@@ -1,0 +1,60 @@
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { MainLayout } from './layout/MainLayout'
+import { AdminLayout } from './pages/admin/AdminLayout'
+import { AdminShopsPage } from './pages/admin/AdminShopsPage'
+import { AdminUsersPage } from './pages/admin/AdminUsersPage'
+import { CashierPage } from './pages/CashierPage'
+import { CompanyDebtsPage } from './pages/CompanyDebtsPage'
+import { CustomerDebtsPage } from './pages/CustomerDebtsPage'
+import { DebtsPage } from './pages/DebtsPage'
+import { HomePage } from './pages/HomePage'
+import { InventoryPage } from './pages/InventoryPage'
+import { JardPage } from './pages/JardPage'
+import { PosPage } from './pages/PosPage'
+import { ProfitReportPage } from './pages/ProfitReportPage'
+import { PurchasesPage } from './pages/PurchasesPage'
+import { PurchaseReturnsPage } from './pages/PurchaseReturnsPage'
+import { ResourceCrudPage } from './pages/ResourceCrudPage'
+import { SalesListPage } from './pages/SalesListPage'
+import { SalesReturnsPage } from './pages/SalesReturnsPage'
+import { CatalogPage } from './pages/CatalogPage'
+import { SettingsPage } from './pages/SettingsPage'
+import { QrCodeSocialLandingPage } from './pages/QrCodeSocialLandingPage'
+import { AdminQrSocialPage } from './pages/admin/AdminQrSocialPage'
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/qr-code" element={<QrCodeSocialLandingPage />} />
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/inventory" element={<InventoryPage />} />
+          <Route path="/jard" element={<JardPage />} />
+          <Route path="/pos" element={<PosPage />} />
+          <Route path="/profit" element={<ProfitReportPage />} />
+          <Route path="/sales" element={<SalesListPage />} />
+          <Route path="/sales-returns" element={<SalesReturnsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/catalog" element={<CatalogPage />} />
+          <Route path="/cashier" element={<CashierPage />} />
+          <Route path="/debts" element={<DebtsPage />} />
+          <Route path="/customer-debts" element={<CustomerDebtsPage />} />
+          <Route path="/company-debts" element={<CompanyDebtsPage />} />
+          <Route path="/manage/purchases" element={<PurchasesPage />} />
+          <Route path="/manage/purchase-returns" element={<PurchaseReturnsPage />} />
+          <Route path="/manage/:resource" element={<ResourceCrudPage />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Navigate to="/admin/shops" replace />} />
+            <Route path="shops" element={<AdminShopsPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="qr-social" element={<AdminQrSocialPage />} />
+          </Route>
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+export default App

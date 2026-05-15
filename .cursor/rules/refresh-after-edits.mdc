@@ -1,0 +1,15 @@
+---
+description: After code edits in this repo, refresh the running app or dev processes so changes show up.
+globs: frontend/src/**/*, backend/**/*.py
+---
+
+# Dev refresh after edits
+
+When you change **frontend** (`frontend/src/`) or **backend** (`backend/**/*.py`) code while the user is developing:
+
+1. **Browser:** Dev server sends `Cache-Control: no-store`, and Vite is configured to **full-reload the page on each save** (unless `VITE_NO_FULL_RELOAD=1`). If the tab still looks stale, macOS **Cmd+Shift+R** once.
+2. **Vite:** Restart the frontend dev server (`npm run dev` from repo root) if it was started before config changes.
+3. **Django:** Python changes need `runserver` to reload (it usually does automatically); if something looks stuck, restart `python manage.py runserver`.
+4. After **dependency** or **vite.config** changes, run once from repo root: `npm run dev:frontend:force` (or `cd frontend && npm run dev:force`) to clear Vite’s optimize cache.
+
+Do not assume the tab updated without a refresh when the user reports stale UI.

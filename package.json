@@ -1,0 +1,19 @@
+{
+  "name": "m-and-m",
+  "private": true,
+  "scripts": {
+    "dev": "node ./node_modules/concurrently/dist/bin/concurrently.js -n vite,django -c cyan,magenta \"node ./frontend/node_modules/vite/bin/vite.js ./frontend\" \"node ./scripts/run-django-backend.mjs\"",
+    "dev:frontend": "node ./frontend/node_modules/vite/bin/vite.js ./frontend",
+    "dev:frontend:force": "node ./frontend/node_modules/vite/bin/vite.js ./frontend --force",
+    "dev:backend": "node ./scripts/run-django-backend.mjs"
+  },
+  "dependencies": {
+    "browser-image-compression": "^2.0.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

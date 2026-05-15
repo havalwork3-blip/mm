@@ -1,0 +1,38 @@
+# Install: sudo cp deploy/linode/gunicorn.service /etc/systemd/system/gunicorn.service
+# Edit all /srv/mnm paths to match your clone directory, then:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now gunicorn
+#
+# Binds Gunicorn to 127.0.0.1:8000 for Nginx reverse proxy (see nginx-mnm.conf).
+# Alternative: replace --bind with
+#   --bind unix:/run/gunicorn/mnm.sock
+# and add RuntimeDirectory=gunicorn plus Nginx upstream to the socket.
+
+[Unit]
+Description=m-and-m Django (Gunicorn)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/mnm/backend
+Environment=PATH=/srv/mnm/backend/venv/bin
+EnvironmentFile=-/srv/mnm/backend/.env
+ExecStart=/srv/mnm/backend/venv/bin/gunicorn config.wsgi:application \
+    --bind 127.0.0.1:8000 \
+    --workers 3 \
+    --threads 2 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile -
+Restart=on-failure
+RestartSec=5
+
+# Hardening (optional; comment out if uploads or paths break)
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

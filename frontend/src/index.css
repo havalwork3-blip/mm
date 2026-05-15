@@ -1,0 +1,209 @@
+@import 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+  RTL: set `dir="rtl"` on <html> or a root wrapper (see App.tsx toggle).
+  Prefer logical properties: ms-*, me-*, ps-*, pe-*, border-s-*, start-*, end-*.
+*/
+
+@layer base {
+  :root {
+    font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply m-0 min-h-dvh bg-slate-50 text-slate-900 antialiased dark:bg-slate-900 dark:text-slate-100;
+  }
+
+  [dir='rtl'] body {
+    font-feature-settings: 'kern' 1;
+  }
+}
+
+/**
+ * Main shell: reserve space for fixed sidebar (logical inline-start = LTR left, RTL right).
+ * Mobile drawer overlays content → no horizontal inset; desktop uses --mm-sidebar-w.
+ */
+@layer components {
+  .mm-app-main-shell {
+    box-sizing: border-box;
+    min-height: 100dvh;
+    min-width: 0;
+    width: 100%;
+    padding-top: var(--mm-mobile-header-h, 0);
+    padding-inline-start: 0;
+  }
+
+  @media (min-width: 768px) {
+    .mm-app-main-shell {
+      padding-top: 0;
+      padding-inline-start: var(--mm-sidebar-w, 0);
+    }
+  }
+}
+
+@layer utilities {
+  /*
+   * Dark-mode compatibility layer:
+   * Some older pages still use light-only slate/white utility classes.
+   * These overrides keep contrast readable until each page gets fully audited.
+   */
+  .dark .bg-white {
+    @apply bg-slate-800;
+  }
+
+  .dark .bg-slate-50 {
+    @apply bg-slate-900;
+  }
+
+  .dark .bg-slate-100 {
+    @apply bg-slate-800;
+  }
+
+  .dark .bg-slate-200 {
+    @apply bg-slate-700;
+  }
+
+  .dark .hover\:bg-slate-50:hover {
+    @apply bg-slate-700;
+  }
+
+  .dark .hover\:bg-slate-100:hover {
+    @apply bg-slate-700;
+  }
+
+  .dark .border-slate-200 {
+    @apply border-slate-700;
+  }
+
+  .dark .border-slate-100 {
+    @apply border-slate-700;
+  }
+
+  .dark .text-slate-900 {
+    @apply text-slate-100;
+  }
+
+  .dark .text-slate-800 {
+    @apply text-slate-200;
+  }
+
+  .dark .text-slate-700 {
+    @apply text-slate-300;
+  }
+
+  .dark .text-slate-600 {
+    @apply text-slate-300;
+  }
+
+  .dark .text-slate-500 {
+    @apply text-slate-400;
+  }
+
+  .dark .text-slate-400 {
+    @apply text-slate-300;
+  }
+}
+
+@media print {
+  body {
+    background: white;
+  }
+  .no-print {
+    display: none !important;
+  }
+
+  /* Default: A4 when printing the on-page receipt preview from the browser */
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  #receipt-print[data-receipt-format='80mm'] {
+    width: 72mm !important;
+    max-width: 72mm !important;
+    margin: 0 auto !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0.5rem !important;
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+  }
+
+  #receipt-print[data-receipt-format='A4'] {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 auto !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  /* Company purchase history modal (ResourceCrudPage) */
+  body:has(#company-purchase-history-print) * {
+    visibility: hidden;
+  }
+  body:has(#company-purchase-history-print) #company-purchase-history-print,
+  body:has(#company-purchase-history-print) #company-purchase-history-print * {
+    visibility: visible;
+  }
+  body:has(#company-purchase-history-print) #company-purchase-history-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 1rem !important;
+    background: white !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Jard page print: render like a plain Excel-style sheet */
+  body:has(#jard-print-root) .mm-app-main-shell {
+    padding: 0 !important;
+  }
+  body:has(#jard-print-root) * {
+    visibility: hidden;
+  }
+  body:has(#jard-print-root) #jard-print-root,
+  body:has(#jard-print-root) #jard-print-root * {
+    visibility: visible;
+  }
+  body:has(#jard-print-root) #jard-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: #0f172a !important;
+  }
+  body:has(#jard-print-root) #jard-print-root .no-print {
+    display: none !important;
+  }
+  body:has(#jard-print-root) #jard-print-root .jard-print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: fixed;
+  }
+  body:has(#jard-print-root) #jard-print-root .jard-print-table th,
+  body:has(#jard-print-root) #jard-print-root .jard-print-table td {
+    border: 1px solid #94a3b8 !important;
+    padding: 6px 8px !important;
+    background: white !important;
+    color: #0f172a !important;
+  }
+  body:has(#jard-print-root) #jard-print-root .jard-print-table th {
+    position: static !important;
+    font-weight: 700 !important;
+  }
+}

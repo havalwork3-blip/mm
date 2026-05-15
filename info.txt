@@ -1,0 +1,197 @@
+================================================================================
+زانیاری گشتی پرۆژەی «m-and-m» (سیستەمی فرۆشتن / کۆگا / دوکان)
+================================================================================
+ئەم تێکستە بۆ ئەوەیە کە بتوانیت تەواوی بخەیتە ناو Gemini (یان هەر ئامێرێکی تر) بۆ
+یارمەتی لە کۆد، باگ، ئارکیتێکتچەر، یان دروستکردنی فیچەرێکی نوێ.
+
+--------------------------------------------------------------------------------
+1) ئەم سیستەمە چییە؟
+--------------------------------------------------------------------------------
+ئەمە بەرنامەیەکی وێبە (SPA + API) بۆ بەڕێوەبردنی دوکان و کۆگا و فرۆشتن (POS)،
+لەگەڵ ڕاپۆرت، قەرزەکانی کڕیار و کۆمپانیا، کڕین و گەڕاندنەوەی کڕین/فرۆشتن،
+هاوبەشەکان، خەرجی، و ڕێکخستنی پسوڵە و QR بۆ لاندینگی سۆشیاڵ میدیا.
+
+پێکهاتە: فرۆنتێند (React) پەیوەندی بە باکێند (Django REST) دەکات لە ڕێگەی
+HTTP JSON و (بۆ لۆگین) HTTP Basic Authentication لەگەڵ credentials لە هێدەر.
+
+--------------------------------------------------------------------------------
+2) زمانەکانی نووسین و تەکنەلۆژیاکان
+--------------------------------------------------------------------------------
+• Python 3 — باکێند: Django 5.x، Django REST Framework 3.x، django-cors-headers
+• TypeScript / TSX — فرۆنتێند: React 19، Vite 8
+• CSS — Tailwind CSS 4 (پێوەستکراو بە Vite پێوەکار `@tailwindcss/vite`)
+• JavaScript (ES modules) — سکریپتی `scripts/run-django-backend.mjs` بۆ ڕانکردنی
+  Django لە Windows بەبێ `cd` لە شێوەی ڕێڕەو کە `&` لە ناوی فۆڵدەردا هەیە
+• HTML — `index.html` (نقطەی چوونەژوورەوەی Vite)
+
+کتابخانە گرنگەکانی فرۆنتێند (npm):
+  react, react-dom, react-router-dom, zustand, lucide-react, qrcode,
+  react-virtuoso, recharts
+
+کتابخانە گرنگەکانی ڕەگەی پرۆژە (بەگشتی بۆ PDF/وێنە لە کلایەنت):
+  jspdf, jspdf-autotable, html2canvas, browser-image-compression
+
+--------------------------------------------------------------------------------
+3) پێکهاتەی فۆڵدەرەکان
+--------------------------------------------------------------------------------
+m&m/                          ← ڕەگەی پرۆژە (npm workspace ی ساکار)
+  package.json                ← `npm run dev` = Vite + Django یەکجار
+  scripts/run-django-backend.mjs
+  frontend/                   ← ئەپەکەی بەکارهێنەر
+    package.json
+    vite.config.ts
+    src/
+      App.tsx                 ← ڕاوتەکان (react-router)
+      main.tsx                ← LocaleProvider, ThemeProvider, SessionProvider
+      pages/                  ← پەڕەکانی سەرەکی و ئەدمین
+      layout/
+      context/                ← Session, Locale, Theme
+      lib/api.ts              ← fetch, buildApiUrl, offline queue, Basic auth
+      i18n/strings.ts         ← وەرگێڕان: ku (کوردی سۆرانی), ar, en
+      types/
+  backend/                    ← API
+    manage.py
+    requirements.txt
+    config/                   ← settings.py, urls.py, wsgi, asgi
+    accounts/                 ← User تایبەت، ڕۆڵەکان، /api/users/
+    shops/                    ← Shop, دراو, ڕێکخستنی دوکان، QR landing
+    inventory/                ← بەرهەم، کڕین، فرۆشتن، ڕاپۆرت، داشبۆرد
+    venv/                     ← پێویستە دروست بکرێت (Python virtualenv)
+
+--------------------------------------------------------------------------------
+4) چۆن کار دەکات (ئارکیتێکتچەر)
+--------------------------------------------------------------------------------
+• فرۆنتێند لە پۆرت 5173 دەجوڵێتەوە (Vite dev server).
+• باکێند لە پۆرت 8000 دەجوڵێتەوە (`runserver 0.0.0.0:8000`).
+• هەموو API لە ژێر prefix ـی `/api/` دەرکەوتووە (بێجگە لە Django admin کە `/admin/` ـە).
+
+ناسنامە (Authentication):
+  - DRF ڕێکخراوە بە SessionAuthentication و BasicAuthentication.
+  - لە فرۆنتێنددا لۆگین بە `setBasicAuth(email, password)` و پاشان
+    `GET /api/users/me/` بۆ وەرگرتنی پڕۆفایل.
+  - بۆ هەموو داواکارییەکان `credentials` و هێدەری Authorization بەکاردێت.
+
+تەنانت (multi-tenant):
+  - بەکارهێنەرانی ئاسایی پەیوەندیدارن بە `shop` (ForeignKey).
+  - سوپەریوزەر دەتوانێت دوکان هەڵبژێرێت (shop override) و query ـی `shop_id`
+    لە `buildApiUrl` زیاد دەکرێت کاتێک Global View کوژاوەتەوە.
+
+داتابەیس:
+  - پێشگریمانە لە dev: SQLite ئەگەر `DJANGO_USE_SQLITE=true` (سکریپتی run-django
+    ئەمە default دەکات ئەگەر env دانەنرابێت).
+  - بۆ production: PostgreSQL لە ڕێگەی env ـەکانی POSTGRES_*.
+
+میدیا:
+  - `MEDIA_ROOT` بۆ وێنەی بەرهەم و فایلەکانی تر؛ لە DEBUG دا static serve بۆ media.
+
+--------------------------------------------------------------------------------
+5) ڕێڕەوەکانی API ـی سەرەکی (کورتە)
+--------------------------------------------------------------------------------
+پێشگریمانە: `http://127.0.0.1:8000` + `/api/...`
+
+accounts (UserViewSet):
+  /api/users/                 CRUD (دروستکردن/نوێکردنەوە تەنها superuser)
+  /api/users/me/              پڕۆفایلی بەکارهێنەری ئێستا
+
+shops:
+  /api/shops/                 دوکانەکان
+  /api/currencies/            دراوەکان
+  /api/shop-settings/         ڕێکخستنی دوکان
+  /api/receipt-settings/      ڕێکخستنی پسوڵە
+  /api/public/qr-landing/     تایبەت بە لاندینگی گشتی QR
+  /api/admin/qr-landing/      بەڕێوەبردنی QR لەلایەن ئەدمین
+  /api/admin/qr-landing/custom-links/
+  /api/admin/qr-landing/logo/
+
+inventory (router + views):
+  /api/categories/, /api/products/, /api/companies/, /api/customers/,
+  /api/expenses/, /api/purchases/, /api/sales/, /api/shareholders/,
+  /api/employee-debts/
+  /api/reports/profit/, /api/reports/jard/
+  /api/dashboard/stats/
+  /api/cashier/summary/, /api/cashier/ledger/, /api/cashier/opening/...
+  /api/admin/stats/           ئامارە گشتییەکانی ئەدمین
+
+تەندروستی:
+  GET /api/health/
+
+--------------------------------------------------------------------------------
+6) ڕاوتەکانی فرۆنتێند (React Router)
+--------------------------------------------------------------------------------
+/                           پەڕەی سەرەکی
+/inventory                  کۆگا
+/jard                       ڕاپۆرتی جەرد
+/pos                        فرۆشتن (POS)
+/profit                     ڕاپۆرتی قازانج
+/sales, /sales-returns      لیستی فرۆشتن و گەڕاندنەوە
+/settings                   ڕێکخستنەکان
+/cashier                    کاشێر / سندوق
+/debts, /customer-debts, /company-debts
+/manage/purchases, /manage/purchase-returns
+/manage/:resource           CRUD ـی سەرچاوەکان (generic)
+/admin/shops, /admin/users, /admin/qr-social
+/qr-code                    لاندینگی گشتی QR (بێ MainLayout لە هەندێک کاتدا)
+
+--------------------------------------------------------------------------------
+7) ڕۆڵەکانی بەکارهێنەر (لە باکێند)
+--------------------------------------------------------------------------------
+UserRole: owner, manager, receipt_editor, employee
+  - بەکارهێنەر بە ئیمەیڵ دەچێتەژوورەوە (username بەکار ناهێنرێت).
+  - non-superuser پێویستی بە `shop` هەیە.
+
+--------------------------------------------------------------------------------
+8) ناوچەی زمان و UI
+--------------------------------------------------------------------------------
+• وەرگێڕان لە `frontend/src/i18n/strings.ts` — زمانەکان: ku, ar, en
+• پێشگریمانە: کوردی (ku). RTL بۆ ku و ar لە `LocaleContext`.
+• تێم (ڕووناکی/تاریک) لە `ThemeContext`.
+
+--------------------------------------------------------------------------------
+9) گۆڕاوەکانی ژینگە (Environment) — گرنگ
+--------------------------------------------------------------------------------
+باکێند (.env لە `backend/` یان گۆڕاوەکانی سیستەم):
+  DJANGO_SECRET_KEY
+  DJANGO_DEBUG                  true/false
+  DJANGO_ALLOWED_HOSTS          لیستی host ـەکان بە کۆما
+  DJANGO_USE_SQLITE             true → SQLite لە backend/db.sqlite3
+  POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST, POSTGRES_PORT
+  DJANGO_DEV_FRONTEND_ORIGINS   بۆ CORS/CSRF لە LAN (وەک http://IP:5173)
+
+فرۆنتێند (Vite):
+  VITE_API_URL                  بنەچەی تەواوی API (بۆ deploy)
+  VITE_DEV_LAN=1                host:true بۆ تێستکردن لە مۆبایل لەسەر تۆڕ
+
+--------------------------------------------------------------------------------
+10) چۆن پڕۆژەکە دەست پێ بکەیت
+--------------------------------------------------------------------------------
+1) Python virtualenv لە `backend/venv` دروست بکە و:
+   pip install -r backend/requirements.txt
+2) لە ڕەگەی `m&m`:
+   npm install          (و لەوانەیە پێویست بێت لە frontend/ هەروەها)
+3) مایگرەیشن:
+   backend\venv\Scripts\python manage.py migrate   (Windows)
+4) لە ڕەگەی `m&m`:  npm run dev
+   → Vite لە 5173، Django لە 8000
+
+تێبینی Windows: ناوی فۆڵدەر `m&&m` یان `&` لە ڕێڕەودا کێشەی shell دروست دەکات؛
+بۆیە `run-django-backend.mjs` بەکارهێنراوە.
+
+--------------------------------------------------------------------------------
+11) تایبەتمەندییەکانی تەکنیکی فرۆنتێند
+--------------------------------------------------------------------------------
+• `apiFetch` / `apiJson` لە `lib/api.ts`: بنەچەی API، Basic auth، shop_id query،
+  هەوڵدانەوەی fallback بۆ 127.0.0.1:8000 لە dev ئەگەر fetch سەرەکی شکست بخوات.
+• نۆرەی داواکارییەکانی ئۆفلاین (mutating requests) بۆ دووبارەکردنەوە دوای گەڕانەوەی تۆڕ.
+• `getGlobalView` / superuser shop override لە sessionStorage/localStorage.
+
+--------------------------------------------------------------------------------
+12) پێشنیار بۆ Gemini کاتێک پرسیار دەکەیت
+--------------------------------------------------------------------------------
+ئەمە پرۆژەیەکی monorepo ـە: `frontend/` = TypeScript+React+Vite+Tailwind؛
+`backend/` = Python+Django+DRF. API ـکان JSON ـن لە `/api/`. زمانەکانی UI: ku/ar/en.
+ئەگەر باگی تۆڕ/LAN بێت، CORS و `DJANGO_DEV_FRONTEND_ORIGINS` و `VITE_API_URL`
+بپشکنە. ئەگەر باگی Windows و path ـە، `run-django-backend.mjs` بخوێنەوە.
+
+================================================================================
+کۆتایی — بەروار/وەشان: پێویستە لە کۆدەکە بپشکنیت (package.json / requirements.txt)
+================================================================================
