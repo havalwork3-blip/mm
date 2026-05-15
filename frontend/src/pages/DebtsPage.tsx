@@ -3,19 +3,13 @@ import { jsPDF } from 'jspdf'
 import { Download, History, Lock, Pencil, Printer, Unlock } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { PageAuthLoading } from '../components/PageAuthLoading'
 import { useLocale } from '../context/LocaleContext'
+import { useSyncedSession } from '../hooks/useSyncedSession'
 import { useResyncLocalMe } from '../hooks/useResyncLocalMe'
-import {
-  apiJson,
-  clearSessionAuth,
-  isApiStatus,
-  persistSessionAuth,
-  restoreSessionAuth,
-  setBasicAuth,
-  setSuperuserShopId,
-} from '../lib/api'
+import { apiJson } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
-import type { CurrencyRow, EmployeeDebtRow, Me, ShopUserRow, SummaryEmployee } from '../types/api'
+import type { CurrencyRow, EmployeeDebtRow, ShopUserRow, SummaryEmployee } from '../types/api'
 
 function normalizeMoneyInput(s: string) {
   return s.replace(/[\s,،\u066C]/g, '').trim()
@@ -77,8 +71,7 @@ function BackHomeLink({ label }: { label: string }) {
 
 export function DebtsPage() {
   const { t } = useLocale()
-  const [ready, setReady] = useState(false)
-  const [me, setMe] = useState<Me | null>(null)
+  const { me, authPending, showLogin, login } = useSyncedSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loginError, setLoginError] = useState<string | null>(null)
@@ -210,21 +203,8 @@ export function DebtsPage() {
     }
   }, [buildDebtsHistoryPdfDoc])
   const loadData = useCallback(async () => {
-    if (!restoreSessionAuth()) {
-      setMe(null)
-      setReady(true)
-      return
-    }
+    if (!me) return
     try {
-      const profile = await apiJson<Me>('/api/users/me/')
-      setMe(profile)
-      if (profile.is_superuser) {
-        const s = localStorage.getItem('pos_shop_id')
-        if (s) setSuperuserShopId(s)
-      } else {
-        setSuperuserShopId(null)
-      }
-
       const d = await apiJson<EmployeeDebtRow[] | { results: EmployeeDebtRow[] }>(
         '/api/employee-debts/',
       )
@@ -249,17 +229,9 @@ export function DebtsPage() {
         setRate(null)
       }
     } catch (e) {
-      if (isApiStatus(e, 401)) {
-        setMe(null)
-        clearSessionAuth()
-        setBasicAuth(null, null)
-      } else {
-        setError(e instanceof Error ? e.message : t('common.error'))
-      }
-    } finally {
-      setReady(true)
+      setError(e instanceof Error ? e.message : t('common.error'))
     }
-  }, [t])
+  }, [me, t])
 
   useEffect(() => {
     void loadData()
@@ -305,28 +277,13 @@ export function DebtsPage() {
     [rate, paymentIqdLinked],
   )
 
-  async function login(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoginError(null)
     try {
-      setBasicAuth(email, password)
-      persistSessionAuth(email, password)
-      const profile = await apiJson<Me>('/api/users/me/')
-      setMe(profile)
-      if (profile.is_superuser) {
-        const s = localStorage.getItem('pos_shop_id')
-        if (s) setSuperuserShopId(s)
-      } else {
-        setSuperuserShopId(null)
-      }
-      setReady(false)
-      await loadData()
+      await login(email, password)
     } catch (err) {
-      setMe(null)
-      clearSessionAuth()
-      setBasicAuth(null, null)
       setLoginError(err instanceof Error ? err.message : t('common.loginFailed'))
-      setReady(true)
     }
   }
 
@@ -419,18 +376,16 @@ export function DebtsPage() {
     }
   }
 
-  if (!ready) {
-    return (
-      <div className="p-8 text-center text-slate-500">{t('common.loading')}</div>
-    )
+  if (authPending) {
+    return <PageAuthLoading />
   }
 
-  if (!me) {
+  if (showLogin) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-start">
         <BackHomeLink label={t('nav.home')} />
         <h1 className="mt-4 text-xl font-semibold">{t('debts.title')}</h1>
-        <form onSubmit={login} className="mt-6 space-y-3">
+        <form onSubmit={handleLogin} className="mt-6 space-y-3">
           <input
             type="email"
             value={email}
@@ -483,8 +438,8 @@ export function DebtsPage() {
         </button>
       </div>
 
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="font-semibold text-slate-900">{t('debts.remainingDebt')}</h2>
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800/40">
+        <h2 className="font-semibold text-slate-900 dark:text-slate-100">{t('debts.remainingDebt')}</h2>
         <div className="mt-3 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
           <table className="w-full min-w-[16rem] text-sm">
             <thead>

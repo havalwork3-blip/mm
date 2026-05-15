@@ -3,24 +3,16 @@ import { jsPDF } from 'jspdf'
 import { ArrowLeft, Banknote, Download, Pencil, Printer, Wallet } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import { PageAuthLoading } from '../components/PageAuthLoading'
 import { useLocale } from '../context/LocaleContext'
-import { useResyncLocalMe } from '../hooks/useResyncLocalMe'
-import {
-  apiJson,
-  clearSessionAuth,
-  isApiStatus,
-  persistSessionAuth,
-  restoreSessionAuth,
-  setBasicAuth,
-  setSuperuserShopId,
-} from '../lib/api'
+import { useSyncedSession } from '../hooks/useSyncedSession'
+import { apiJson } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
 import type {
   CustomerCollectPaymentResponse,
   CustomerDebtRow,
   CustomerDebtSummaryResponse,
   CustomerRow,
-  Me,
   SaleListRow,
 } from '../types/api'
 
@@ -128,11 +120,18 @@ function debtRowPhonesDisplay(r: CustomerDebtRow) {
 
 export function CustomerDebtsPage() {
   const { t } = useLocale()
-  const [me, setMe] = useState<Me | null>(null)
+  const {
+    me,
+    authPending,
+    showLogin,
+    login,
+    shopImpersonation,
+    setShopImpersonation,
+    canAccessShopData,
+  } = useSyncedSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [shopOverride, setShopOverride] = useState('')
-  const [shopImpersonation, setShopImpersonation] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [summary, setSummary] = useState<CustomerDebtSummaryResponse | null>(
@@ -179,9 +178,6 @@ export function CustomerDebtsPage() {
   const canRecordPayment = Boolean(
     me && hasPerm(me, 'change_sale', 'add_sale'),
   )
-  const canAccessShopData =
-    me &&
-    (!me.is_superuser || me.shop !== null || Boolean(shopImpersonation))
   const customerNames = Array.from(
     new Set(customerLookup.map((r) => String(r.name ?? '')).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b))
@@ -245,61 +241,9 @@ export function CustomerDebtsPage() {
     return { usdStr: formatMoneyCompact(usdSum), iqdStr: iqdDisplay }
   }, [filteredDebtRows, summary?.exchange_rate_usd_to_iqd])
 
-  const loadMe = useCallback(async (u: string, p: string) => {
-    setBasicAuth(u, p)
-    persistSessionAuth(u, p)
-    const profile = await apiJson<Me>('/api/users/me/')
-    setMe(profile)
-    if (profile.is_superuser) {
-      const stored = localStorage.getItem('pos_shop_id')
-      if (stored) {
-        setShopOverride(stored)
-        setShopImpersonation(stored)
-        setSuperuserShopId(stored)
-      } else {
-        setShopImpersonation(null)
-        setSuperuserShopId(null)
-      }
-    } else {
-      localStorage.removeItem('pos_shop_id')
-      setShopImpersonation(null)
-      setSuperuserShopId(null)
-    }
-  }, [])
-
-  const reloadLocalMe = useCallback(async () => {
-    if (!restoreSessionAuth()) return
-    try {
-      const profile = await apiJson<Me>('/api/users/me/')
-      setMe(profile)
-      if (profile.is_superuser) {
-        const stored = localStorage.getItem('pos_shop_id')
-        if (stored) {
-          setShopOverride(stored)
-          setShopImpersonation(stored)
-          setSuperuserShopId(stored)
-        } else {
-          setShopImpersonation(null)
-          setSuperuserShopId(null)
-        }
-      } else {
-        localStorage.removeItem('pos_shop_id')
-        setShopImpersonation(null)
-        setSuperuserShopId(null)
-      }
-    } catch (e) {
-      if (isApiStatus(e, 401)) {
-        clearSessionAuth()
-        setBasicAuth(null, null)
-      }
-    }
-  }, [])
-
   useEffect(() => {
-    void reloadLocalMe()
-  }, [reloadLocalMe])
-
-  useResyncLocalMe(reloadLocalMe)
+    setShopOverride(shopImpersonation ?? '')
+  }, [shopImpersonation])
 
   const fetchSummary = useCallback(async () => {
     setLoading(true)
@@ -329,15 +273,12 @@ export function CustomerDebtsPage() {
     return () => window.clearTimeout(id)
   }, [successMsg])
 
-  async function login(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     try {
-      await loadMe(email, password)
+      await login(email, password)
     } catch (err) {
-      setMe(null)
-      setBasicAuth(null, null)
-      clearSessionAuth()
       setError(err instanceof Error ? err.message : t('common.loginFailed'))
     }
   }
@@ -815,13 +756,17 @@ export function CustomerDebtsPage() {
       ? Math.round(parseFloat(rateForHint) * 100).toLocaleString()
       : null
   const historyPaymentsColSpan = canRecordPayment ? 4 : 3
-  if (!me) {
+  if (authPending) {
+    return <PageAuthLoading />
+  }
+
+  if (showLogin) {
     return (
       <div className="mx-auto max-w-md px-4 py-16">
         <h1 className="text-start text-xl font-semibold">
           {t('customerDebts.title')} — {t('dash.signIn')}
         </h1>
-        <form onSubmit={login} className="mt-6 space-y-3">
+        <form onSubmit={handleLogin} className="mt-6 space-y-3">
           <input
             type="email"
             autoComplete="username"
@@ -913,15 +858,7 @@ export function CustomerDebtsPage() {
                   type="button"
                   onClick={() => {
                     const v = shopOverride.trim()
-                    if (!v) {
-                      localStorage.removeItem('pos_shop_id')
-                      setShopImpersonation(null)
-                      setSuperuserShopId(null)
-                    } else {
-                      localStorage.setItem('pos_shop_id', v)
-                      setShopImpersonation(v)
-                      setSuperuserShopId(v)
-                    }
+                    setShopImpersonation(v || null)
                     void fetchSummary()
                   }}
                   className="font-medium text-violet-700 dark:text-violet-400"

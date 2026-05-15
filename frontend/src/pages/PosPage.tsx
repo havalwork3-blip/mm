@@ -12,20 +12,10 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { PageAuthLoading } from '../components/PageAuthLoading'
 import { useLocale } from '../context/LocaleContext'
-import { useResyncLocalMe } from '../hooks/useResyncLocalMe'
-import {
-  apiJson,
-  clearSessionAuth,
-  getGlobalView,
-  hasPersistedSessionAuth,
-  isApiStatus,
-  persistSessionAuth,
-  resolveMediaUrl,
-  restoreSessionAuth,
-  setBasicAuth,
-  setSuperuserShopId,
-} from '../lib/api'
+import { useSyncedSession } from '../hooks/useSyncedSession'
+import { apiJson, getGlobalView, resolveMediaUrl } from '../lib/api'
 import {
   buildBlankReceiptHtml,
   buildReceiptHtml,
@@ -36,7 +26,6 @@ import { hasPerm } from '../lib/permissions'
 import type {
   CurrencyRow,
   CustomerRow,
-  Me,
   Paginated,
   ProductRow,
   ReceiptSettingsRow,
@@ -98,12 +87,15 @@ export function PosPage() {
   const { t, lang, setLang } = useLocale()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [me, setMe] = useState<Me | null>(null)
-  /** تا دڵنیا بین لە session: بێ ئەمە لۆگین بۆ چرکەیەک دەردەکەوێت پێش بارکردنی me */
-  const [sessionReady, setSessionReady] = useState(
-    () => typeof window === 'undefined' || !hasPersistedSessionAuth(),
-  )
-  const [shopImpersonation, setShopImpersonation] = useState<string | null>(null)
+  const {
+    me,
+    authPending,
+    showLogin,
+    login,
+    shopImpersonation,
+    canAccessShopData,
+    needsShop,
+  } = useSyncedSession()
   const [error, setError] = useState<string | null>(null)
 
   const [rate, setRate] = useState<number | null>(null)
@@ -284,66 +276,6 @@ export function PosPage() {
     }
   }, [selectedCustomerId])
 
-  const loadMe = useCallback(async (u: string, p: string) => {
-    setBasicAuth(u, p)
-    persistSessionAuth(u, p)
-    const profile = await apiJson<Me>('/api/users/me/')
-    setMe(profile)
-    if (profile.is_superuser) {
-      const stored = localStorage.getItem('pos_shop_id')
-      if (stored) {
-        setShopImpersonation(stored)
-        setSuperuserShopId(stored)
-      } else {
-        setShopImpersonation(null)
-        setSuperuserShopId(null)
-      }
-    } else {
-      localStorage.removeItem('pos_shop_id')
-      setSuperuserShopId(null)
-      setShopImpersonation(null)
-    }
-  }, [])
-
-  const reloadLocalMe = useCallback(async () => {
-    if (!restoreSessionAuth()) {
-      setSessionReady(true)
-      return
-    }
-    try {
-      const profile = await apiJson<Me>('/api/users/me/')
-      setMe(profile)
-      if (profile.is_superuser) {
-        const stored = localStorage.getItem('pos_shop_id')
-        if (stored) {
-          setShopImpersonation(stored)
-          setSuperuserShopId(stored)
-        } else {
-          setShopImpersonation(null)
-          setSuperuserShopId(null)
-        }
-      } else {
-        localStorage.removeItem('pos_shop_id')
-        setSuperuserShopId(null)
-        setShopImpersonation(null)
-      }
-    } catch (e) {
-      if (isApiStatus(e, 401)) {
-        clearSessionAuth()
-        setBasicAuth(null, null)
-      }
-      setMe(null)
-    } finally {
-      setSessionReady(true)
-    }
-  }, [])
-
-  useEffect(() => {
-    void reloadLocalMe()
-  }, [reloadLocalMe])
-
-  useResyncLocalMe(reloadLocalMe)
-
   const loadRate = useCallback(async () => {
     const rows = await apiJson<CurrencyRow[]>('/api/currencies/')
     const sorted = [...rows].sort(
@@ -386,10 +318,6 @@ export function PosPage() {
     }
   }
 
-  const canAccessShopData =
-    me &&
-    (!me.is_superuser || me.shop !== null || Boolean(shopImpersonation))
-
   useEffect(() => {
     if (!me || !canAccessShopData) return
     if (editParam && /^\d+$/.test(editParam)) return
@@ -397,7 +325,7 @@ export function PosPage() {
   }, [me, canAccessShopData, loadRate, editParam])
 
   useEffect(() => {
-    if (!me || !sessionReady || !canAccessShopData) return
+    if (!me || authPending || !canAccessShopData) return
     if (!editParam || !/^\d+$/.test(editParam)) {
       loadedEditKeyRef.current = ''
       setEditingSaleId(null)
@@ -527,7 +455,7 @@ export function PosPage() {
     return () => {
       cancelled = true
     }
-  }, [editParam, me, sessionReady, canAccessShopData, setSearchParams, t])
+  }, [editParam, me, authPending, canAccessShopData, setSearchParams, t])
 
   useEffect(() => {
     if (!me || !canAccessShopData) return
@@ -640,11 +568,8 @@ export function PosPage() {
     e.preventDefault()
     setError(null)
     try {
-      await loadMe(email, password)
+      await login(email, password)
     } catch (err) {
-      setMe(null)
-      setBasicAuth(null, null)
-      clearSessionAuth()
       setError(err instanceof Error ? err.message : t('common.loginFailed'))
     }
   }
@@ -1385,37 +1310,24 @@ export function PosPage() {
     printReceiptHtml(html)
   }
 
-  const needsShop =
-    me?.is_superuser && me.shop === null && !shopImpersonation
-
   const showAddCustomer =
     customerQuery.trim().length > 0 &&
     !customerHits.some(
       (c) => c.name.toLowerCase() === customerQuery.trim().toLowerCase(),
     )
 
-  if (!sessionReady) {
+  if (authPending) {
     return (
-      <div
-        className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-slate-50 dark:bg-slate-900"
-        role="status"
-        aria-live="polite"
-      >
-        <div
-          className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500 border-t-transparent"
-          aria-hidden
-        />
-        <span className="text-sm text-slate-600 dark:text-slate-400">
-          {t('common.loading')}
-        </span>
+      <div className="min-h-dvh bg-slate-50 dark:bg-slate-900">
+        <PageAuthLoading />
       </div>
     )
   }
 
-  if (!me) {
+  if (showLogin) {
     return (
-      <div className="min-h-dvh bg-slate-50">
-        <header className="border-b border-slate-200 bg-white px-4 py-3">
+      <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
+        <header className="border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
           <div className="mx-auto flex max-w-lg items-center justify-between">
             <Link
               to="/"
@@ -1586,7 +1498,7 @@ export function PosPage() {
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-6 max-lg:pb-36 lg:grid-cols-2 lg:pb-6">
         <section className="flex flex-col gap-4">
           <div ref={customerSearchWrapRef} className="relative">
-            <label className="mb-1 block text-start text-sm font-medium text-slate-700">
+            <label className="mb-1 block text-start text-sm font-medium text-slate-700 dark:text-slate-300">
               {t('pos.customer')}
             </label>
             <div className="flex items-stretch gap-2">
@@ -1737,11 +1649,11 @@ export function PosPage() {
                 }
               }}
               placeholder={t('pos.searchPlaceholder')}
-              className="w-full rounded-xl border border-slate-200 bg-white py-3 ps-4 pe-3 text-start shadow-sm outline-none ring-violet-500/20 focus:ring-2"
+              className="w-full rounded-xl border border-slate-200 bg-white py-3 ps-4 pe-3 text-start shadow-sm outline-none ring-violet-500/20 focus:ring-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
             {searchOpen && (
               <ul
-                className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800"
                 role="listbox"
               >
                 {productQuery.trim().length > 0 && (
@@ -2243,7 +2155,7 @@ export function PosPage() {
 
       {canAccessShopData && (
         <div
-          className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.1)] backdrop-blur-md md:hidden"
+          className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.1)] backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/95 md:hidden"
           style={{
             paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
           }}

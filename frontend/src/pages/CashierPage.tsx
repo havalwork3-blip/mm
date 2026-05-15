@@ -1,16 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { PageAuthLoading } from '../components/PageAuthLoading'
 import { useLocale } from '../context/LocaleContext'
-import { useResyncLocalMe } from '../hooks/useResyncLocalMe'
-import {
-  apiJson,
-  clearSessionAuth,
-  isApiStatus,
-  persistSessionAuth,
-  restoreSessionAuth,
-  setBasicAuth,
-  setSuperuserShopId,
-} from '../lib/api'
+import { useSyncedSession } from '../hooks/useSyncedSession'
+import { apiJson } from '../lib/api'
 import { formatDecimalTrim, formatMoneyCompact } from '../lib/formatMoney'
 import { iqdIntegerStringFromUsd } from '../lib/usdIqdDisplay'
 import { hasPerm } from '../lib/permissions'
@@ -18,7 +11,6 @@ import type {
   CashierLedgerEntry,
   CashierLedgerResponse,
   CashierSummaryResponse,
-  Me,
   ProfitReportResponse,
 } from '../types/api'
 
@@ -323,8 +315,7 @@ function VaultOverviewTable({
 
 export function CashierPage() {
   const { t } = useLocale()
-  const [ready, setReady] = useState(false)
-  const [me, setMe] = useState<Me | null>(null)
+  const { me, authPending, showLogin, login } = useSyncedSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loginError, setLoginError] = useState<string | null>(null)
@@ -338,58 +329,12 @@ export function CashierPage() {
   const [loading, setLoading] = useState(false)
   const [contentOpen, setContentOpen] = useState(false)
 
-  const bootstrap = useCallback(async () => {
-    if (!restoreSessionAuth()) {
-      setMe(null)
-      setReady(true)
-      return
-    }
-    try {
-      const profile = await apiJson<Me>('/api/users/me/')
-      setMe(profile)
-      if (profile.is_superuser) {
-        const s = localStorage.getItem('pos_shop_id')
-        if (s) setSuperuserShopId(s)
-      } else {
-        setSuperuserShopId(null)
-      }
-    } catch (e) {
-      if (isApiStatus(e, 401)) {
-        setMe(null)
-        clearSessionAuth()
-        setBasicAuth(null, null)
-      } else {
-        setError(e instanceof Error ? e.message : t('common.error'))
-      }
-    } finally {
-      setReady(true)
-    }
-  }, [t])
-
-  useEffect(() => {
-    void bootstrap()
-  }, [bootstrap])
-
-  useResyncLocalMe(bootstrap)
-
-  async function login(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoginError(null)
     try {
-      setBasicAuth(email, password)
-      persistSessionAuth(email, password)
-      const profile = await apiJson<Me>('/api/users/me/')
-      setMe(profile)
-      if (profile.is_superuser) {
-        const s = localStorage.getItem('pos_shop_id')
-        if (s) setSuperuserShopId(s)
-      } else {
-        setSuperuserShopId(null)
-      }
+      await login(email, password)
     } catch (err) {
-      setMe(null)
-      clearSessionAuth()
-      setBasicAuth(null, null)
       setLoginError(err instanceof Error ? err.message : t('common.loginFailed'))
     }
   }
@@ -475,17 +420,15 @@ export function CashierPage() {
     }
   }
 
-  if (!ready) {
-    return (
-      <div className="p-8 text-center text-slate-500 dark:text-slate-400">{t('common.loading')}</div>
-    )
+  if (authPending) {
+    return <PageAuthLoading />
   }
 
-  if (!me) {
+  if (showLogin) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-start text-slate-900 dark:text-slate-100">
         <h1 className="text-xl font-semibold text-slate-900 dark:text-white">{t('cashier.title')}</h1>
-        <form onSubmit={login} className="mt-6 space-y-3">
+        <form onSubmit={handleLogin} className="mt-6 space-y-3">
           <input
             type="email"
             value={email}

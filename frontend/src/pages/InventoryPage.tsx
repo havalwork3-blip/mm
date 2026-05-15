@@ -4,23 +4,15 @@ import { Link } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import html2canvas from 'html2canvas'
-import { useLocale } from '../context/LocaleContext'
+import { PageAuthLoading } from '../components/PageAuthLoading'
 import { InventoryProductGrid } from '../components/inventory/InventoryProductGrid'
-import { useResyncLocalMe } from '../hooks/useResyncLocalMe'
-import {
-  apiJson,
-  clearSessionAuth,
-  getGlobalView,
-  isApiStatus,
-  persistSessionAuth,
-  restoreSessionAuth,
-  setBasicAuth,
-  setSuperuserShopId,
-} from '../lib/api'
+import { useLocale } from '../context/LocaleContext'
+import { useSyncedSession } from '../hooks/useSyncedSession'
+import { apiJson, getGlobalView } from '../lib/api'
 import imageCompression from 'browser-image-compression'
 import { hasPerm } from '../lib/permissions'
 import { useInventoryProductsStore } from '../stores/inventoryProductsStore'
-import type { CurrencyRow, Me, Paginated, ProductRow, ShopSettingsRow } from '../types/api'
+import type { CurrencyRow, Paginated, ProductRow, ShopSettingsRow } from '../types/api'
 
 type CategoryOption = { id: number; name: string }
 type CompanyOption = { id: number; name: string }
@@ -109,9 +101,15 @@ export function InventoryPage() {
   const { t, lang, setLang } = useLocale()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [me, setMe] = useState<Me | null>(null)
-  /** Superuser-only: when set, sent as ?shop_id= (synced with localStorage). */
-  const [shopImpersonation, setShopImpersonation] = useState<string | null>(null)
+  const {
+    me,
+    authPending,
+    showLogin,
+    login,
+    shopImpersonation,
+    canAccessShopData,
+    needsShop,
+  } = useSyncedSession()
   const [error, setError] = useState<string | null>(null)
 
   const [search] = useState('')
@@ -193,60 +191,6 @@ export function InventoryPage() {
     const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 300)
     return () => window.clearTimeout(t)
   }, [search])
-
-  const loadMe = useCallback(async (u: string, p: string) => {
-    setBasicAuth(u, p)
-    persistSessionAuth(u, p)
-    const profile = await apiJson<Me>('/api/users/me/')
-    setMe(profile)
-    if (profile.is_superuser) {
-      const stored = localStorage.getItem('pos_shop_id')
-      if (stored) {
-        setShopImpersonation(stored)
-        setSuperuserShopId(stored)
-      } else {
-        setShopImpersonation(null)
-        setSuperuserShopId(null)
-      }
-    } else {
-      localStorage.removeItem('pos_shop_id')
-      setSuperuserShopId(null)
-      setShopImpersonation(null)
-    }
-  }, [])
-
-  const reloadLocalMe = useCallback(async () => {
-    if (!restoreSessionAuth()) return
-    try {
-      const profile = await apiJson<Me>('/api/users/me/')
-      setMe(profile)
-      if (profile.is_superuser) {
-        const stored = localStorage.getItem('pos_shop_id')
-        if (stored) {
-          setShopImpersonation(stored)
-          setSuperuserShopId(stored)
-        } else {
-          setShopImpersonation(null)
-          setSuperuserShopId(null)
-        }
-      } else {
-        localStorage.removeItem('pos_shop_id')
-        setSuperuserShopId(null)
-        setShopImpersonation(null)
-      }
-    } catch (e) {
-      if (isApiStatus(e, 401)) {
-        clearSessionAuth()
-        setBasicAuth(null, null)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    void reloadLocalMe()
-  }, [reloadLocalMe])
-
-  useResyncLocalMe(reloadLocalMe)
 
   const loadCurrencies = useCallback(async () => {
     const rows = await apiJson<CurrencyRow[]>('/api/currencies/')
@@ -399,10 +343,6 @@ export function InventoryPage() {
     setCategories(catList)
   }, [])
 
-  const canAccessShopData =
-    me &&
-    (!me.is_superuser || me.shop !== null || Boolean(shopImpersonation))
-
   useEffect(() => {
     if (!me || !canAccessShopData) return
     void loadCurrencies().catch((e) =>
@@ -428,11 +368,8 @@ export function InventoryPage() {
     e.preventDefault()
     setError(null)
     try {
-      await loadMe(email, password)
+      await login(email, password)
     } catch (err) {
-      setMe(null)
-      setBasicAuth(null, null)
-      clearSessionAuth()
       setError(err instanceof Error ? err.message : t('common.loginFailed'))
     }
   }
@@ -970,8 +907,6 @@ export function InventoryPage() {
     }
   }
 
-  const needsShop =
-    me?.is_superuser && me.shop === null && !shopImpersonation
   const canAddProduct = hasPerm(me, 'inventory.add_product')
   const canEditProduct = hasPerm(me, 'inventory.change_product')
   const canEditStockHistory =
@@ -1002,9 +937,17 @@ export function InventoryPage() {
 
   const productCount = filteredProducts.length
 
-  if (!me) {
+  if (authPending) {
     return (
-      <div className="min-h-dvh bg-slate-50">
+      <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
+        <PageAuthLoading />
+      </div>
+    )
+  }
+
+  if (showLogin) {
+    return (
+      <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
         <header className="border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
           <div className="mx-auto flex max-w-lg items-center justify-between gap-4">
             <Link
@@ -1090,7 +1033,7 @@ export function InventoryPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-50">
+    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
       {needsShop && (
         <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6">
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-start text-sm text-amber-900">
@@ -1110,9 +1053,9 @@ export function InventoryPage() {
         )}
 
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-slate-700">
+          <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
             <LayoutGrid className="h-5 w-5 text-violet-600" aria-hidden />
-            <h1 className="text-lg font-semibold tracking-tight text-slate-900">
+            <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
               {t('inv.sectionProducts')}
             </h1>
           </div>
@@ -1121,14 +1064,14 @@ export function InventoryPage() {
               type="button"
               onClick={() => void downloadProductsPdf()}
               disabled={exportingProducts}
-              className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
+              className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 disabled:opacity-60"
             >
               {exportingProducts ? t('inv.exportingPdf') : t('inv.exportPdf')}
             </button>
             <button
               type="button"
               onClick={() => void openDiscontinuedListModal()}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
               <Ban className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
               {t('inv.stoppedRestockingList')}
@@ -1136,14 +1079,14 @@ export function InventoryPage() {
             <button
               type="button"
               onClick={() => void openAddHistoryModal()}
-              className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+              className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
               {t('inv.addHistory')}
             </button>
             {canViewCategories ? (
               <Link
                 to="/manage/categories"
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 <Layers className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
                 {t('inv.productCategoriesLink')}
@@ -1152,9 +1095,9 @@ export function InventoryPage() {
           </div>
         </div>
 
-        <div className="mb-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-4">
+        <div className="mb-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/40 sm:grid-cols-4">
           <div className="relative">
-            <label className="mb-1 block text-start text-xs font-medium text-slate-600">
+            <label className="mb-1 block text-start text-xs font-medium text-slate-600 dark:text-slate-400">
               {t('sales.filterProductName')}
             </label>
             <input
@@ -1167,10 +1110,10 @@ export function InventoryPage() {
               onFocus={() => setProductNameFilterOpen(true)}
               onBlur={() => window.setTimeout(() => setProductNameFilterOpen(false), 120)}
               placeholder={t('sales.filterProductNamePlaceholder')}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
             {productNameFilterOpen && productNameSuggestions.length > 0 ? (
-              <ul className="absolute inset-x-0 top-full z-20 mt-1 max-h-40 overflow-auto rounded-lg border border-slate-200 bg-white shadow">
+              <ul className="absolute inset-x-0 top-full z-20 mt-1 max-h-40 overflow-auto rounded-lg border border-slate-200 bg-white shadow dark:border-slate-600 dark:bg-slate-800">
                 {productNameSuggestions.map((name) => (
                   <li key={name}>
                     <button
@@ -1189,13 +1132,13 @@ export function InventoryPage() {
             ) : null}
           </div>
           <div>
-            <label className="mb-1 block text-start text-xs font-medium text-slate-600">
+            <label className="mb-1 block text-start text-xs font-medium text-slate-600 dark:text-slate-400">
               {t('nav.categories')}
             </label>
             <select
               value={categoryFilterId}
               onChange={(e) => setCategoryFilterId(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             >
               <option value="">{t('common.all')}</option>
               {categories.map((c) => (
@@ -1206,7 +1149,7 @@ export function InventoryPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-start text-xs font-medium text-slate-600">
+            <label className="mb-1 block text-start text-xs font-medium text-slate-600 dark:text-slate-400">
               {t('inv.lowStock')}
             </label>
             <input
@@ -1215,7 +1158,7 @@ export function InventoryPage() {
               value={lowStockMaxInput}
               onChange={(e) => setLowStockMaxInput(e.target.value)}
               placeholder={String(lowStockThreshold)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
           </div>
           {canAddProduct ? (
@@ -1279,7 +1222,7 @@ export function InventoryPage() {
           aria-modal="true"
           aria-labelledby="rate-dialog-title"
         >
-          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-xl">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-600 dark:bg-slate-900">
             <h2
               id="rate-dialog-title"
               className="text-start text-base font-semibold text-slate-900"
@@ -1873,7 +1816,7 @@ export function InventoryPage() {
                       setHistoryStockEditForm((f) => ({ ...f, note: e.target.value }))
                     }
                     rows={3}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                   />
                 </label>
               </div>

@@ -17,6 +17,8 @@ const STORAGE_KEY = 'mm-theme-settings'
 const DEFAULT_PRIMARY = '#7c3aed'
 const DEFAULT_MODE: ThemeMode = 'light'
 const DEFAULT_BACKGROUND = '#f1f5f9'
+/** Main shell background in dark mode (matches POS / slate-900). */
+const DEFAULT_DARK_BACKGROUND = '#0f172a'
 
 const Ctx = createContext<ThemeCtx | null>(null)
 
@@ -29,7 +31,10 @@ function applyRootTheme(primaryColor: string, backgroundColor: string, mode: The
   root.style.setProperty('--color-violet-500', primaryColor)
   root.style.setProperty('--color-violet-600', primaryColor)
   root.style.setProperty('--color-violet-700', primaryColor)
-  root.style.setProperty('--app-bg-color', backgroundColor)
+  root.style.setProperty(
+    '--app-bg-color',
+    resolvedDark ? DEFAULT_DARK_BACKGROUND : backgroundColor,
+  )
   root.classList.toggle('dark', resolvedDark)
   root.style.colorScheme = resolvedDark ? 'dark' : 'light'
 }

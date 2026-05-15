@@ -1,20 +1,13 @@
 import { TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import { PageAuthLoading } from '../components/PageAuthLoading'
 import { useLocale } from '../context/LocaleContext'
-import { useResyncLocalMe } from '../hooks/useResyncLocalMe'
-import {
-  apiJson,
-  clearSessionAuth,
-  isApiStatus,
-  persistSessionAuth,
-  restoreSessionAuth,
-  setBasicAuth,
-  setSuperuserShopId,
-} from '../lib/api'
+import { useSyncedSession } from '../hooks/useSyncedSession'
+import { apiJson } from '../lib/api'
 import { formatDecimalTrim, formatMoneyCompact } from '../lib/formatMoney'
 import { hasPerm } from '../lib/permissions'
-import type { Me, ProfitReportResponse } from '../types/api'
+import type { ProfitReportResponse } from '../types/api'
 
 /** Parse API decimal string; handles trailing minus in RTL display. */
 function parseReportNumber(s: string): number {
@@ -35,7 +28,8 @@ function netProfitCellClass(usd: string) {
 
 export function ProfitReportPage() {
   const { t } = useLocale()
-  const [me, setMe] = useState<Me | null>(null)
+  const { me, authPending, showLogin, login, shopImpersonation, setShopImpersonation } =
+    useSyncedSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [shopOverride, setShopOverride] = useState('')
@@ -49,65 +43,16 @@ export function ProfitReportPage() {
 
   const canViewProfit = Boolean(me && hasPerm(me, 'view_profitreport'))
 
-  const loadMe = useCallback(async (u: string, p: string) => {
-    setBasicAuth(u, p)
-    persistSessionAuth(u, p)
-    const profile = await apiJson<Me>('/api/users/me/')
-    setMe(profile)
-    if (profile.is_superuser) {
-      const stored = localStorage.getItem('pos_shop_id')
-      if (stored) {
-        setShopOverride(stored)
-        setSuperuserShopId(stored)
-      } else {
-        setSuperuserShopId(null)
-      }
-    } else {
-      localStorage.removeItem('pos_shop_id')
-      setSuperuserShopId(null)
-    }
-  }, [])
-
-  const reloadLocalMe = useCallback(async () => {
-    if (!restoreSessionAuth()) return
-    try {
-      const profile = await apiJson<Me>('/api/users/me/')
-      setMe(profile)
-      if (profile.is_superuser) {
-        const stored = localStorage.getItem('pos_shop_id')
-        if (stored) {
-          setShopOverride(stored)
-          setSuperuserShopId(stored)
-        } else {
-          setSuperuserShopId(null)
-        }
-      } else {
-        localStorage.removeItem('pos_shop_id')
-        setSuperuserShopId(null)
-      }
-    } catch (e) {
-      if (isApiStatus(e, 401)) {
-        clearSessionAuth()
-        setBasicAuth(null, null)
-      }
-    }
-  }, [])
-
   useEffect(() => {
-    void reloadLocalMe()
-  }, [reloadLocalMe])
+    setShopOverride(shopImpersonation ?? '')
+  }, [shopImpersonation])
 
-  useResyncLocalMe(reloadLocalMe)
-
-  async function login(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     try {
-      await loadMe(email, password)
+      await login(email, password)
     } catch (err) {
-      setMe(null)
-      setBasicAuth(null, null)
-      clearSessionAuth()
       setError(err instanceof Error ? err.message : t('common.loginFailed'))
     }
   }
@@ -131,13 +76,17 @@ export function ProfitReportPage() {
     if (canViewProfit) void fetchReport()
   }, [canViewProfit, fetchReport])
 
-  if (!me) {
+  if (authPending) {
+    return <PageAuthLoading />
+  }
+
+  if (showLogin) {
     return (
       <div className="mx-auto max-w-md px-4 py-16">
         <h1 className="text-start text-xl font-semibold">
           {t('nav.profit')} — {t('dash.signIn')}
         </h1>
-        <form onSubmit={login} className="mt-6 space-y-3">
+        <form onSubmit={handleLogin} className="mt-6 space-y-3">
           <input
             type="email"
             autoComplete="username"
@@ -176,9 +125,9 @@ export function ProfitReportPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-50">
+    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <h1 className="mb-6 flex items-center gap-2 text-lg font-semibold text-slate-900">
+        <h1 className="mb-6 flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
           <TrendingUp className="h-6 w-6 text-emerald-600" aria-hidden />
           {t('nav.profit')}
         </h1>
@@ -196,14 +145,7 @@ export function ProfitReportPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const v = shopOverride.trim()
-                  if (!v) {
-                    localStorage.removeItem('pos_shop_id')
-                    setSuperuserShopId(null)
-                  } else {
-                    localStorage.setItem('pos_shop_id', v)
-                    setSuperuserShopId(v)
-                  }
+                  setShopImpersonation(shopOverride.trim() || null)
                   void fetchReport()
                 }}
                 className="font-medium text-violet-700"

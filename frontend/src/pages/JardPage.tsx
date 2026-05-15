@@ -203,7 +203,7 @@ export function JardPage() {
   }
 
   return (
-    <div id="jard-print-root" className="p-4 sm:p-6">
+    <div id="jard-print-root" className="min-h-dvh p-4 sm:p-6">
       {/*
         Summary order (LTR; RTL mirrors visually): 1) grand total units 2) remaining units
         3) remaining value USD 4) sold units 5) sold value USD

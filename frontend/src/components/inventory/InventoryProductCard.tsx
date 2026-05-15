@@ -28,12 +28,12 @@ export const InventoryProductCard = memo(function InventoryProductCard({
   const discontinued = Boolean(p.is_discontinued)
   return (
     <article
-      className={`flex h-full min-h-[150px] gap-3 rounded-2xl border bg-white p-3 shadow-sm ${
+      className={`flex h-full min-h-[150px] gap-3 rounded-2xl border bg-white p-3 shadow-sm dark:bg-slate-800/60 ${
         discontinued
-          ? 'border-slate-400 bg-slate-50/80 opacity-90'
+          ? 'border-slate-400 bg-slate-50/80 opacity-90 dark:border-slate-600 dark:bg-slate-800/50'
           : lowStock
-            ? 'border-red-300 bg-red-50/40'
-            : 'border-slate-200'
+            ? 'border-red-300 bg-red-50/40 dark:border-red-800 dark:bg-red-950/25'
+            : 'border-slate-200 dark:border-slate-700'
       }`}
     >
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100">
@@ -53,7 +53,7 @@ export const InventoryProductCard = memo(function InventoryProductCard({
       </div>
       <div className="flex min-w-0 flex-1 flex-col text-start">
         <div className="flex items-start justify-between gap-2">
-          <h2 className="truncate text-sm font-semibold text-slate-900">{p.name}</h2>
+          <h2 className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{p.name}</h2>
           {lowStock ? (
             <span className="shrink-0 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700">
               {t('inv.lowStock')}
@@ -95,7 +95,7 @@ export const InventoryProductCard = memo(function InventoryProductCard({
               <button
                 type="button"
                 onClick={() => onEdit(p)}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 {t('crud.edit')}
               </button>

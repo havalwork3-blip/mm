@@ -1,24 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
+import { PageAuthLoading } from '../components/PageAuthLoading'
 import { SaleListRow } from '../components/sales/SaleListRow'
 import { useLocale } from '../context/LocaleContext'
-import { useResyncLocalMe } from '../hooks/useResyncLocalMe'
-import {
-  apiJson,
-  clearSessionAuth,
-  isApiStatus,
-  persistSessionAuth,
-  restoreSessionAuth,
-  setBasicAuth,
-  setSuperuserShopId,
-} from '../lib/api'
+import { useSyncedSession } from '../hooks/useSyncedSession'
+import { apiJson, setSuperuserShopId } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
 import { withReceiptPrefs } from '../lib/receiptPrefs'
 import { useSalesListStore } from '../stores/salesListStore'
 import type {
   CustomerRow,
-  Me,
   Paginated,
   ProductRow,
   ReceiptSettingsRow,
@@ -28,10 +20,18 @@ import type {
 export function SalesListPage() {
   const { t } = useLocale()
   type PaymentStatusFilter = 'all' | 'debt' | 'paid'
-  const [me, setMe] = useState<Me | null>(null)
+  const {
+    me,
+    authPending,
+    showLogin,
+    login,
+    shopImpersonation,
+    setShopImpersonation,
+    canAccessShopData,
+    needsShop,
+  } = useSyncedSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [shopImpersonation, setShopImpersonation] = useState<string | null>(null)
   const [shopOverride, setShopOverride] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -66,64 +66,6 @@ export function SalesListPage() {
   useEffect(() => {
     setShopOverride(shopImpersonation ?? '')
   }, [shopImpersonation])
-
-  const loadMe = useCallback(async (u: string, p: string) => {
-    setBasicAuth(u, p)
-    persistSessionAuth(u, p)
-    const profile = await apiJson<Me>('/api/users/me/')
-    setMe(profile)
-    if (profile.is_superuser) {
-      const stored = localStorage.getItem('pos_shop_id')
-      if (stored) {
-        setShopImpersonation(stored)
-        setSuperuserShopId(stored)
-      } else {
-        setShopImpersonation(null)
-        setSuperuserShopId(null)
-      }
-    } else {
-      localStorage.removeItem('pos_shop_id')
-      setSuperuserShopId(null)
-      setShopImpersonation(null)
-    }
-  }, [])
-
-  const reloadLocalMe = useCallback(async () => {
-    if (!restoreSessionAuth()) return
-    try {
-      const profile = await apiJson<Me>('/api/users/me/')
-      setMe(profile)
-      if (profile.is_superuser) {
-        const stored = localStorage.getItem('pos_shop_id')
-        if (stored) {
-          setShopImpersonation(stored)
-          setSuperuserShopId(stored)
-        } else {
-          setShopImpersonation(null)
-          setSuperuserShopId(null)
-        }
-      } else {
-        localStorage.removeItem('pos_shop_id')
-        setSuperuserShopId(null)
-        setShopImpersonation(null)
-      }
-    } catch (e) {
-      if (isApiStatus(e, 401)) {
-        clearSessionAuth()
-        setBasicAuth(null, null)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    void reloadLocalMe()
-  }, [reloadLocalMe])
-
-  useResyncLocalMe(reloadLocalMe)
-
-  const canAccessShopData =
-    me &&
-    (!me.is_superuser || me.shop !== null || Boolean(shopImpersonation))
 
   useEffect(() => {
     const id = window.setTimeout(
@@ -302,18 +244,17 @@ export function SalesListPage() {
     e.preventDefault()
     setError(null)
     try {
-      await loadMe(email, password)
+      await login(email, password)
     } catch (err) {
-      setMe(null)
-      setBasicAuth(null, null)
-      clearSessionAuth()
       setError(err instanceof Error ? err.message : t('common.loginFailed'))
     }
   }
 
-  const needsShop = me?.is_superuser && me.shop === null && !shopImpersonation
+  if (authPending) {
+    return <PageAuthLoading />
+  }
 
-  if (!me) {
+  if (showLogin) {
     return (
       <div className="mx-auto max-w-md px-4 py-16">
         <h1 className="text-start text-xl font-semibold text-slate-900">
@@ -354,7 +295,7 @@ export function SalesListPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-50">
+    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
       {needsShop && (
         <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6">
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-start text-sm text-amber-900">
@@ -371,15 +312,7 @@ export function SalesListPage() {
                 type="button"
                 onClick={() => {
                   const v = shopOverride.trim()
-                  if (!v) {
-                    localStorage.removeItem('pos_shop_id')
-                    setSuperuserShopId(null)
-                    setShopImpersonation(null)
-                  } else {
-                    localStorage.setItem('pos_shop_id', v)
-                    setSuperuserShopId(v)
-                    setShopImpersonation(v)
-                  }
+                  setShopImpersonation(v || null)
                 }}
                 className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
               >
@@ -399,7 +332,7 @@ export function SalesListPage() {
 
         {!needsShop && (
           <form
-            className="mb-6 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+            className="mb-6 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/40"
             onSubmit={(e) => {
               e.preventDefault()
               applySalesFilters()
@@ -500,7 +433,7 @@ export function SalesListPage() {
                   type="date"
                   value={dateFromInput}
                   onChange={(e) => setDateFromInput(e.target.value)}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                 />
               </label>
               <label className="flex w-full min-w-[140px] flex-col gap-1 text-start text-xs font-medium text-slate-600 sm:w-auto">
@@ -509,7 +442,7 @@ export function SalesListPage() {
                   type="date"
                   value={dateToInput}
                   onChange={(e) => setDateToInput(e.target.value)}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                 />
               </label>
               <label className="flex w-full min-w-[160px] flex-col gap-1 text-start text-xs font-medium text-slate-600 sm:w-auto">
@@ -521,7 +454,7 @@ export function SalesListPage() {
                     setPaymentStatusInput(next)
                     setAppliedPaymentStatus(next)
                   }}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                 >
                   <option value="all">{t('sales.paymentStatus.all')}</option>
                   <option value="debt">{t('sales.paymentStatus.debt')}</option>
@@ -538,7 +471,7 @@ export function SalesListPage() {
                 <button
                   type="button"
                   onClick={clearSalesFilters}
-                  className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
                   {t('sales.clearFilters')}
                 </button>

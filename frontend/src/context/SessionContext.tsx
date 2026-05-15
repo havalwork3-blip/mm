@@ -71,6 +71,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const onFocus = () => {
+      // Session is already loaded after sign-in; skip redundant /me on every tab focus.
+      if (me) return
       void refresh()
     }
     const onSessionRefresh = () => {
@@ -82,7 +84,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('focus', onFocus)
       window.removeEventListener('mm-session-refresh', onSessionRefresh)
     }
-  }, [refresh])
+  }, [refresh, me])
 
   const login = useCallback(
     async (email: string, password: string) => {
