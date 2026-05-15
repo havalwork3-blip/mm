@@ -105,6 +105,11 @@ export function QrCodeSocialLandingPage() {
 
   const accent = data?.accent_color?.trim() || '#c9a962'
   const logoSrc = resolveMediaUrl(data?.logo_url ?? null)
+  const [heroLogoFailed, setHeroLogoFailed] = useState(false)
+
+  useEffect(() => {
+    setHeroLogoFailed(false)
+  }, [logoSrc])
 
   const presets = data?.preset_links ?? []
   const customs = data?.custom_links ?? []
@@ -180,8 +185,13 @@ export function QrCodeSocialLandingPage() {
                     `,
                   }}
                 >
-                  {logoSrc ? (
-                    <img src={logoSrc} alt="" className="h-[76%] w-[76%] rounded-full object-cover" />
+                  {logoSrc && !heroLogoFailed ? (
+                    <img
+                      src={logoSrc}
+                      alt=""
+                      className="h-[76%] w-[76%] rounded-full object-cover"
+                      onError={() => setHeroLogoFailed(true)}
+                    />
                   ) : (
                     <Sparkles
                       className="h-11 w-11 text-[color-mix(in_srgb,var(--page-accent)_88%,white)]"

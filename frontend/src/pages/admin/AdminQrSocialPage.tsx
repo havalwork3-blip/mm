@@ -1,7 +1,8 @@
 import { Copy, Download, Plus, QrCode, Share2, Trash2 } from 'lucide-react'
 import QRCode from 'qrcode'
 import type { FormEvent } from 'react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { useLocale } from '../../context/LocaleContext'
 import { apiFetch, apiJson, resolveMediaUrl } from '../../lib/api'
 import type {
@@ -48,6 +49,25 @@ function pngDataUrlToJpegDataUrl(pngDataUrl: string, bgHex: string, quality = 0.
   })
 }
 
+function SafeLogoPreview({
+  src,
+  className,
+  emptyClassName = 'text-xs text-slate-400',
+}: {
+  src: string | null
+  className?: string
+  emptyClassName?: string
+}) {
+  const [failed, setFailed] = useState(false)
+  useEffect(() => {
+    setFailed(false)
+  }, [src])
+  if (!src || failed) {
+    return <span className={emptyClassName}>—</span>
+  }
+  return <img src={src} alt="" className={className} onError={() => setFailed(true)} />
+}
+
 const PRESET_META: { id: string; labelKey: string }[] = [
   { id: 'instagram', labelKey: 'qrAdmin.platform.instagram' },
   { id: 'facebook', labelKey: 'qrAdmin.platform.facebook' },
@@ -68,6 +88,9 @@ export function AdminQrSocialPage() {
   const [error, setError] = useState<string | null>(null)
   const [copyDone, setCopyDone] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [primaryLogoUploading, setPrimaryLogoUploading] = useState(false)
+  const [primaryLogoPreviewUrl, setPrimaryLogoPreviewUrl] = useState<string | null>(null)
+  const primaryLogoPreviewRef = useRef<string | null>(null)
 
   const [newCustom, setNewCustom] = useState({
     label: '',
@@ -82,8 +105,8 @@ export function AdminQrSocialPage() {
     return new URL('/qr-code', window.location.origin).href
   }, [])
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true)
     setError(null)
     try {
       const data = await apiJson<QrLandingAdminResponse>('/api/admin/qr-landing/', {
@@ -91,10 +114,10 @@ export function AdminQrSocialPage() {
       })
       setCfg(data)
     } catch (e) {
-      setCfg(null)
+      if (!opts?.silent) setCfg(null)
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
-      setLoading(false)
+      if (!opts?.silent) setLoading(false)
     }
   }, [t])
 
@@ -103,17 +126,53 @@ export function AdminQrSocialPage() {
   }, [load])
 
   useEffect(() => {
+    return () => {
+      if (primaryLogoPreviewRef.current) {
+        URL.revokeObjectURL(primaryLogoPreviewRef.current)
+        primaryLogoPreviewRef.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     if (!landingUrl) {
       setQrDataUrl(null)
       return
     }
+    let cancelled = false
     void QRCode.toDataURL(landingUrl, {
       width: 220,
       margin: 2,
       errorCorrectionLevel: 'M',
       color: { dark: '#1a1410', light: QR_SIDEBAR_LIGHT },
-    }).then(setQrDataUrl, () => setQrDataUrl(null))
+    })
+      .then((dataUrl) => {
+        if (!cancelled) setQrDataUrl(dataUrl)
+      })
+      .catch(() => {
+        if (!cancelled) setQrDataUrl(null)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [landingUrl])
+
+  function setPrimaryLogoLocalPreview(file: File) {
+    if (primaryLogoPreviewRef.current) {
+      URL.revokeObjectURL(primaryLogoPreviewRef.current)
+    }
+    const url = URL.createObjectURL(file)
+    primaryLogoPreviewRef.current = url
+    setPrimaryLogoPreviewUrl(url)
+  }
+
+  function clearPrimaryLogoLocalPreview() {
+    if (primaryLogoPreviewRef.current) {
+      URL.revokeObjectURL(primaryLogoPreviewRef.current)
+      primaryLogoPreviewRef.current = null
+    }
+    setPrimaryLogoPreviewUrl(null)
+  }
 
   async function saveMain(e: FormEvent) {
     e.preventDefault()
@@ -132,7 +191,7 @@ export function AdminQrSocialPage() {
         }),
         omitShopScope: true,
       })
-      await load()
+      await load({ silent: true })
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
@@ -151,24 +210,66 @@ export function AdminQrSocialPage() {
   }
 
   async function uploadPrimaryLogo(file: File) {
+    if (!file.type.startsWith('image/')) {
+      setError(t('qrAdmin.logoInvalidType'))
+      return
+    }
     setError(null)
+    setPrimaryLogoUploading(true)
+    setPrimaryLogoLocalPreview(file)
     const fd = new FormData()
     fd.append('logo', file)
     try {
-      await apiFetch('/api/admin/qr-landing/logo/', { method: 'POST', body: fd })
-      await load()
+      const res = await apiFetch('/api/admin/qr-landing/logo/', {
+        method: 'POST',
+        body: fd,
+        omitShopScope: true,
+      })
+      if (!res.ok) {
+        let detail = res.statusText
+        try {
+          const j = (await res.json()) as { detail?: string }
+          if (j.detail) detail = j.detail
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail)
+      }
+      const body = (await res.json()) as { primary_logo_url: string | null }
+      clearPrimaryLogoLocalPreview()
+      setCfg((c) => (c ? { ...c, primary_logo_url: body.primary_logo_url } : c))
     } catch (e) {
+      clearPrimaryLogoLocalPreview()
       setError(e instanceof Error ? e.message : t('common.error'))
+    } finally {
+      setPrimaryLogoUploading(false)
     }
   }
 
   async function removePrimaryLogo() {
     setError(null)
+    setPrimaryLogoUploading(true)
     try {
-      await apiFetch('/api/admin/qr-landing/logo/', { method: 'DELETE' })
-      await load()
+      const res = await apiFetch('/api/admin/qr-landing/logo/', {
+        method: 'DELETE',
+        omitShopScope: true,
+      })
+      if (!res.ok) {
+        let detail = res.statusText
+        try {
+          const j = (await res.json()) as { detail?: string }
+          if (j.detail) detail = j.detail
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail)
+      }
+      clearPrimaryLogoLocalPreview()
+      setCfg((c) => (c ? { ...c, primary_logo_url: null } : c))
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
+    } finally {
+      setPrimaryLogoUploading(false)
     }
   }
 
@@ -192,7 +293,7 @@ export function AdminQrSocialPage() {
         sort_order: 0,
         logoFile: null,
       })
-      await load()
+      await load({ silent: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error'))
     }
@@ -206,7 +307,7 @@ export function AdminQrSocialPage() {
         method: 'DELETE',
         omitShopScope: true,
       })
-      await load()
+      await load({ silent: true })
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     }
@@ -250,7 +351,7 @@ export function AdminQrSocialPage() {
           omitShopScope: true,
         })
       }
-      await load()
+      await load({ silent: true })
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     }
@@ -284,7 +385,10 @@ export function AdminQrSocialPage() {
     }
   }
 
-  const primaryLogoResolved = resolveMediaUrl(cfg?.primary_logo_url ?? null)
+  const primaryLogoResolved = useMemo(() => {
+    if (primaryLogoPreviewUrl) return primaryLogoPreviewUrl
+    return resolveMediaUrl(cfg?.primary_logo_url ?? null)
+  }, [primaryLogoPreviewUrl, cfg?.primary_logo_url])
 
   return (
     <div className="space-y-8 text-start">
@@ -371,31 +475,34 @@ export function AdminQrSocialPage() {
                 <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t('qrAdmin.primaryLogo')}</h2>
                 <div className="mt-3 flex flex-wrap items-start gap-4">
                   <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-900">
-                    {primaryLogoResolved ? (
-                      <img src={primaryLogoResolved} alt="" className="max-h-full max-w-full object-contain" />
-                    ) : (
-                      <span className="text-xs text-slate-400">—</span>
-                    )}
+                    <SafeLogoPreview
+                      src={primaryLogoResolved}
+                      className="max-h-full max-w-full object-contain"
+                    />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:hover:bg-slate-800">
+                    <label
+                      className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:hover:bg-slate-800 ${primaryLogoUploading ? 'pointer-events-none opacity-60' : ''}`}
+                    >
                       <input
                         type="file"
                         accept="image/*"
                         className="hidden"
+                        disabled={primaryLogoUploading}
                         onChange={(e) => {
                           const f = e.target.files?.[0]
                           e.target.value = ''
                           if (f) void uploadPrimaryLogo(f)
                         }}
                       />
-                      {t('qrAdmin.uploadLogo')}
+                      {primaryLogoUploading ? t('common.loading') : t('qrAdmin.uploadLogo')}
                     </label>
                     {primaryLogoResolved ? (
                       <button
                         type="button"
+                        disabled={primaryLogoUploading}
                         onClick={() => void removePrimaryLogo()}
-                        className="text-start text-sm text-rose-600 hover:underline dark:text-rose-400"
+                        className="text-start text-sm text-rose-600 hover:underline disabled:opacity-50 dark:text-rose-400"
                       >
                         {t('qrAdmin.removeLogo')}
                       </button>
@@ -544,10 +651,18 @@ export function AdminQrSocialPage() {
               <Copy className="h-4 w-4" aria-hidden />
               {copyDone ? t('qrAdmin.copied') : t('qrAdmin.copyUrl')}
             </button>
-            {qrDataUrl && (
-              <div className="mt-4 flex flex-col items-center">
-                <img src={qrDataUrl} alt="" width={220} height={220} className="rounded-xl border border-white shadow-md" />
-                <div className="mt-3 flex w-full flex-wrap gap-2">
+            <div className="mt-4">
+            <ErrorBoundary
+                fallback={
+                  <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+                    {t('qrAdmin.qrPreviewFailed')}
+                  </p>
+                }
+              >
+                {qrDataUrl ? (
+                  <div className="flex flex-col items-center">
+                    <img src={qrDataUrl} alt="" width={220} height={220} className="rounded-xl border border-white shadow-md" />
+                    <div className="mt-3 flex w-full flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={downloadQrPng}
@@ -564,9 +679,13 @@ export function AdminQrSocialPage() {
                     <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     {t('qrAdmin.downloadJpg')}
                   </button>
-                </div>
-              </div>
-            )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-center text-xs text-slate-500 dark:text-slate-400">{t('common.loading')}</p>
+                )}
+            </ErrorBoundary>
+            </div>
           </div>
         </aside>
       </div>
