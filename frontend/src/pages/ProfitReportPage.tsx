@@ -120,7 +120,7 @@ export function ProfitReportPage() {
     )
   }
 
-  if (!canViewProfit) {
+  if (!me || !canViewProfit) {
     return <Navigate to="/" replace />
   }
 

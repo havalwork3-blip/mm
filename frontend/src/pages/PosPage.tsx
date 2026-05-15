@@ -92,7 +92,6 @@ export function PosPage() {
     authPending,
     showLogin,
     login,
-    shopImpersonation,
     canAccessShopData,
     needsShop,
   } = useSyncedSession()

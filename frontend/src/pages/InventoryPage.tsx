@@ -106,7 +106,6 @@ export function InventoryPage() {
     authPending,
     showLogin,
     login,
-    shopImpersonation,
     canAccessShopData,
     needsShop,
   } = useSyncedSession()

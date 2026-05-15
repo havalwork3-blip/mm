@@ -800,7 +800,7 @@ export function CustomerDebtsPage() {
     )
   }
 
-  if (!canView) {
+  if (!me || !canView) {
     return <Navigate to="/" replace />
   }
 
