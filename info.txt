@@ -158,7 +158,7 @@ UserRole: owner, manager, receipt_editor, employee
   DJANGO_DEV_FRONTEND_ORIGINS   بۆ CORS/CSRF لە LAN (وەک http://IP:5173)
 
 فرۆنتێند (Vite):
-  VITE_API_URL                  بنەچەی تەواوی API (بۆ deploy)
+  VITE_API_URL                  بنەچەی ماڵپەڕ (بێ /api)، وەک https://mmiraq.com
   VITE_DEV_LAN=1                host:true بۆ تێستکردن لە مۆبایل لەسەر تۆڕ
 
 --------------------------------------------------------------------------------

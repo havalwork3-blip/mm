@@ -6,14 +6,21 @@ import {
 } from './offlineQueue'
 
 /**
- * API origin for JSON and media. Order: `VITE_API_URL` → same host as the page on
- * port 8000 when the SPA is not opened via localhost (phone/LAN and `vite preview`).
- * In production builds on a real hostname, same-origin is used (reverse proxy on /api/).
- * Set `VITE_API_URL` to override (e.g. a separate API subdomain).
+ * Site origin for API calls (no `/api` suffix). Every `apiJson` path already starts with `/api/…`.
+ * Order: `VITE_API_URL` → same host as the page on port 8000 (dev LAN) → same-origin (prod).
  */
+function normalizeApiBase(raw: string): string {
+  let base = raw.trim().replace(/\/+$/, '')
+  // `VITE_API_URL=https://example.com/api` + path `/api/users/me/` → double `/api/api/…`
+  if (/\/api$/i.test(base)) {
+    base = base.slice(0, -4)
+  }
+  return base
+}
+
 export function getApiBase(): string {
-  const env = import.meta.env.VITE_API_URL?.trim().replace(/\/$/, '')
-  if (env) return env
+  const env = import.meta.env.VITE_API_URL?.trim()
+  if (env) return normalizeApiBase(env)
   if (typeof window !== 'undefined') {
     const { protocol, hostname } = window.location
     if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
