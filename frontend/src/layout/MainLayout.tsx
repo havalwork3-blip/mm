@@ -9,11 +9,13 @@ import {
   Package,
   PanelLeftClose,
   PanelLeftOpen,
+  Moon,
   QrCode,
   Settings,
   ShieldCheck,
   ShoppingCart,
   Store,
+  Sun,
   TrendingUp,
   Users,
   Wallet,
@@ -24,6 +26,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { LangSwitcher } from '../components/LangSwitcher'
 import { useLocale } from '../context/LocaleContext'
 import { useSession } from '../context/SessionContext'
+import { useTheme } from '../context/ThemeContext'
 import { apiJson, getGlobalView, setGlobalView, setSuperuserShopId } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
 import type { Me, ShopRow } from '../types/api'
@@ -270,6 +273,7 @@ function navLinkClass(collapsed: boolean, isActive: boolean) {
 export function MainLayout() {
   const { t, lang, setLang } = useLocale()
   const { me, loading, logout } = useSession()
+  const { resolvedMode, toggleTheme } = useTheme()
   const loc = useLocation()
   const navigate = useNavigate()
 
@@ -406,6 +410,15 @@ export function MainLayout() {
             </div>
             <div className="flex shrink-0 items-center">
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:text-violet-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-violet-500 dark:hover:text-violet-300"
+                  aria-label={resolvedMode === 'dark' ? t('settings.lightMode') : t('settings.darkMode')}
+                  title={resolvedMode === 'dark' ? t('settings.lightMode') : t('settings.darkMode')}
+                >
+                  {resolvedMode === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </button>
                 <LangSwitcher lang={lang} setLang={setLang} t={t} compact />
               </div>
             </div>
@@ -654,6 +667,15 @@ export function MainLayout() {
                     ) : (
                       <PanelLeftClose className="h-4 w-4 rtl:rotate-180" aria-hidden />
                     )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-600 bg-slate-800 text-slate-200 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-500 hover:text-violet-300"
+                    aria-label={resolvedMode === 'dark' ? t('settings.lightMode') : t('settings.darkMode')}
+                    title={resolvedMode === 'dark' ? t('settings.lightMode') : t('settings.darkMode')}
+                  >
+                    {resolvedMode === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                   </button>
                   <LangSwitcher
                     lang={lang}
