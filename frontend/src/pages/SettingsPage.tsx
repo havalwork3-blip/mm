@@ -323,7 +323,6 @@ export function SettingsPage() {
               />
             </label>
           </div>
-          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">{t('settings.themeModeSidebarHint')}</p>
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 lg:col-span-6">
           <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{t('settings.baseCurrency')}</h2>
