@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="preload" href="./logo.png" as="image" />
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
@@ -265,42 +266,32 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0.65rem;
-      border-radius: 22px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(251, 191, 36, 0.18);
-      box-shadow:
-        0 12px 40px rgba(0, 0, 0, 0.35),
-        0 0 48px -12px var(--gold-glow);
-      overflow: hidden;
+      line-height: 0;
     }
 
     .logo-img-wrap::after {
       content: "";
       position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        105deg,
-        transparent 40%,
-        rgba(255, 255, 255, 0.12) 50%,
-        transparent 60%
-      );
-      animation: logo-shine 4s ease-in-out infinite;
+      inset: -12%;
+      background: radial-gradient(circle, rgba(251, 191, 36, 0.2) 0%, transparent 65%);
+      animation: logo-pulse 3.5s ease-in-out infinite;
       pointer-events: none;
+      z-index: 0;
     }
 
-    @keyframes logo-shine {
-      0%, 100% { transform: translateX(-120%); }
-      50% { transform: translateX(120%); }
+    @keyframes logo-pulse {
+      0%, 100% { opacity: 0.45; transform: scale(0.95); }
+      50% { opacity: 1; transform: scale(1.05); }
     }
 
     .logo-img {
+      position: relative;
+      z-index: 1;
       display: block;
-      width: clamp(7.5rem, 28vw, 10.5rem);
+      width: clamp(8.5rem, 32vw, 11.5rem);
       height: auto;
       object-fit: contain;
-      border-radius: 12px;
-      filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.25));
+      filter: drop-shadow(0 8px 28px rgba(251, 191, 36, 0.22));
     }
 
     /* Typography */
@@ -470,7 +461,7 @@
     /* Small phones */
     @media (max-width: 380px) {
       .logo-img {
-        width: 6.5rem;
+        width: 7.25rem;
       }
     }
   </style>
@@ -501,7 +492,7 @@
       <div class="card">
         <header class="logo">
           <div class="logo-img-wrap">
-            <img class="logo-img" src="IMG_8433.png" alt="MM IRAQ" width="168" height="168" decoding="async" />
+            <img class="logo-img" src="./logo.png" alt="MM IRAQ" width="184" height="184" decoding="async" fetchpriority="high" />
           </div>
         </header>
 
