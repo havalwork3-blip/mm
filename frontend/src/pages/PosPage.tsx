@@ -154,10 +154,7 @@ export function PosPage() {
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false)
   const [receiptSettings, setReceiptSettings] = useState<ReceiptSettingsRow | null>(null)
   const [shopSettings, setShopSettings] = useState<ShopSettingsRow | null>(null)
-  const [lastReceipt, setLastReceipt] = useState<Record<
-    string,
-    unknown
-  > | null>(null)
+  const [lastReceipt, setLastReceipt] = useState<SaleListRow | null>(null)
   const [receiptSummary, setReceiptSummary] = useState<{
     subtotalUsd: number
     discountUsd: number
@@ -1042,7 +1039,7 @@ export function PosPage() {
         const sid = localStorage.getItem('pos_shop_id')?.trim()
         if (sid) body.shop = Number(sid)
       }
-      const sale = await apiJson<Record<string, unknown>>(
+      const sale = await apiJson<SaleListRow>(
         isEdit ? `/api/sales/${editingSaleId}/` : '/api/sales/',
         {
           method: isEdit ? 'PUT' : 'POST',

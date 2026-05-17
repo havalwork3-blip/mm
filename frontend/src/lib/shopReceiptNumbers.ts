@@ -5,9 +5,14 @@ export function digitsOnlyAscii(s: string, maxLen = 128): string {
 }
 
 /** Sale receipt # for display and print (per shop). */
-export function formatSaleReceiptNumber(receiptNumber: number | null | undefined): string {
-  if (receiptNumber == null || !Number.isFinite(receiptNumber)) return ''
-  return String(receiptNumber)
+export function formatSaleReceiptNumber(receiptNumber: unknown): string {
+  if (receiptNumber == null || receiptNumber === '') return ''
+  const n =
+    typeof receiptNumber === 'number'
+      ? receiptNumber
+      : Number(String(receiptNumber).trim())
+  if (!Number.isFinite(n)) return ''
+  return String(n)
 }
 
 /** Purchase invoice / receipt # from invoice_number only (per shop). */
