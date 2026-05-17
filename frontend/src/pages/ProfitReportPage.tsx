@@ -219,6 +219,14 @@ export function ProfitReportPage() {
                     {formatMoneyCompact(report.totals.total_customer_discounts_usd)}
                   </dd>
                 </div>
+                {parseReportNumber(report.totals.total_inventory_loss_usd ?? '0') > 0 ? (
+                  <div className="flex justify-between gap-4 rounded-lg bg-rose-50 px-3 py-2 dark:bg-rose-950/30">
+                    <dt>{t('profit.inventoryLoss')}</dt>
+                    <dd className="font-mono tabular-nums text-rose-800 dark:text-rose-300">
+                      {formatMoneyCompact(report.totals.total_inventory_loss_usd ?? '0')}
+                    </dd>
+                  </div>
+                ) : null}
                 <div className="flex justify-between gap-4 rounded-lg bg-slate-50 px-3 py-2">
                   <dt>{t('dash.expenses')}</dt>
                   <dd className="font-mono tabular-nums">

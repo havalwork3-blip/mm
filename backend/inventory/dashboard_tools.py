@@ -52,6 +52,18 @@ def net_profit_in_range(shop_id: int, d_from, d_to) -> Decimal:
     return Decimal(data["totals"]["net_profit_usd"])
 
 
+def total_inventory_loss_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
+    from .reports import total_inventory_loss_usd_for_expenses
+    from .models import Expense
+
+    expense_qs = Expense.objects.filter(
+        shop_id=shop_id,
+        occurred_on__gte=d_from,
+        occurred_on__lte=d_to,
+    )
+    return total_inventory_loss_usd_for_expenses(expense_qs)
+
+
 def total_expenses_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
     expense_qs = Expense.objects.filter(
         shop_id=shop_id,

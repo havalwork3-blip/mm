@@ -227,6 +227,15 @@ export type ShopSettingsRow = {
   id: number
   shop: number
   primary_color: string
+  background_color?: string
+  dark_background_color?: string
+  accent_color?: string
+  sidebar_color?: string
+  surface_color?: string
+  surface_color_dark?: string
+  success_color?: string
+  warning_color?: string
+  danger_color?: string
   default_mode: 'light' | 'dark' | 'system'
   low_stock_threshold: number
   base_currency: 'USD' | 'IQD'
@@ -349,6 +358,8 @@ export type DashboardStats = {
   date_to: string
   net_profit_usd: string
   total_expenses_usd: string
+  /** Stock write-offs (manual decrease + stop-carrying), subset of expenses. */
+  total_inventory_loss_usd?: string
   total_sales_usd: string
   total_discounts_usd: string
   debtor_customers_count: number
@@ -388,9 +399,13 @@ export type AdminGlobalStats = {
     shop_name: string
     is_active: boolean
     sales_usd: string
+    total_sold_usd?: string
     profit_usd: string
     expenses_usd: string
     discounts_usd: string
+    returned_products_usd?: string
+    period_receivables_usd?: string
+    period_cash_drawer_usd?: string
     stock_value_usd: string
   }>
 }
@@ -416,6 +431,8 @@ export type ProfitReportResponse = {
     sum_sale_line_buy_prices_usd: string
     total_customer_discounts_usd: string
     total_expenses_usd: string
+    /** Inventory loss / write-off (USD), included in total_expenses_usd. */
+    total_inventory_loss_usd?: string
     total_company_discounts_received_usd: string
     net_profit_usd: string
   }

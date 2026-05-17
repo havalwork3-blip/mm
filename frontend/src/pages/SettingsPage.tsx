@@ -1,21 +1,23 @@
 import { CheckCircle2 } from 'lucide-react'
 import QRCode from 'qrcode'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { SettingsAppearanceSection } from '../components/settings/SettingsAppearanceSection'
 import { useLocale } from '../context/LocaleContext'
 import { useSession } from '../context/SessionContext'
 import { useTheme } from '../context/ThemeContext'
 import { apiJson, getSuperuserShopId, setSuperuserShopId } from '../lib/api'
 import { setShowIqdOnPdf, withReceiptPrefs } from '../lib/receiptPrefs'
+import {
+  THEME_PALETTE_DEFAULTS,
+  paletteFromShopSettings,
+  shopThemePatchFromPalette,
+} from '../lib/themeColors'
 import type { CurrencyRow, ReceiptSettingsRow, ShopRow, ShopSettingsRow } from '../types/api'
-
-const THEME_PRESETS = ['#7c3aed', '#06b6d4', '#16a34a', '#f59e0b', '#ec4899', '#ef4444']
-const BACKGROUND_PRESETS = ['#f8fafc', '#f1f5f9', '#e2e8f0', '#fef3c7', '#ecfeff', '#fdf2f8']
 
 export function SettingsPage() {
   const { t } = useLocale()
   const { me, loading } = useSession()
-  const { applyTheme, backgroundColor } = useTheme()
-  const [backgroundColorInput, setBackgroundColorInput] = useState(backgroundColor)
+  const { applyTheme, mode, resolvedMode } = useTheme()
   const [shop, setShop] = useState<ShopRow | null>(null)
   const [shopSettings, setShopSettings] = useState<ShopSettingsRow | null>(null)
   const [receipt, setReceipt] = useState<ReceiptSettingsRow | null>(null)
@@ -32,10 +34,6 @@ export function SettingsPage() {
     const timer = window.setTimeout(() => setSuccessMessage(null), 2800)
     return () => window.clearTimeout(timer)
   }, [successMessage])
-
-  useEffect(() => {
-    setBackgroundColorInput(backgroundColor)
-  }, [backgroundColor])
 
   const load = useCallback(async () => {
     try {
@@ -74,11 +72,15 @@ export function SettingsPage() {
         setRatePer100Input('')
       }
       setShopSettings(ss)
+      applyTheme({
+        ...paletteFromShopSettings(ss),
+        mode: ss.default_mode === 'system' ? 'light' : ss.default_mode,
+      })
       setReceipt(withReceiptPrefs(rs))
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     }
-  }, [me, t])
+  }, [applyTheme, me, t])
 
   useEffect(() => {
     if (me) void load()
@@ -94,7 +96,8 @@ export function SettingsPage() {
         shopScoped: true,
         body: JSON.stringify({
           base_currency: shopSettings.base_currency,
-          primary_color: shopSettings.primary_color,
+          default_mode: shopSettings.default_mode,
+          ...shopThemePatchFromPalette(paletteFromShopSettings(shopSettings)),
         }),
       })
       const form = new FormData()
@@ -122,8 +125,9 @@ export function SettingsPage() {
       ])
       setShopSettings(nextSettings)
       applyTheme({
-        primaryColor: nextSettings.primary_color || '#7c3aed',
-        backgroundColor: backgroundColorInput || '#f1f5f9',
+        ...paletteFromShopSettings(nextSettings),
+        mode:
+          nextSettings.default_mode === 'system' ? mode : nextSettings.default_mode,
       })
       setShowIqdOnPdf(nextReceipt.shop, receipt.show_iqd_on_pdf !== false)
       setReceipt(withReceiptPrefs(nextReceipt))
@@ -190,13 +194,44 @@ export function SettingsPage() {
     }
   }, [receipt?.receipt_qr_url])
 
-  useEffect(() => {
-    if (!shopSettings) return
-    applyTheme({
-      primaryColor: shopSettings.primary_color || '#7c3aed',
-      backgroundColor: backgroundColorInput || '#f1f5f9',
+  const previewPalette = useMemo(
+    () => (shopSettings ? paletteFromShopSettings(shopSettings) : THEME_PALETTE_DEFAULTS),
+    [shopSettings],
+  )
+
+  const patchThemeField = useCallback(
+    (patch: Partial<ShopSettingsRow>) => {
+      setShopSettings((s) => {
+        if (!s) return s
+        const next = { ...s, ...patch }
+        applyTheme({
+          ...paletteFromShopSettings(next),
+          mode:
+            next.default_mode === 'system'
+              ? mode
+              : (next.default_mode as 'light' | 'dark'),
+        })
+        return next
+      })
+    },
+    [applyTheme, mode],
+  )
+
+  function resetThemeColors() {
+    const d = THEME_PALETTE_DEFAULTS
+    patchThemeField({
+      primary_color: d.primaryColor,
+      background_color: d.backgroundColor,
+      dark_background_color: d.darkBackgroundColor,
+      accent_color: d.accentColor,
+      sidebar_color: d.sidebarColor,
+      surface_color: d.surfaceColor,
+      surface_color_dark: d.surfaceColorDark,
+      success_color: d.successColor,
+      warning_color: d.warningColor,
+      danger_color: d.dangerColor,
     })
-  }, [applyTheme, backgroundColorInput, shopSettings])
+  }
 
   if (loading) return <div className="p-8 text-center text-slate-500">{t('common.loading')}</div>
   if (!me) return <div className="p-8 text-red-600">{t('common.loginFailed')}</div>
@@ -254,78 +289,20 @@ export function SettingsPage() {
       </div>
       {error ? <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</p> : null}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 lg:col-span-6">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{t('settings.appearance')}</h2>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('settings.appearanceHint')}</p>
-          <div className="mt-4">
-            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{t('settings.primaryColor')}</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {THEME_PRESETS.map((color) => {
-                const active = shopSettings.primary_color?.toLowerCase() === color
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setShopSettings((s) => (s ? { ...s, primary_color: color } : s))}
-                    className={`h-9 w-9 rounded-full border-2 transition ${
-                      active
-                        ? 'scale-105 border-white ring-2 ring-slate-400 dark:ring-slate-200'
-                        : 'border-white/80 hover:scale-105'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    aria-label={color}
-                    title={color}
-                  />
-                )
-              })}
-            </div>
-            <label className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-600 dark:bg-slate-900">
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">HEX</span>
-              <input
-                value={shopSettings.primary_color}
-                onChange={(e) =>
-                  setShopSettings((s) => (s ? { ...s, primary_color: e.target.value } : s))
-                }
-                placeholder="#7c3aed"
-                className="w-full bg-transparent text-sm outline-none"
-              />
-            </label>
-          </div>
-          <div className="mt-4">
-            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{t('settings.backgroundColor')}</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {BACKGROUND_PRESETS.map((color) => {
-                const active = backgroundColorInput.toLowerCase() === color
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setBackgroundColorInput(color)}
-                    className={`h-9 w-9 rounded-full border-2 transition ${
-                      active
-                        ? 'scale-105 border-white ring-2 ring-slate-400 dark:ring-slate-200'
-                        : 'border-white/80 hover:scale-105'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    aria-label={color}
-                    title={color}
-                  />
-                )
-              })}
-            </div>
-            <label className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-600 dark:bg-slate-900">
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">HEX</span>
-              <input
-                value={backgroundColorInput}
-                onChange={(e) => setBackgroundColorInput(e.target.value)}
-                placeholder="#f1f5f9"
-                className="w-full bg-transparent text-sm outline-none"
-              />
-            </label>
-          </div>
-          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">{t('settings.themeModeSidebarHint')}</p>
-        </section>
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 lg:col-span-6">
+                <SettingsAppearanceSection
+          t={t}
+          shopSettings={shopSettings}
+          previewPalette={previewPalette}
+          resolvedMode={resolvedMode}
+          mode={mode}
+          onPatch={patchThemeField}
+          onModeChange={(v) => {
+            patchThemeField({ default_mode: v })
+            applyTheme({ mode: v })
+          }}
+          onReset={resetThemeColors}
+        />
+<section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 lg:col-span-6">
           <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{t('settings.baseCurrency')}</h2>
           <select
             value={shopSettings.base_currency}

@@ -3,6 +3,7 @@ import { useLocale } from '../context/LocaleContext'
 import { useSession } from '../context/SessionContext'
 import { apiJson } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
+import { formatSaleReceiptNumber } from '../lib/shopReceiptNumbers'
 import type { Paginated, SaleListRow, SaleReturnResponse } from '../types/api'
 
 export function SalesReturnsPage() {
@@ -261,7 +262,9 @@ export function SalesReturnsPage() {
                 ) : (
                   visibleRows.map((sale) => (
                     <tr key={sale.id} className="border-t border-slate-100 dark:border-slate-700">
-                      <td className="px-3 py-2 font-mono">#{sale.receipt_number ?? sale.id}</td>
+                      <td className="px-3 py-2 font-mono">
+                        #{formatSaleReceiptNumber(sale.receipt_number) || '—'}
+                      </td>
                       <td className="px-3 py-2">{sale.customer_name || '—'}</td>
                       <td className="px-3 py-2">{new Date(sale.occurred_at).toLocaleDateString()}</td>
                       <td className="px-3 py-2 text-end">{sale.lines.length}</td>
@@ -299,7 +302,7 @@ export function SalesReturnsPage() {
                 {t('sales.filterReceiptNumber')}
               </span>
               <input
-                value={selectedSale ? String(selectedSale.receipt_number ?? selectedSale.id) : ''}
+                value={selectedSale ? formatSaleReceiptNumber(selectedSale.receipt_number) : ''}
                 readOnly
                 className="min-h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono tabular-nums dark:border-slate-600 dark:bg-slate-950/60 dark:text-slate-100"
               />

@@ -16,6 +16,7 @@ from .dashboard_tools import (
     total_debtor_customers_count,
     top_selling_products_in_range,
     total_expenses_usd_in_range,
+    total_inventory_loss_usd_in_range,
     total_payables_usd,
     total_returned_products_qty_in_range,
     total_returned_products_usd_in_range,
@@ -49,6 +50,7 @@ class DashboardStatsView(APIView):
         shop_id = require_shop_id(request)
         np = net_profit_in_range(shop_id, d_from, d_to)
         exp = total_expenses_usd_in_range(shop_id, d_from, d_to)
+        inventory_loss = total_inventory_loss_usd_in_range(shop_id, d_from, d_to)
         sales_total = total_sales_usd_in_range(shop_id, d_from, d_to)
         discounts_total = total_customer_discounts_usd_in_range(shop_id, d_from, d_to)
         debtor_customers_count = total_debtor_customers_count(shop_id)
@@ -80,6 +82,7 @@ class DashboardStatsView(APIView):
                 "date_to": d_to.isoformat(),
                 "net_profit_usd": format(np, "f"),
                 "total_expenses_usd": format(exp, "f"),
+                "total_inventory_loss_usd": format(inventory_loss, "f"),
                 "total_sales_usd": format(sales_total, "f"),
                 "total_discounts_usd": format(discounts_total, "f"),
                 "debtor_customers_count": debtor_customers_count,

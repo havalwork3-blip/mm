@@ -1,6 +1,7 @@
 import QRCode from 'qrcode'
 
 import { formatDecimalTrim } from './formatMoney'
+import { formatSaleReceiptNumber } from './shopReceiptNumbers'
 import type { ReceiptSettingsRow, SaleListRow } from '../types/api'
 
 export type ReceiptSummary = {
@@ -209,7 +210,7 @@ export async function buildReceiptHtml(args: {
     const customerNameDisp = escapeHtml(customerNameDisplay || '')
     const previousDebt = blankMode ? '' : fmtUsd(parseDec(String(sale.previous_debt_usd ?? '0')))
     const showCustomerBalance = receiptSettings?.show_customer_balance ?? true
-    const rawInvoiceId = String(sale.receipt_number ?? sale.id ?? '').trim()
+    const rawInvoiceId = formatSaleReceiptNumber(sale.receipt_number)
     const invoiceNumeric = Number.parseInt(rawInvoiceId, 10)
     const invoiceDisplay = Number.isFinite(invoiceNumeric) && invoiceNumeric > 0
       ? invoiceNumeric.toLocaleString('en-US')

@@ -257,9 +257,9 @@ function roleLabel(
 }
 
 const ADMIN_SUB: { to: string; labelKey: string; icon: LucideIcon; end?: boolean }[] = [
-  { to: '/admin/shops', labelKey: 'admin.shops', icon: Store },
-  { to: '/admin/users', labelKey: 'admin.users', icon: Users },
-  { to: '/admin/qr-social', labelKey: 'admin.qrSocial', icon: QrCode },
+  { to: '/system/shops', labelKey: 'admin.shops', icon: Store },
+  { to: '/system/users', labelKey: 'admin.users', icon: Users },
+  { to: '/system/qr-social', labelKey: 'admin.qrSocial', icon: QrCode },
 ]
 
 function navLinkClass(collapsed: boolean, isActive: boolean) {
@@ -286,11 +286,13 @@ export function MainLayout() {
   const [globalViewOn, setGlobalViewOn] = useState(() => getGlobalView())
   const [shopTick, setShopTick] = useState(0)
   const [adminAccordionOpen, setAdminAccordionOpen] = useState(() =>
-    loc.pathname.startsWith('/admin'),
+    loc.pathname.startsWith('/system') || loc.pathname.startsWith('/admin'),
   )
 
   useEffect(() => {
-    if (loc.pathname.startsWith('/admin')) setAdminAccordionOpen(true)
+    if (loc.pathname.startsWith('/system') || loc.pathname.startsWith('/admin')) {
+      setAdminAccordionOpen(true)
+    }
   }, [loc.pathname])
 
   const loadShops = useCallback(async () => {
@@ -378,7 +380,7 @@ export function MainLayout() {
   }
 
   return (
-    <div className="min-h-dvh bg-[var(--app-bg-color,#f1f5f9)] dark:bg-slate-900">
+    <div className="min-h-dvh bg-[var(--app-bg-color,#f1f5f9)]">
       {showSidebar && (
         <>
           <header className="fixed inset-x-0 top-0 z-[110] flex h-14 min-h-[3.5rem] items-center gap-2 border-b border-slate-200 bg-white/95 px-2 shadow-sm backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/95 md:hidden">
@@ -434,7 +436,7 @@ export function MainLayout() {
           )}
 
           <aside
-            className={`fixed inset-y-0 start-0 z-[105] flex w-[min(100vw-2.5rem,16rem)] max-w-[18rem] flex-col border-slate-700/60 bg-slate-900 text-slate-100 shadow-2xl transition-transform duration-200 ease-out md:z-40 md:max-w-none md:border-e md:shadow-xl md:rtl:border-s md:rtl:border-e-0 ${
+            className={`fixed inset-y-0 start-0 z-[105] flex w-[min(100vw-2.5rem,16rem)] max-w-[18rem] flex-col border-slate-700/60 bg-[var(--sidebar-bg,#0f172a)] text-slate-100 shadow-2xl transition-transform duration-200 ease-out md:z-40 md:max-w-none md:border-e md:shadow-xl md:rtl:border-s md:rtl:border-e-0 ${
               collapsed ? 'md:w-[4.25rem]' : 'md:w-64'
             } ${
               mobileOpen

@@ -17,6 +17,7 @@ from accounts.models import User
 
 from shops.scoping import get_shop_id_for_request, require_shop_id
 
+from .customer_sync import SYNC_FIELDS, sync_customer_profile_to_sibling_shops
 from .dashboard_tools import (
     apply_customer_debt_payment_fifo,
     apply_supplier_debt_payment_fifo,
@@ -147,6 +148,21 @@ class CustomerViewSet(ShopScopedViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ["name", "phone_1", "workplace", "address"]
     lookup_value_regex = r"[0-9]+"
+
+    def perform_create(self, serializer):
+        with transaction.atomic():
+            customer = serializer.save(shop_id=require_shop_id(self.request))
+            sync_customer_profile_to_sibling_shops(customer)
+
+    def perform_update(self, serializer):
+        old_snapshot: dict[str, object] | None = None
+        if any(field in serializer.validated_data for field in SYNC_FIELDS):
+            inst = serializer.instance
+            old_snapshot = {field: getattr(inst, field) for field in SYNC_FIELDS}
+        with transaction.atomic():
+            customer = serializer.save()
+            if old_snapshot is not None:
+                sync_customer_profile_to_sibling_shops(customer, old_snapshot=old_snapshot)
 
     def get_queryset(self):
         return super().get_queryset()
@@ -648,7 +664,7 @@ class SaleViewSet(ShopScopedViewSet):
         if receipt_number:
             try:
                 val = int(receipt_number)
-                qs = qs.filter(Q(receipt_number=val) | Q(id=val))
+                qs = qs.filter(receipt_number=val)
             except (TypeError, ValueError):
                 return qs.none()
         if search:

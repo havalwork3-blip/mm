@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageAuthLoading } from '../components/PageAuthLoading'
 import { useLocale } from '../context/LocaleContext'
+import { useSubmitLock } from '../hooks/useSubmitLock'
 import { useSyncedSession } from '../hooks/useSyncedSession'
 import { apiJson, getGlobalView, resolveMediaUrl } from '../lib/api'
 import {
@@ -23,6 +24,7 @@ import {
 } from '../lib/receiptHtml'
 import { withReceiptPrefs } from '../lib/receiptPrefs'
 import { hasPerm } from '../lib/permissions'
+import { formatSaleReceiptNumber } from '../lib/shopReceiptNumbers'
 import type {
   CurrencyRow,
   CustomerRow,
@@ -148,6 +150,7 @@ export function PosPage() {
   const [returnQuantities, setReturnQuantities] = useState<Record<number, string>>({})
   const [loadingReturnSale, setLoadingReturnSale] = useState(false)
   const [submittingReturn, setSubmittingReturn] = useState(false)
+  const { isSubmitting: creatingCustomer, runLocked: runCreateCustomer } = useSubmitLock()
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false)
   const [receiptSettings, setReceiptSettings] = useState<ReceiptSettingsRow | null>(null)
   const [shopSettings, setShopSettings] = useState<ShopSettingsRow | null>(null)
@@ -951,27 +954,29 @@ export function PosPage() {
   )
 
   async function createCustomer() {
-    setError(null)
-    const custPayload: Record<string, unknown> = {
-      name: newCustName.trim(),
-      workplace: newCustWorkplace,
-      address: newCustAddress,
-      phone_1: newCustPhone1,
-      phone_2: newCustPhone2,
-      note: newCustNote,
-    }
-    if (me?.is_superuser && getGlobalView()) {
-      const sid = localStorage.getItem('pos_shop_id')?.trim()
-      if (sid) custPayload.shop = Number(sid)
-    }
-    const created = await apiJson<CustomerRow>('/api/customers/', {
-      method: 'POST',
-      body: JSON.stringify(custPayload),
+    await runCreateCustomer(async () => {
+      setError(null)
+      const custPayload: Record<string, unknown> = {
+        name: newCustName.trim(),
+        workplace: newCustWorkplace,
+        address: newCustAddress,
+        phone_1: newCustPhone1,
+        phone_2: newCustPhone2,
+        note: newCustNote,
+      }
+      if (me?.is_superuser && getGlobalView()) {
+        const sid = localStorage.getItem('pos_shop_id')?.trim()
+        if (sid) custPayload.shop = Number(sid)
+      }
+      const created = await apiJson<CustomerRow>('/api/customers/', {
+        method: 'POST',
+        body: JSON.stringify(custPayload),
+      })
+      setSelectedCustomerId(created.id)
+      setSelectedCustomer(created)
+      setCustomerQuery(created.name)
+      setCustomerModalOpen(false)
     })
-    setSelectedCustomerId(created.id)
-    setSelectedCustomer(created)
-    setCustomerQuery(created.name)
-    setCustomerModalOpen(false)
   }
 
   function openNewCustomerModal(initialName: string) {
@@ -1122,7 +1127,7 @@ export function PosPage() {
     try {
       const first = await apiJson<SaleListRow>(`/api/sales/${saleId}/`)
       setReturnSale(first)
-      setReturnReceiptNumber(String(first.id))
+      setReturnReceiptNumber(formatSaleReceiptNumber(first.receipt_number))
       const initial: Record<number, string> = {}
       for (const ln of first.lines) initial[ln.id] = ''
       setReturnQuantities(initial)
@@ -1722,7 +1727,7 @@ export function PosPage() {
                           {p.name}
                         </span>
                         <span className="text-xs text-slate-500">
-                          ${formatMoneyCompact(p.sale_price_retail)} · {t('pos.stock')}{' '}
+                          {t('pos.stock')}{' '}
                           <span
                             className={
                               p.current_stock_quantity < 0
@@ -2297,7 +2302,8 @@ export function PosPage() {
             {returnSale ? (
               <div className="mt-4 space-y-3">
                 <p className="text-sm text-slate-600 dark:text-slate-300">
-                  #{returnSale.receipt_number ?? returnSale.id} · {returnSale.customer_name || '—'}
+                  #{formatSaleReceiptNumber(returnSale.receipt_number) || '—'} ·{' '}
+                  {returnSale.customer_name || '—'}
                 </p>
                 <div className="max-h-72 overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
                   <table className="min-w-full text-sm">
@@ -2476,10 +2482,10 @@ export function PosPage() {
                 type="button"
                 tabIndex={-1}
                 onClick={() => void createCustomer()}
-                disabled={!newCustName.trim()}
+                disabled={creatingCustomer || !newCustName.trim()}
                 className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
-                {t('pos.save')}
+                {creatingCustomer ? t('pos.saving') : t('pos.save')}
               </button>
             </div>
           </div>
@@ -2497,7 +2503,7 @@ export function PosPage() {
               {saleSuccessMode === 'edit' ? t('pos.saleChangesSaved') : t('pos.saleSuccess')}
             </h2>
             <p className="mt-2 text-center text-sm text-slate-500">
-              #{String(lastReceipt?.receipt_number ?? lastReceipt?.id ?? '')}
+              #{formatSaleReceiptNumber(lastReceipt?.receipt_number) || '—'}
             </p>
             <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
@@ -2572,7 +2578,7 @@ export function PosPage() {
         >
           <h2 className="text-center text-xl font-bold text-slate-900">{t('pos.receipt')}</h2>
           <p className="mt-1 text-center text-xs text-slate-500">
-            #{String(lastReceipt.receipt_number ?? lastReceipt.id)} ·{' '}
+            #{formatSaleReceiptNumber(lastReceipt.receipt_number) || '—'} ·{' '}
             {lastReceipt.occurred_at
               ? new Date(String(lastReceipt.occurred_at)).toLocaleString()
               : ''}

@@ -1,11 +1,16 @@
 import { ArrowLeft, Banknote, Building2, Download, FileText, History, Pencil, Printer } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSubmitLock } from '../hooks/useSubmitLock'
 import { Link, useParams } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import { useLocale } from '../context/LocaleContext'
 import { useSession } from '../context/SessionContext'
 import { apiJson, isApiStatus } from '../lib/api'
+import {
+  formatInventoryLossExpenseName,
+  formatInventoryLossExpenseNote,
+} from '../lib/inventoryLossExpenseText'
 import { buildReceiptHtml, computeReceiptSummaryFromSale, printReceiptHtml } from '../lib/receiptHtml'
 import { withReceiptPrefs } from '../lib/receiptPrefs'
 import { hasPerm } from '../lib/permissions'
@@ -466,6 +471,7 @@ export function ResourceCrudPage() {
   const [purchaseEditOpen, setPurchaseEditOpen] = useState(false)
   const [purchaseEditLoading, setPurchaseEditLoading] = useState(false)
   const [purchaseEditSaving, setPurchaseEditSaving] = useState(false)
+  const { isSubmitting: formSaving, runLocked: runFormSave } = useSubmitLock()
   const [purchaseEditError, setPurchaseEditError] = useState<string | null>(null)
   const [purchaseEditId, setPurchaseEditId] = useState<number | null>(null)
   const [purchaseEditCompanyId, setPurchaseEditCompanyId] = useState<number | null>(null)
@@ -753,39 +759,41 @@ export function ResourceCrudPage() {
   }
 
   const save = async () => {
-    if (!cfg) return
-    setError(null)
-    let body: Record<string, unknown>
-    try {
-      body = cfg.toPayload ? cfg.toPayload(draft) : draft
-    } catch {
-      setError(t('purchase.linesJsonInvalid'))
-      return
-    }
-    if (resource === 'opening-cash') {
-      body = {
-        for_date: String(body.for_date ?? ''),
-        opening_cash_usd: String(body.opening_cash_usd ?? ''),
+    await runFormSave(async () => {
+      if (!cfg) return
+      setError(null)
+      let body: Record<string, unknown>
+      try {
+        body = cfg.toPayload ? cfg.toPayload(draft) : draft
+      } catch {
+        setError(t('purchase.linesJsonInvalid'))
+        return
       }
-    }
-    const id = editing?.id
-    const path =
-      resource === 'opening-cash' ? cfg.endpoint : id ? `${cfg.endpoint}${id}/` : cfg.endpoint
-    try {
-      await apiJson(path, {
-        method: resource === 'opening-cash' ? 'POST' : id ? 'PATCH' : 'POST',
-        body: JSON.stringify(body),
-      })
-      if (resource === 'expenses') {
-        const nm = String((body as { name?: unknown }).name ?? '').trim()
-        if (nm)
-          setExpenseFormSavedNames(rememberExpenseName(me?.shop, nm))
+      if (resource === 'opening-cash') {
+        body = {
+          for_date: String(body.for_date ?? ''),
+          opening_cash_usd: String(body.opening_cash_usd ?? ''),
+        }
       }
-      setOpen(false)
-      await loadRows()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'))
-    }
+      const id = editing?.id
+      const path =
+        resource === 'opening-cash' ? cfg.endpoint : id ? `${cfg.endpoint}${id}/` : cfg.endpoint
+      try {
+        await apiJson(path, {
+          method: resource === 'opening-cash' ? 'POST' : id ? 'PATCH' : 'POST',
+          body: JSON.stringify(body),
+        })
+        if (resource === 'expenses') {
+          const nm = String((body as { name?: unknown }).name ?? '').trim()
+          if (nm)
+            setExpenseFormSavedNames(rememberExpenseName(me?.shop, nm))
+        }
+        setOpen(false)
+        await loadRows()
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t('common.error'))
+      }
+    })
   }
 
   const remove = async (id: unknown) => {
@@ -1420,6 +1428,12 @@ export function ResourceCrudPage() {
       if (/^-?\d+(\.\d+)?$/.test(raw.replace(/,/g, ''))) {
         return formatMoneyCompact(raw)
       }
+    }
+    if (isExpensesResource && columnKey === 'name') {
+      return formatInventoryLossExpenseName(String(value ?? ''))
+    }
+    if (isExpensesResource && columnKey === 'note') {
+      return formatInventoryLossExpenseNote(String(value ?? '')) || '—'
     }
     return String(value ?? '')
   }
@@ -2459,17 +2473,19 @@ export function ResourceCrudPage() {
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
+                disabled={formSaving}
                 onClick={() => setOpen(false)}
-                className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-600"
+                className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm disabled:opacity-50 dark:border-slate-600"
               >
                 {t('crud.cancel')}
               </button>
               <button
                 type="button"
+                disabled={formSaving}
                 onClick={() => void save()}
-                className="min-h-11 rounded-lg bg-violet-600 px-3 text-sm font-medium text-white"
+                className="min-h-11 rounded-lg bg-violet-600 px-3 text-sm font-medium text-white disabled:opacity-50"
               >
-                {t('crud.save')}
+                {formSaving ? t('pos.saving') : t('crud.save')}
               </button>
             </div>
           </div>
@@ -2603,7 +2619,9 @@ export function ResourceCrudPage() {
                     ) : (
                       filteredExpenseHistoryRows.map((r) => (
                         <tr key={String(r.id)} className="border-t border-slate-100 dark:border-slate-700">
-                          <td className="px-3 py-2">{String(r.name ?? '—')}</td>
+                          <td className="px-3 py-2">
+                            {formatInventoryLossExpenseName(String(r.name ?? '')) || '—'}
+                          </td>
                           <td className="px-3 py-2 font-mono tabular-nums">
                             {r.amount != null && String(r.amount).trim() !== ''
                               ? formatMoneyCompact(r.amount as string | number)
@@ -2616,8 +2634,11 @@ export function ResourceCrudPage() {
                           <td className="px-3 py-2 text-end font-mono tabular-nums">
                             {formatMoneyCompact(r.amount_usd as string | number | null | undefined)}
                           </td>
-                          <td className="max-w-[12rem] truncate px-3 py-2 text-slate-600 dark:text-slate-300" title={String(r.note ?? '')}>
-                            {String(r.note ?? '') || '—'}
+                          <td
+                            className="max-w-[12rem] truncate px-3 py-2 text-slate-600 dark:text-slate-300"
+                            title={formatInventoryLossExpenseNote(String(r.note ?? ''))}
+                          >
+                            {formatInventoryLossExpenseNote(String(r.note ?? '')) || '—'}
                           </td>
                         </tr>
                       ))

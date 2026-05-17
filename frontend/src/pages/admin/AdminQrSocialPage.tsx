@@ -4,6 +4,7 @@ import type { FormEvent } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { useLocale } from '../../context/LocaleContext'
+import { useSubmitLock } from '../../hooks/useSubmitLock'
 import { apiFetch, apiJson, resolveMediaUrl } from '../../lib/api'
 import type {
   QrLandingAdminResponse,
@@ -85,6 +86,7 @@ export function AdminQrSocialPage() {
   const [cfg, setCfg] = useState<QrLandingAdminResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const { isSubmitting: addingCustomLink, runLocked: runAddCustomLink } = useSubmitLock()
   const [error, setError] = useState<string | null>(null)
   const [copyDone, setCopyDone] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
@@ -275,28 +277,30 @@ export function AdminQrSocialPage() {
 
   async function addCustomLink(e: FormEvent) {
     e.preventDefault()
-    if (!newCustom.label.trim() || !newCustom.url.trim()) return
-    setError(null)
-    const fd = new FormData()
-    fd.append('label', newCustom.label.trim())
-    fd.append('url', newCustom.url.trim())
-    fd.append('enabled', 'true')
-    fd.append('sort_order', String(newCustom.sort_order))
-    fd.append('bg_color', newCustom.bg_color)
-    if (newCustom.logoFile) fd.append('logo', newCustom.logoFile)
-    try {
-      await apiFetch('/api/admin/qr-landing/custom-links/', { method: 'POST', body: fd })
-      setNewCustom({
-        label: '',
-        url: 'https://',
-        bg_color: '#14110f',
-        sort_order: 0,
-        logoFile: null,
-      })
-      await load({ silent: true })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
-    }
+    await runAddCustomLink(async () => {
+      if (!newCustom.label.trim() || !newCustom.url.trim()) return
+      setError(null)
+      const fd = new FormData()
+      fd.append('label', newCustom.label.trim())
+      fd.append('url', newCustom.url.trim())
+      fd.append('enabled', 'true')
+      fd.append('sort_order', String(newCustom.sort_order))
+      fd.append('bg_color', newCustom.bg_color)
+      if (newCustom.logoFile) fd.append('logo', newCustom.logoFile)
+      try {
+        await apiFetch('/api/admin/qr-landing/custom-links/', { method: 'POST', body: fd })
+        setNewCustom({
+          label: '',
+          url: 'https://',
+          bg_color: '#14110f',
+          sort_order: 0,
+          logoFile: null,
+        })
+        await load({ silent: true })
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('common.error'))
+      }
+    })
   }
 
   async function deleteCustomLink(id: number) {
@@ -625,10 +629,11 @@ export function AdminQrSocialPage() {
                 </div>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900"
+                  disabled={addingCustomLink}
+                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
                 >
                   <Plus className="h-4 w-4" aria-hidden />
-                  {t('qrAdmin.addCustomLink')}
+                  {addingCustomLink ? t('common.loading') : t('qrAdmin.addCustomLink')}
                 </button>
               </form>
             </div>

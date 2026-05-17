@@ -12,8 +12,20 @@ from rest_framework.views import APIView
 from accounts.models import User
 from shops.models import Shop
 
-from .dashboard_tools import total_stock_value_usd
-from .reports import profit_report_for_shop
+from .dashboard_tools import (
+    cashier_snapshot,
+    net_profit_in_range,
+    total_customer_discounts_usd_in_range,
+    total_expenses_usd_in_range,
+    total_returned_products_usd_in_range,
+    total_receivables_usd_in_range,
+    total_sales_usd_in_range,
+    total_stock_value_usd,
+)
+
+
+def _money(value: Decimal) -> str:
+    return format(value.quantize(Decimal("0.0001")), "f")
 
 
 class IsSuperuser(BasePermission):
@@ -50,14 +62,20 @@ class GlobalAdminStatsView(APIView):
         global_sales = Decimal("0")
         global_expenses = Decimal("0")
         shop_rows: list[dict] = []
-        # Iterate over all shops collecting per-shop breakdown for top-shops chart.
         for shop in Shop.objects.all().only("id", "name", "is_active"):
-            totals = profit_report_for_shop(shop.pk, d_from, d_to)["totals"]
-            net_profit = Decimal(totals["net_profit_usd"])
-            sales_usd = Decimal(totals["sum_sale_line_prices_usd"])
-            discounts_usd = Decimal(totals["total_customer_discounts_usd"])
-            expenses_usd = Decimal(totals["total_expenses_usd"])
+            sales_usd = total_sales_usd_in_range(shop.pk, d_from, d_to)
+            net_profit = net_profit_in_range(shop.pk, d_from, d_to)
+            expenses_usd = total_expenses_usd_in_range(shop.pk, d_from, d_to)
+            discounts_usd = total_customer_discounts_usd_in_range(shop.pk, d_from, d_to)
+            returned_usd = total_returned_products_usd_in_range(shop.pk, d_from, d_to)
+            receivables_usd = total_receivables_usd_in_range(shop.pk, d_from, d_to)
             stock_usd = total_stock_value_usd(shop.pk)
+            cash_snapshot = cashier_snapshot(shop.pk, d_from, d_to)
+            drawer_usd = (
+                Decimal(cash_snapshot["sales_cash_in_usd"])
+                - Decimal(cash_snapshot["expenses_usd"])
+                - Decimal(cash_snapshot["employee_debt_cash_effect_usd"])
+            ).quantize(Decimal("0.0001"))
 
             global_profit += net_profit
             global_discounts += discounts_usd
@@ -70,11 +88,15 @@ class GlobalAdminStatsView(APIView):
                     "shop_id": shop.pk,
                     "shop_name": shop.name,
                     "is_active": shop.is_active,
-                    "sales_usd": format(sales_usd.quantize(Decimal("0.0001")), "f"),
-                    "profit_usd": format(net_profit.quantize(Decimal("0.0001")), "f"),
-                    "expenses_usd": format(expenses_usd.quantize(Decimal("0.0001")), "f"),
-                    "discounts_usd": format(discounts_usd.quantize(Decimal("0.0001")), "f"),
-                    "stock_value_usd": format(stock_usd.quantize(Decimal("0.0001")), "f"),
+                    "sales_usd": _money(sales_usd),
+                    "total_sold_usd": _money(sales_usd),
+                    "profit_usd": _money(net_profit),
+                    "expenses_usd": _money(expenses_usd),
+                    "discounts_usd": _money(discounts_usd),
+                    "returned_products_usd": _money(returned_usd),
+                    "period_receivables_usd": _money(receivables_usd),
+                    "period_cash_drawer_usd": _money(drawer_usd),
+                    "stock_value_usd": _money(stock_usd),
                 }
             )
 

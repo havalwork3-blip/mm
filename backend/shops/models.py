@@ -110,6 +110,15 @@ class ShopSettings(ShopScopedModel):
         IQD = "IQD", "IQD"
 
     primary_color = models.CharField(max_length=7, default="#7c3aed")
+    background_color = models.CharField(max_length=7, default="#f1f5f9")
+    dark_background_color = models.CharField(max_length=7, default="#0f172a")
+    accent_color = models.CharField(max_length=7, default="#06b6d4")
+    sidebar_color = models.CharField(max_length=7, default="#0f172a")
+    surface_color = models.CharField(max_length=7, default="#ffffff")
+    surface_color_dark = models.CharField(max_length=7, default="#1e293b")
+    success_color = models.CharField(max_length=7, default="#16a34a")
+    warning_color = models.CharField(max_length=7, default="#f59e0b")
+    danger_color = models.CharField(max_length=7, default="#ef4444")
     default_mode = models.CharField(
         max_length=10,
         choices=DefaultMode.choices,

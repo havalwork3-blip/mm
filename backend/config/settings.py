@@ -134,6 +134,7 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.BasicAuthentication",
     ],
+    "EXCEPTION_HANDLER": "config.exceptions.custom_exception_handler",
 }
 
 _default_local_origins = [

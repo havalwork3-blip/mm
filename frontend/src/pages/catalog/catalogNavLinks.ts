@@ -34,9 +34,9 @@ export const CATALOG_NAV_LINKS: Partial<Record<CatalogSectionId, CatalogNavLink[
   debts: [{ to: '/debts', labelKey: 'nav.debts' }],
   settings: [{ to: '/settings', labelKey: 'nav.settings' }],
   admin: [
-    { to: '/admin/shops', labelKey: 'admin.shops', superuserOnly: true },
-    { to: '/admin/users', labelKey: 'admin.users', superuserOnly: true },
-    { to: '/admin/qr-social', labelKey: 'admin.qrSocial', superuserOnly: true },
+    { to: '/system/shops', labelKey: 'admin.shops', superuserOnly: true },
+    { to: '/system/users', labelKey: 'admin.users', superuserOnly: true },
+    { to: '/system/qr-social', labelKey: 'admin.qrSocial', superuserOnly: true },
   ],
-  access: [{ to: '/admin/users', labelKey: 'admin.users', superuserOnly: true }],
+  access: [{ to: '/system/users', labelKey: 'admin.users', superuserOnly: true }],
 }

@@ -44,12 +44,17 @@ function App() {
           <Route path="/manage/purchases" element={<PurchasesPage />} />
           <Route path="/manage/purchase-returns" element={<PurchaseReturnsPage />} />
           <Route path="/manage/:resource" element={<ResourceCrudPage />} />
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Navigate to="/admin/shops" replace />} />
+          {/* Superuser UI — must not use `/admin/*` (reserved for Django admin in nginx). */}
+          <Route path="/system" element={<AdminLayout />}>
+            <Route index element={<Navigate to="/system/shops" replace />} />
             <Route path="shops" element={<AdminShopsPage />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="qr-social" element={<AdminQrSocialPage />} />
           </Route>
+          <Route path="/admin" element={<Navigate to="/system/shops" replace />} />
+          <Route path="/admin/shops" element={<Navigate to="/system/shops" replace />} />
+          <Route path="/admin/users" element={<Navigate to="/system/users" replace />} />
+          <Route path="/admin/qr-social" element={<Navigate to="/system/qr-social" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

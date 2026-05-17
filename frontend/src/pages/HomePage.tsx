@@ -33,11 +33,26 @@ import {
   YAxis,
 } from 'recharts'
 import { LangSwitcher } from '../components/LangSwitcher'
+import { SuperuserDashboardScopeCard } from '../components/SuperuserDashboardScopeCard'
 import { useLocale } from '../context/LocaleContext'
 import { useSession } from '../context/SessionContext'
-import { apiJson, getGlobalView, isApiStatus } from '../lib/api'
+import {
+  apiJson,
+  getGlobalView,
+  getSuperuserShopId,
+  isApiStatus,
+  setGlobalView,
+  setSuperuserShopId,
+} from '../lib/api'
 import { hasPerm } from '../lib/permissions'
-import type { AdminGlobalStats, DashboardStats, Paginated, ProductRow, ShopSettingsRow } from '../types/api'
+import type {
+  AdminGlobalStats,
+  DashboardStats,
+  Paginated,
+  ProductRow,
+  ShopRow,
+  ShopSettingsRow,
+} from '../types/api'
 
 const PRODUCT_DONUT_COLORS = [
   '#6366f1',
@@ -95,6 +110,60 @@ export function HomePage() {
   const [topSellingSearchOpen, setTopSellingSearchOpen] = useState(false)
   const [topSellingLimit, setTopSellingLimit] = useState<'10' | '20' | '50' | 'all'>('10')
   const preservedScrollY = useRef<number | null>(null)
+
+  const [scopeShopId, setScopeShopId] = useState(() => localStorage.getItem('pos_shop_id') ?? '')
+  const [scopeGlobalView, setScopeGlobalView] = useState(() => getGlobalView())
+  const [scopeShops, setScopeShops] = useState<ShopRow[]>([])
+
+  const showSuperuserScopeCard = Boolean(
+    me?.is_superuser && !scopeGlobalView && !scopeShopId.trim(),
+  )
+
+  const canFetchShopDashboardExtras = useMemo(() => {
+    if (!me || getGlobalView()) return false
+    if (me.is_superuser) {
+      return Boolean(scopeShopId.trim() || getSuperuserShopId())
+    }
+    return true
+  }, [me, scopeShopId])
+
+  const syncSuperuserScope = useCallback(() => {
+    setScopeShopId(localStorage.getItem('pos_shop_id') ?? '')
+    setScopeGlobalView(getGlobalView())
+  }, [])
+
+  useEffect(() => {
+    if (!me?.is_superuser) return
+    syncSuperuserScope()
+    void (async () => {
+      try {
+        const data = await apiJson<ShopRow[] | { results: ShopRow[] }>('/api/shops/')
+        setScopeShops(Array.isArray(data) ? data : data.results)
+      } catch {
+        setScopeShops([])
+      }
+    })()
+  }, [me?.is_superuser, syncSuperuserScope])
+
+  const applySuperuserScopeShop = useCallback(() => {
+    const v = scopeShopId.trim()
+    setGlobalView(false)
+    setSuperuserShopId(v || null)
+    if (v) localStorage.setItem('pos_shop_id', v)
+    else localStorage.removeItem('pos_shop_id')
+    setScopeGlobalView(false)
+    setScopeShopId(v)
+    window.dispatchEvent(new Event('mm-dashboard-refresh'))
+  }, [scopeShopId])
+
+  const enableSuperuserScopeGlobalView = useCallback(() => {
+    setGlobalView(true)
+    setSuperuserShopId(null)
+    localStorage.removeItem('pos_shop_id')
+    setScopeGlobalView(true)
+    setScopeShopId('')
+    window.dispatchEvent(new Event('mm-dashboard-refresh'))
+  }, [])
 
   const preserveScrollPosition = useCallback(() => {
     preservedScrollY.current = window.scrollY
@@ -160,7 +229,14 @@ export function HomePage() {
   }, [shouldFetchStats, statsForbidden, me?.is_superuser, dFrom, dTo, t])
 
   const fetchTopSellingProducts = useCallback(async () => {
-    if (!me || me.is_superuser || getGlobalView()) return
+    if (!me || getGlobalView()) return
+    if (
+      me.is_superuser &&
+      !getSuperuserShopId() &&
+      !localStorage.getItem('pos_shop_id')?.trim()
+    ) {
+      return
+    }
     setLoadingTopSelling(true)
     try {
       const q = `?from=${encodeURIComponent(topSellingFrom)}&to=${encodeURIComponent(topSellingTo)}`
@@ -205,21 +281,50 @@ export function HomePage() {
   }, [me, shouldFetchStats, statsForbidden, fetchStats])
 
   useEffect(() => {
-    if (!me || me.is_superuser || getGlobalView()) return
+    if (!canFetchShopDashboardExtras) {
+      if (me?.is_superuser) {
+        setStockProducts([])
+        setTopSellingProducts([])
+      }
+      return
+    }
     void fetchTopSellingProducts()
     void fetchStockProducts()
     void fetchShopSettings()
-  }, [me, fetchTopSellingProducts, fetchStockProducts, fetchShopSettings])
+  }, [
+    me,
+    canFetchShopDashboardExtras,
+    fetchTopSellingProducts,
+    fetchStockProducts,
+    fetchShopSettings,
+  ])
 
   useEffect(() => {
     const onRefresh = () => {
+      syncSuperuserScope()
       if (me && shouldFetchStats && !statsForbidden) void fetchStats()
-      if (me && !getGlobalView()) void fetchStockProducts()
-      if (me && !getGlobalView()) void fetchShopSettings()
+      const shopScoped =
+        me &&
+        !getGlobalView() &&
+        (!me.is_superuser || Boolean(localStorage.getItem('pos_shop_id')?.trim() || getSuperuserShopId()))
+      if (shopScoped) {
+        void fetchTopSellingProducts()
+        void fetchStockProducts()
+        void fetchShopSettings()
+      }
     }
     window.addEventListener('mm-dashboard-refresh', onRefresh)
     return () => window.removeEventListener('mm-dashboard-refresh', onRefresh)
-  }, [me, shouldFetchStats, statsForbidden, fetchStats, fetchStockProducts, fetchShopSettings])
+  }, [
+    me,
+    shouldFetchStats,
+    statsForbidden,
+    fetchStats,
+    fetchTopSellingProducts,
+    fetchStockProducts,
+    fetchShopSettings,
+    syncSuperuserScope,
+  ])
 
   const quickLinks = useMemo(() => {
     const items = [
@@ -286,8 +391,14 @@ export function HomePage() {
           name: shop.shop_name,
           is_active: shop.is_active,
           sales,
+          totalSold: parseFloat(shop.total_sold_usd ?? shop.sales_usd) || 0,
           profit,
           stock,
+          expenses: parseFloat(shop.expenses_usd) || 0,
+          receivables: parseFloat(shop.period_receivables_usd ?? '0') || 0,
+          returned: parseFloat(shop.returned_products_usd ?? '0') || 0,
+          discounts: parseFloat(shop.discounts_usd) || 0,
+          pettyCash: parseFloat(shop.period_cash_drawer_usd ?? '0') || 0,
           color: PRODUCT_DONUT_COLORS[idx % PRODUCT_DONUT_COLORS.length],
         }
       })
@@ -344,17 +455,17 @@ export function HomePage() {
   const isSuperuserDashboard = Boolean(me?.is_superuser)
   const chartTopSellingProducts = useMemo((): TopSellingProductRow[] => {
     if (topSellingProducts.length > 0) return topSellingProducts
-    if (me?.is_superuser && stats?.top_selling_products?.length) return stats.top_selling_products
+    if (stats?.top_selling_products?.length) return stats.top_selling_products
     return topSellingProducts
-  }, [topSellingProducts, me?.is_superuser, stats?.top_selling_products])
+  }, [topSellingProducts, stats?.top_selling_products])
   const filteredTopSellingProducts = useMemo(() => {
     const q = topSellingSearch.trim().toLowerCase()
     const bySearch = q
-      ? topSellingProducts.filter((item) => item.product_name.toLowerCase().includes(q))
-      : topSellingProducts
+      ? chartTopSellingProducts.filter((item) => item.product_name.toLowerCase().includes(q))
+      : chartTopSellingProducts
     if (topSellingLimit === 'all') return bySearch
     return bySearch.slice(0, Number(topSellingLimit))
-  }, [topSellingProducts, topSellingSearch, topSellingLimit])
+  }, [chartTopSellingProducts, topSellingSearch, topSellingLimit])
   const displayedStockProducts = useMemo(() => {
     if (!showOnlyLowStock) return stockProducts
     return stockProducts.filter((item) => {
@@ -502,14 +613,14 @@ export function HomePage() {
   const topSellingNameSuggestions = useMemo(() => {
     const names = Array.from(
       new Set(
-        topSellingProducts
+        chartTopSellingProducts
           .map((item) => String(item.product_name || '').trim())
           .filter(Boolean),
       ),
     ).sort((a, b) => a.localeCompare(b))
     const q = topSellingSearch.trim().toLowerCase()
     return names.filter((name) => (!q ? true : name.toLowerCase().includes(q))).slice(0, 20)
-  }, [topSellingProducts, topSellingSearch])
+  }, [chartTopSellingProducts, topSellingSearch])
   const topMaxQty = useMemo(() => {
     if (topProductsData.length === 0) return 1
     return Math.max(...topProductsData.map((row) => row.qty), 1)
@@ -848,6 +959,12 @@ export function HomePage() {
                 salesLabel={t('admin.shopSales')}
                 stockLabel={t('dash.stockValue')}
                 chartCaption={t('admin.shopsSalesCompareChart')}
+                totalSoldLabel={t('dash.totalSold')}
+                expensesLabel={t('dash.totalExpenses')}
+                receivablesLabel={t('dash.totalDebtorCustomers')}
+                returnedLabel={t('dash.totalReturnedProducts')}
+                discountsLabel={t('dash.totalDiscounts')}
+                pettyCashLabel={t('dash.cashVsExpenses')}
               />
             </section>
           </>
@@ -1006,6 +1123,12 @@ export function HomePage() {
                     salesLabel={t('admin.shopSales')}
                     stockLabel={t('dash.stockValue')}
                     chartCaption={t('admin.shopsSalesCompareChart')}
+                    totalSoldLabel={t('dash.totalSold')}
+                    expensesLabel={t('dash.totalExpenses')}
+                    receivablesLabel={t('dash.totalDebtorCustomers')}
+                    returnedLabel={t('dash.totalReturnedProducts')}
+                    discountsLabel={t('dash.totalDiscounts')}
+                    pettyCashLabel={t('dash.cashVsExpenses')}
                   />
                 </section>
               ) : (
@@ -1039,7 +1162,7 @@ export function HomePage() {
                   {t('dash.topSellingProducts')}
                 </h2>
                 <span className="rounded-full border border-violet-200 bg-white px-2.5 py-1 text-xs font-semibold text-violet-700 dark:border-violet-400/40 dark:bg-violet-900/50 dark:text-violet-100">
-                  {filteredTopSellingProducts.length}/{topSellingProducts.length}
+                  {filteredTopSellingProducts.length}/{chartTopSellingProducts.length}
                 </span>
               </div>
               <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -1213,6 +1336,17 @@ export function HomePage() {
           </>
         )}
       </div>
+
+      {showSuperuserScopeCard ? (
+        <SuperuserDashboardScopeCard
+          t={t}
+          shops={scopeShops}
+          shopId={scopeShopId}
+          onShopIdChange={setScopeShopId}
+          onApplyShop={applySuperuserScopeShop}
+          onEnableGlobalView={enableSuperuserScopeGlobalView}
+        />
+      ) : null}
     </div>
   )
 }
@@ -1668,6 +1802,60 @@ function TopShopsSalesBarChart({
   )
 }
 
+type TopShopRow = {
+  shop_id: number
+  name: string
+  is_active: boolean
+  sales: number
+  totalSold: number
+  profit: number
+  stock: number
+  expenses: number
+  receivables: number
+  returned: number
+  discounts: number
+  pettyCash: number
+  color: string
+}
+
+function ShopMetricPill({
+  icon,
+  label,
+  value,
+  currencyLabel,
+  tone = 'slate',
+}: {
+  icon: React.ReactNode
+  label: string
+  value: number
+  currencyLabel: string
+  tone?: 'slate' | 'amber' | 'violet' | 'rose' | 'sky' | 'emerald'
+}) {
+  const toneClasses = {
+    slate: 'border-slate-200/80 bg-slate-50/90 dark:border-slate-600/60 dark:bg-slate-800/50',
+    amber: 'border-amber-200/80 bg-amber-50/70 dark:border-amber-700/40 dark:bg-amber-950/25',
+    violet: 'border-violet-200/80 bg-violet-50/70 dark:border-violet-700/40 dark:bg-violet-950/25',
+    rose: 'border-rose-200/80 bg-rose-50/70 dark:border-rose-700/40 dark:bg-rose-950/25',
+    sky: 'border-sky-200/80 bg-sky-50/70 dark:border-sky-700/40 dark:bg-sky-950/25',
+    emerald: 'border-emerald-200/80 bg-emerald-50/70 dark:border-emerald-700/40 dark:bg-emerald-950/25',
+  }[tone]
+
+  return (
+    <div className={`rounded-xl border px-2.5 py-2 transition-colors ${toneClasses}`}>
+      <p className="flex items-center gap-1 text-[10px] font-medium leading-tight text-slate-500 dark:text-slate-400">
+        <span className="shrink-0 opacity-80">{icon}</span>
+        <span className="line-clamp-2 min-w-0">{label}</span>
+      </p>
+      <p className="mt-1 text-start text-sm font-bold tabular-nums leading-tight text-slate-900 dark:text-slate-50">
+        {formatCompactNumber(value)}
+        <span className="ms-1 text-[10px] font-medium text-slate-400 dark:text-slate-500">
+          {currencyLabel}
+        </span>
+      </p>
+    </div>
+  )
+}
+
 function TopShopsListPanel({
   rows,
   currencyLabel,
@@ -1678,16 +1866,14 @@ function TopShopsListPanel({
   salesLabel,
   stockLabel,
   chartCaption,
+  totalSoldLabel,
+  expensesLabel,
+  receivablesLabel,
+  returnedLabel,
+  discountsLabel,
+  pettyCashLabel,
 }: {
-  rows: Array<{
-    shop_id: number
-    name: string
-    is_active: boolean
-    sales: number
-    profit: number
-    stock: number
-    color: string
-  }>
+  rows: TopShopRow[]
   currencyLabel: string
   emptyLabel: string
   activeLabel: string
@@ -1696,6 +1882,12 @@ function TopShopsListPanel({
   salesLabel: string
   stockLabel: string
   chartCaption: string
+  totalSoldLabel: string
+  expensesLabel: string
+  receivablesLabel: string
+  returnedLabel: string
+  discountsLabel: string
+  pettyCashLabel: string
 }) {
   if (rows.length === 0) {
     return (
@@ -1805,31 +1997,76 @@ function TopShopsListPanel({
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-2">
-                  <div className="rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-2.5 dark:border-slate-600/70 dark:bg-slate-800/80">
-                    <p className="flex items-center gap-1 text-start text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                      <TrendingUp className="h-3 w-3 shrink-0 text-emerald-500 opacity-90" aria-hidden />
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50/90 to-white px-3 py-2.5 dark:border-emerald-800/50 dark:from-emerald-950/30 dark:to-slate-900/40">
+                    <p className="flex items-center gap-1 text-start text-[10px] font-medium text-emerald-700/80 dark:text-emerald-300/80">
+                      <TrendingUp className="h-3 w-3 shrink-0" aria-hidden />
                       {profitLabel}
                     </p>
-                    <p className={`mt-1 text-start text-lg font-bold tabular-nums leading-tight sm:text-xl ${profitTone}`}>
+                    <p className={`mt-1 text-start text-lg font-bold tabular-nums leading-tight ${profitTone}`}>
                       {formatCompactNumber(row.profit)}
                       <span className="ms-1.5 align-baseline text-xs font-medium text-slate-400 opacity-90 dark:text-slate-500">
                         {currencyLabel}
                       </span>
                     </p>
                   </div>
-                  <div className="rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-2.5 dark:border-slate-600/70 dark:bg-slate-800/80">
-                    <p className="flex items-center gap-1 text-start text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                      <Package className="h-3 w-3 shrink-0 text-sky-500 opacity-90" aria-hidden />
+                  <div className="rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50/90 to-white px-3 py-2.5 dark:border-sky-800/50 dark:from-sky-950/30 dark:to-slate-900/40">
+                    <p className="flex items-center gap-1 text-start text-[10px] font-medium text-sky-700/80 dark:text-sky-300/80">
+                      <Package className="h-3 w-3 shrink-0" aria-hidden />
                       {stockLabel}
                     </p>
-                    <p className="mt-1 text-start text-lg font-bold tabular-nums leading-tight text-slate-900 dark:text-slate-50 sm:text-xl">
+                    <p className="mt-1 text-start text-lg font-bold tabular-nums leading-tight text-slate-900 dark:text-slate-50">
                       {formatCompactNumber(row.stock)}
                       <span className="ms-1.5 align-baseline text-xs font-medium text-slate-400 dark:text-slate-500">
                         {currencyLabel}
                       </span>
                     </p>
                   </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <ShopMetricPill
+                    icon={<TrendingUp className="h-3 w-3 text-emerald-600" aria-hidden />}
+                    label={totalSoldLabel}
+                    value={row.totalSold}
+                    currencyLabel={currencyLabel}
+                    tone="emerald"
+                  />
+                  <ShopMetricPill
+                    icon={<Wallet className="h-3 w-3 text-amber-600" aria-hidden />}
+                    label={expensesLabel}
+                    value={row.expenses}
+                    currencyLabel={currencyLabel}
+                    tone="amber"
+                  />
+                  <ShopMetricPill
+                    icon={<Users className="h-3 w-3 text-violet-600" aria-hidden />}
+                    label={receivablesLabel}
+                    value={row.receivables}
+                    currencyLabel={currencyLabel}
+                    tone="violet"
+                  />
+                  <ShopMetricPill
+                    icon={<RotateCcw className="h-3 w-3 text-rose-600" aria-hidden />}
+                    label={returnedLabel}
+                    value={row.returned}
+                    currencyLabel={currencyLabel}
+                    tone="rose"
+                  />
+                  <ShopMetricPill
+                    icon={<Banknote className="h-3 w-3 text-slate-600" aria-hidden />}
+                    label={discountsLabel}
+                    value={row.discounts}
+                    currencyLabel={currencyLabel}
+                    tone="slate"
+                  />
+                  <ShopMetricPill
+                    icon={<Coins className="h-3 w-3 text-sky-600" aria-hidden />}
+                    label={pettyCashLabel}
+                    value={row.pettyCash}
+                    currencyLabel={currencyLabel}
+                    tone="sky"
+                  />
                 </div>
               </div>
             </div>

@@ -148,6 +148,13 @@ class Purchase(ShopScopedModel):
 
     class Meta:
         ordering = ["-occurred_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["shop", "invoice_number"],
+                condition=models.Q(invoice_number__gt=""),
+                name="uniq_purchase_shop_invoice_number_when_set",
+            ),
+        ]
 
 
 class PurchaseLine(models.Model):

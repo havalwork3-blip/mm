@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageAuthLoading } from '../components/PageAuthLoading'
 import { useLocale } from '../context/LocaleContext'
+import { useSubmitLock } from '../hooks/useSubmitLock'
 import { useSyncedSession } from '../hooks/useSyncedSession'
 import { useResyncLocalMe } from '../hooks/useResyncLocalMe'
 import { apiJson } from '../lib/api'
@@ -91,6 +92,7 @@ export function DebtsPage() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [debtEditOpen, setDebtEditOpen] = useState(false)
   const [debtEditSaving, setDebtEditSaving] = useState(false)
+  const { isSubmitting: addingDebt, runLocked: runAddDebt } = useSubmitLock()
   const [debtEditError, setDebtEditError] = useState<string | null>(null)
   const [debtEditRow, setDebtEditRow] = useState<EmployeeDebtRow | null>(null)
   const [debtEditOccurredOn, setDebtEditOccurredOn] = useState('')
@@ -289,34 +291,36 @@ export function DebtsPage() {
 
   async function addDebt(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
-    let usdVal = parseDec(normalizeMoneyInput(amountUsd))
-    if (usdVal <= 0 && rate !== null && rate > 0) {
-      const iqdVal = parseDec(normalizeMoneyInput(amountIqd))
-      if (iqdVal > 0) usdVal = iqdVal / rate
-    }
-    if (usdVal <= 0) {
-      setError(t('debts.enterValidAmount'))
-      return
-    }
-    try {
-      await apiJson('/api/employee-debts/', {
-        method: 'POST',
-        body: JSON.stringify({
-          employee: employeeId,
-          amount: usdVal.toFixed(4),
-          debt_type: debtType,
-          occurred_on: date,
-          note,
-        }),
-      })
-      setAmountUsd('')
-      setAmountIqd('')
-      setNote('')
-      await loadData()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'))
-    }
+    await runAddDebt(async () => {
+      setError(null)
+      let usdVal = parseDec(normalizeMoneyInput(amountUsd))
+      if (usdVal <= 0 && rate !== null && rate > 0) {
+        const iqdVal = parseDec(normalizeMoneyInput(amountIqd))
+        if (iqdVal > 0) usdVal = iqdVal / rate
+      }
+      if (usdVal <= 0) {
+        setError(t('debts.enterValidAmount'))
+        return
+      }
+      try {
+        await apiJson('/api/employee-debts/', {
+          method: 'POST',
+          body: JSON.stringify({
+            employee: employeeId,
+            amount: usdVal.toFixed(4),
+            debt_type: debtType,
+            occurred_on: date,
+            note,
+          }),
+        })
+        setAmountUsd('')
+        setAmountIqd('')
+        setNote('')
+        await loadData()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('common.error'))
+      }
+    })
   }
 
   const canUseDebts = Boolean(me && hasPerm(me, 'view_employeedebt'))
@@ -640,9 +644,10 @@ export function DebtsPage() {
 
           <button
             type="submit"
-            className="sm:col-span-2 rounded-lg bg-violet-600 py-2.5 font-medium text-white hover:bg-violet-700"
+            disabled={addingDebt}
+            className="sm:col-span-2 rounded-lg bg-violet-600 py-2.5 font-medium text-white hover:bg-violet-700 disabled:opacity-50"
           >
-            {t('debts.save')}
+            {addingDebt ? t('pos.saving') : t('debts.save')}
           </button>
         </form>
       </section>

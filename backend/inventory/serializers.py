@@ -32,6 +32,41 @@ from .models import (
 )
 
 
+def _usd_compact(value: Decimal | str | None) -> str:
+    """Format USD amount without trailing zeros (e.g. 1.0000 → 1)."""
+    if value is None:
+        return "0"
+    d = Decimal(str(value)).quantize(Decimal("0.0001"))
+    s = format(d, "f")
+    if "." in s:
+        s = s.rstrip("0").rstrip(".")
+    return s
+
+
+def _inventory_loss_expense_name(product_name: str) -> str:
+    return f"زەرەری کۆگا — {product_name}"
+
+
+def _inventory_loss_note(
+    *,
+    discontinued: bool,
+    qty: int,
+    buy_price: Decimal,
+    loss_amount: Decimal,
+) -> str:
+    buy_s = _usd_compact(buy_price)
+    loss_s = _usd_compact(loss_amount)
+    if discontinued:
+        return (
+            f"[AUTO_DISCONTINUE_LOSS] واز لە هێنانەوە: {qty} دانە × {buy_s} USD "
+            f"(کۆی گشتی {loss_s} USD)"
+        )
+    return (
+        f"[AUTO_INVENTORY_LOSS] کەمکردنەوەی دەستی کۆگا: {qty} دانە × {buy_s} USD "
+        f"(کۆی گشتی {loss_s} USD)"
+    )
+
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
@@ -154,13 +189,37 @@ class ProductSerializer(serializers.ModelSerializer):
             validated_data["is_unregistered_placeholder"] = True
         return super().create(validated_data)
 
+    def _record_inventory_loss_expense(
+        self,
+        *,
+        shop_id: int,
+        product_name: str,
+        loss_amount: Decimal,
+        note: str,
+    ) -> None:
+        if loss_amount <= 0:
+            return
+        Expense.objects.create(
+            shop_id=shop_id,
+            name=_inventory_loss_expense_name(product_name),
+            amount=loss_amount,
+            currency=ExpenseCurrency.USD,
+            note=note,
+            occurred_on=timezone.localdate(),
+            exchange_rate_usd_to_iqd=None,
+        )
+
     def update(self, instance: Product, validated_data: dict) -> Product:
         prev_stock = int(instance.current_stock_quantity or 0)
         was_discontinued = bool(instance.is_discontinued)
         next_discontinued = bool(validated_data.get("is_discontinued", instance.is_discontinued))
+        discontinued_now = not was_discontinued and next_discontinued
         restored_from_discontinued = was_discontinued and not next_discontinued
         # Restored products must restart from zero stock by business rule.
         if restored_from_discontinued:
+            validated_data["current_stock_quantity"] = 0
+        # Stop-carrying: remaining stock is written off at buy price (qty × buy_price).
+        elif discontinued_now and prev_stock > 0:
             validated_data["current_stock_quantity"] = 0
         # Once a placeholder product is manually edited in inventory, treat it as fully registered.
         if instance.is_unregistered_placeholder:
@@ -194,22 +253,24 @@ class ProductSerializer(serializers.ModelSerializer):
                     unit_cost_usd=updated.buy_price,
                     damaged_quantity=0,
                 )
-            # Manual stock decrease is treated as inventory loss (expense).
+            # Manual stock decrease / stop-carrying write-off → inventory loss (expense).
             elif delta < 0 and not restored_from_discontinued:
                 loss_qty = abs(delta)
                 loss_amount = (Decimal(loss_qty) * Decimal(updated.buy_price or 0)).quantize(
                     Decimal("0.0001"),
                 )
-                if loss_amount > 0:
-                    Expense.objects.create(
-                        shop_id=updated.shop_id,
-                        name=f"Inventory loss - {updated.name}",
-                        amount=loss_amount,
-                        currency=ExpenseCurrency.USD,
-                        note=f"[AUTO_INVENTORY_LOSS] Product stock decreased manually (-{loss_qty})",
-                        occurred_on=timezone.localdate(),
-                        exchange_rate_usd_to_iqd=None,
-                    )
+                note = _inventory_loss_note(
+                    discontinued=discontinued_now,
+                    qty=loss_qty,
+                    buy_price=Decimal(updated.buy_price or 0),
+                    loss_amount=loss_amount,
+                )
+                self._record_inventory_loss_expense(
+                    shop_id=updated.shop_id,
+                    product_name=updated.name,
+                    loss_amount=loss_amount,
+                    note=note,
+                )
         return updated
 
 
@@ -428,11 +489,10 @@ class PurchaseSerializer(serializers.ModelSerializer):
 
     def _next_invoice_number(self, shop_id: int) -> str:
         max_num = 0
-        for pid, inv in Purchase.objects.filter(shop_id=shop_id).values_list("id", "invoice_number"):
+        for inv in Purchase.objects.filter(shop_id=shop_id).values_list("invoice_number", flat=True):
             raw = str(inv or "").strip()
-            n = int(raw) if raw.isdigit() else int(pid)
-            if n > max_num:
-                max_num = n
+            if raw.isdigit():
+                max_num = max(max_num, int(raw))
         return str(max_num + 1)
 
     def validate(self, attrs: dict) -> dict:
@@ -457,6 +517,15 @@ class PurchaseSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"invoice_number": "Receipt number must contain digits only."},
             )
+        if inv != "":
+            shop_id = require_shop_id(self.context["request"])
+            dup_qs = Purchase.objects.filter(shop_id=shop_id, invoice_number=inv)
+            if self.instance is not None:
+                dup_qs = dup_qs.exclude(pk=self.instance.pk)
+            if dup_qs.exists():
+                raise serializers.ValidationError(
+                    {"invoice_number": "This receipt number already exists in your shop."},
+                )
 
         if self.instance is not None and "[AUTO_STOCK_INCREASE]" in str(self.instance.note or ""):
             if "note" in attrs and attrs.get("note") is not None:
@@ -484,67 +553,89 @@ class PurchaseSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"company": "Supplier must belong to your shop."},
             )
-        if not str(validated_data.get("invoice_number", "") or "").strip():
-            validated_data["invoice_number"] = self._next_invoice_number(shop_id)
+        manual_invoice = str(validated_data.get("invoice_number", "") or "").strip()
 
-        with transaction.atomic():
-            purchase = Purchase.objects.create(**validated_data)
-            fallback_category = (
-                Category.objects.filter(shop_id=shop_id).order_by("id").first()
-            )
-            if fallback_category is None:
-                fallback_category = Category.objects.create(
-                    shop_id=shop_id,
-                    name="General",
-                )
-            for line in lines_data:
-                product = line.get("product")
-                manual_name = str(line.pop("manual_name", "") or "").strip()
-                if product is not None:
-                    if product.shop_id != shop_id:
-                        raise serializers.ValidationError(
-                            {"lines": "Each product must belong to your shop."},
-                        )
-                elif manual_name:
-                    product = (
-                        Product.objects.select_for_update()
-                        .filter(shop_id=shop_id, name__iexact=manual_name)
-                        .first()
+        for attempt in range(3):
+            if not str(validated_data.get("invoice_number", "") or "").strip():
+                validated_data["invoice_number"] = self._next_invoice_number(shop_id)
+            try:
+                with transaction.atomic():
+                    purchase = Purchase.objects.create(**validated_data)
+                    fallback_category = (
+                        Category.objects.filter(shop_id=shop_id).order_by("id").first()
                     )
-                    if product is None:
-                        product = Product.objects.create(
+                    if fallback_category is None:
+                        fallback_category = Category.objects.create(
                             shop_id=shop_id,
-                            name=manual_name,
-                            is_unregistered_placeholder=True,
-                            category=fallback_category,
-                            buy_price=Decimal(str(line["unit_cost_usd"])),
-                            sale_price_retail=Decimal(str(line["unit_cost_usd"])),
-                            sale_price_wholesale=Decimal(str(line["unit_cost_usd"])),
-                            current_stock_quantity=0,
+                            name="General",
                         )
-                else:
+                    for line in lines_data:
+                        product = line.get("product")
+                        manual_name = str(line.pop("manual_name", "") or "").strip()
+                        if product is not None:
+                            if product.shop_id != shop_id:
+                                raise serializers.ValidationError(
+                                    {"lines": "Each product must belong to your shop."},
+                                )
+                        elif manual_name:
+                            product = (
+                                Product.objects.select_for_update()
+                                .filter(shop_id=shop_id, name__iexact=manual_name)
+                                .first()
+                            )
+                            if product is None:
+                                product = Product.objects.create(
+                                    shop_id=shop_id,
+                                    name=manual_name,
+                                    is_unregistered_placeholder=True,
+                                    category=fallback_category,
+                                    buy_price=Decimal(str(line["unit_cost_usd"])),
+                                    sale_price_retail=Decimal(str(line["unit_cost_usd"])),
+                                    sale_price_wholesale=Decimal(str(line["unit_cost_usd"])),
+                                    current_stock_quantity=0,
+                                )
+                        else:
+                            raise serializers.ValidationError(
+                                {"lines": "Each line must include a product or manual_name."},
+                            )
+                        qty = int(line["quantity"])
+                        damaged = int(line.get("damaged_quantity", 0) or 0)
+                        if damaged > qty:
+                            raise serializers.ValidationError(
+                                {
+                                    "lines": (
+                                        f"Damaged quantity cannot exceed quantity for {product.name}."
+                                    ),
+                                },
+                            )
+                        add_to_stock = qty - damaged
+                        PurchaseLine.objects.create(
+                            purchase=purchase,
+                            product=product,
+                            quantity=qty,
+                            unit_cost_usd=line["unit_cost_usd"],
+                            damaged_quantity=damaged,
+                        )
+                        if add_to_stock > 0:
+                            Product.objects.filter(pk=product.pk).update(
+                                current_stock_quantity=F("current_stock_quantity") + add_to_stock,
+                            )
+                return purchase
+            except IntegrityError:
+                if manual_invoice or attempt >= 2:
                     raise serializers.ValidationError(
-                        {"lines": "Each line must include a product or manual_name."},
-                    )
-                qty = int(line["quantity"])
-                damaged = int(line.get("damaged_quantity", 0) or 0)
-                if damaged > qty:
-                    raise serializers.ValidationError(
-                        {"lines": f"Damaged quantity cannot exceed quantity for {product.name}."},
-                    )
-                add_to_stock = qty - damaged
-                PurchaseLine.objects.create(
-                    purchase=purchase,
-                    product=product,
-                    quantity=qty,
-                    unit_cost_usd=line["unit_cost_usd"],
-                    damaged_quantity=damaged,
-                )
-                if add_to_stock > 0:
-                    Product.objects.filter(pk=product.pk).update(
-                        current_stock_quantity=F("current_stock_quantity") + add_to_stock,
-                    )
-        return purchase
+                        {
+                            "invoice_number": (
+                                "This receipt number already exists in your shop."
+                                if manual_invoice
+                                else "Could not allocate purchase receipt number. Please retry."
+                            ),
+                        },
+                    ) from None
+                validated_data["invoice_number"] = ""
+        raise serializers.ValidationError(
+            {"detail": "Could not allocate purchase receipt number. Please retry."},
+        )
 
     def _resolve_purchase_line_blocks_for_shop(self, shop_id: int, lines_data: list) -> list[dict]:
         """Resolve validated nested line dicts to rows with Product instances (may create placeholders)."""

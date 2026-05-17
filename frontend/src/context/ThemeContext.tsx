@@ -1,46 +1,31 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { apiJson, restoreSessionAuth, setSuperuserShopId } from '../lib/api'
+import {
+  THEME_PALETTE_DEFAULTS,
+  applyThemePalette,
+  paletteFromShopSettings,
+  type ThemePalette,
+} from '../lib/themeColors'
 import type { ShopRow, ShopSettingsRow } from '../types/api'
 
 type ThemeMode = 'light' | 'dark' | 'system'
 
 type ThemeCtx = {
-  primaryColor: string
-  backgroundColor: string
+  palette: ThemePalette
   mode: ThemeMode
   resolvedMode: 'light' | 'dark'
-  applyTheme: (next: { primaryColor: string; backgroundColor?: string; mode?: ThemeMode }) => void
+  applyTheme: (next: Partial<ThemePalette> & { mode?: ThemeMode }) => void
+  setPaletteFromShopSettings: (settings: ShopSettingsRow) => void
   toggleTheme: () => void
 }
 
 const STORAGE_KEY = 'mm-theme-settings'
-const DEFAULT_PRIMARY = '#7c3aed'
 const DEFAULT_MODE: ThemeMode = 'light'
-const DEFAULT_BACKGROUND = '#f1f5f9'
-/** Main shell background in dark mode (matches POS / slate-900). */
-const DEFAULT_DARK_BACKGROUND = '#0f172a'
 
 const Ctx = createContext<ThemeCtx | null>(null)
 
-function applyRootTheme(primaryColor: string, backgroundColor: string, mode: ThemeMode) {
-  const root = document.documentElement
-  // Default is light; OS dark preference is ignored. Only explicit "dark" enables dark UI.
-  const resolvedDark = mode === 'dark'
-  root.style.setProperty('--primary-color', primaryColor)
-  root.style.setProperty('--color-violet-500', primaryColor)
-  root.style.setProperty('--color-violet-600', primaryColor)
-  root.style.setProperty('--color-violet-700', primaryColor)
-  root.style.setProperty(
-    '--app-bg-color',
-    resolvedDark ? DEFAULT_DARK_BACKGROUND : backgroundColor,
-  )
-  root.classList.toggle('dark', resolvedDark)
-  root.style.colorScheme = resolvedDark ? 'dark' : 'light'
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [primaryColor, setPrimaryColor] = useState(DEFAULT_PRIMARY)
-  const [backgroundColor, setBackgroundColor] = useState(DEFAULT_BACKGROUND)
+  const [palette, setPalette] = useState<ThemePalette>(THEME_PALETTE_DEFAULTS)
   const [mode, setMode] = useState<ThemeMode>(DEFAULT_MODE)
   const resolvedMode: 'light' | 'dark' = mode === 'dark' ? 'dark' : 'light'
 
@@ -49,12 +34,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (!raw) return
       const parsed = JSON.parse(raw) as {
+        palette?: Partial<ThemePalette>
         primaryColor?: string
         backgroundColor?: string
         mode?: ThemeMode
       }
-      if (parsed.primaryColor) setPrimaryColor(parsed.primaryColor)
-      if (parsed.backgroundColor) setBackgroundColor(parsed.backgroundColor)
+      if (parsed.palette) {
+        setPalette((p) => ({ ...p, ...parsed.palette }))
+      } else if (parsed.primaryColor || parsed.backgroundColor) {
+        setPalette((p) => ({
+          ...p,
+          ...(parsed.primaryColor ? { primaryColor: parsed.primaryColor } : {}),
+          ...(parsed.backgroundColor ? { backgroundColor: parsed.backgroundColor } : {}),
+        }))
+      }
       if (parsed.mode) setMode(parsed.mode)
     } catch {
       // Ignore local preference parsing errors.
@@ -62,13 +55,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    applyRootTheme(primaryColor, backgroundColor, mode)
+    applyThemePalette(palette, resolvedMode)
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ primaryColor, backgroundColor, mode }))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ palette, mode }))
     } catch {
       // Ignore persistence failures.
     }
-  }, [primaryColor, backgroundColor, mode])
+  }, [palette, mode, resolvedMode])
 
   useEffect(() => {
     const loadFromApi = async () => {
@@ -88,7 +81,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             }
           }
           const settings = await apiJson<ShopSettingsRow>('/api/shop-settings/')
-          if (settings.primary_color) setPrimaryColor(settings.primary_color)
+          setPalette(paletteFromShopSettings(settings))
           if (settings.default_mode && settings.default_mode !== 'system') {
             setMode(settings.default_mode)
           }
@@ -102,20 +95,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
-      primaryColor,
-      backgroundColor,
+      palette,
       mode,
       resolvedMode,
-      applyTheme: (next: { primaryColor: string; backgroundColor?: string; mode?: ThemeMode }) => {
-        setPrimaryColor(next.primaryColor)
-        if (next.backgroundColor) setBackgroundColor(next.backgroundColor)
+      applyTheme: (next: Partial<ThemePalette> & { mode?: ThemeMode }) => {
+        setPalette((p) => ({ ...p, ...next }))
         if (next.mode) setMode(next.mode)
+      },
+      setPaletteFromShopSettings: (settings: ShopSettingsRow) => {
+        setPalette(paletteFromShopSettings(settings))
+        if (settings.default_mode && settings.default_mode !== 'system') {
+          setMode(settings.default_mode)
+        }
       },
       toggleTheme: () => {
         setMode((m) => (m === 'dark' ? 'light' : 'dark'))
       },
     }),
-    [primaryColor, backgroundColor, mode, resolvedMode],
+    [palette, mode, resolvedMode],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
@@ -125,4 +122,27 @@ export function useTheme() {
   const ctx = useContext(Ctx)
   if (!ctx) throw new Error('useTheme must be used within ThemeProvider')
   return ctx
+}
+
+/** @deprecated use `palette.primaryColor` */
+export function useThemeLegacyColors() {
+  const { palette, mode, resolvedMode, applyTheme, toggleTheme } = useTheme()
+  return {
+    primaryColor: palette.primaryColor,
+    backgroundColor: palette.backgroundColor,
+    mode,
+    resolvedMode,
+    applyTheme: (next: {
+      primaryColor: string
+      backgroundColor?: string
+      mode?: ThemeMode
+    }) => {
+      applyTheme({
+        primaryColor: next.primaryColor,
+        ...(next.backgroundColor ? { backgroundColor: next.backgroundColor } : {}),
+        ...(next.mode ? { mode: next.mode } : {}),
+      })
+    },
+    toggleTheme,
+  }
 }

@@ -15,6 +15,23 @@ from shops.models import Shop
 from .models import Expense, Purchase, Sale, SaleLine, Shareholder
 from .serializers import latest_usd_to_iqd_for_shop
 
+INVENTORY_LOSS_NOTE_MARKERS = (
+    "[AUTO_INVENTORY_LOSS]",
+    "[AUTO_DISCONTINUE_LOSS]",
+)
+
+
+def expense_is_inventory_loss(expense: Expense) -> bool:
+    note = (expense.note or "").strip()
+    return any(note.startswith(marker) for marker in INVENTORY_LOSS_NOTE_MARKERS)
+
+
+def total_inventory_loss_usd_for_expenses(expense_qs) -> Decimal:
+    return sum(
+        (e.amount_usd() for e in expense_qs if expense_is_inventory_loss(e)),
+        Decimal("0"),
+    )
+
 
 def _range_bounds(d_from, d_to):
     """Same calendar-day semantics as inventory.dashboard_tools._bounds (business TZ)."""
@@ -86,7 +103,9 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
         occurred_on__gte=d_from,
         occurred_on__lte=d_to,
     )
-    total_expense_usd = sum((e.amount_usd() for e in expense_qs), Decimal("0"))
+    expense_list = list(expense_qs)
+    total_expense_usd = sum((e.amount_usd() for e in expense_list), Decimal("0"))
+    total_inventory_loss_usd = total_inventory_loss_usd_for_expenses(expense_list)
 
     purchase_qs = Purchase.objects.filter(
         shop_id=shop_id,
@@ -152,6 +171,7 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
             "sum_sale_line_buy_prices_usd": format(sum_buy, "f"),
             "total_customer_discounts_usd": format(cust_disc, "f"),
             "total_expenses_usd": format(total_expense_usd, "f"),
+            "total_inventory_loss_usd": format(total_inventory_loss_usd, "f"),
             "total_company_discounts_received_usd": format(company_disc, "f"),
             "net_profit_usd": format(net_profit.quantize(Decimal("0.0001")), "f"),
         },
@@ -169,6 +189,7 @@ def profit_report_global(d_from, d_to) -> dict:
     sum_buy = Decimal("0")
     cust_disc_t = Decimal("0")
     expense_t = Decimal("0")
+    inventory_loss_t = Decimal("0")
     company_disc_t = Decimal("0")
     net_t = Decimal("0")
     all_lines: list[dict] = []
@@ -180,6 +201,7 @@ def profit_report_global(d_from, d_to) -> dict:
         sum_buy += Decimal(t["sum_sale_line_buy_prices_usd"])
         cust_disc_t += Decimal(t["total_customer_discounts_usd"])
         expense_t += Decimal(t["total_expenses_usd"])
+        inventory_loss_t += Decimal(t.get("total_inventory_loss_usd", "0"))
         company_disc_t += Decimal(t["total_company_discounts_received_usd"])
         net_t += Decimal(t["net_profit_usd"])
         for line in r["lines"]:
@@ -196,6 +218,7 @@ def profit_report_global(d_from, d_to) -> dict:
             "sum_sale_line_buy_prices_usd": format(sum_buy, "f"),
             "total_customer_discounts_usd": format(cust_disc_t, "f"),
             "total_expenses_usd": format(expense_t, "f"),
+            "total_inventory_loss_usd": format(inventory_loss_t, "f"),
             "total_company_discounts_received_usd": format(company_disc_t, "f"),
             "net_profit_usd": format(net_t.quantize(Decimal("0.0001")), "f"),
         },

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocale } from '../../context/LocaleContext'
+import { useSubmitLock } from '../../hooks/useSubmitLock'
 import { apiJson } from '../../lib/api'
 import type { ShopRow } from '../../types/api'
 
@@ -23,6 +24,7 @@ export function AdminShopsPage() {
   const [slug, setSlug] = useState('')
   const [editing, setEditing] = useState<ShopRow | null>(null)
   const [editName, setEditName] = useState('')
+  const { isSubmitting: editSaving, runLocked: runSaveEdit } = useSubmitLock()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -69,13 +71,20 @@ export function AdminShopsPage() {
 
   async function saveEdit(e: React.FormEvent) {
     e.preventDefault()
-    if (!editing) return
-    await apiJson(`/api/shops/${editing.slug}/`, {
-      method: 'PATCH',
-      body: JSON.stringify({ name: editName.trim() }),
+    await runSaveEdit(async () => {
+      if (!editing) return
+      setError(null)
+      try {
+        await apiJson(`/api/shops/${editing.slug}/`, {
+          method: 'PATCH',
+          body: JSON.stringify({ name: editName.trim() }),
+        })
+        setEditing(null)
+        await load()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t('common.error'))
+      }
     })
-    setEditing(null)
-    await load()
   }
 
   async function deleteShop(row: ShopRow) {
@@ -197,16 +206,18 @@ export function AdminShopsPage() {
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
+                disabled={editSaving}
                 onClick={() => setEditing(null)}
-                className="rounded-lg px-3 py-2 text-slate-600"
+                className="rounded-lg px-3 py-2 text-slate-600 disabled:opacity-50"
               >
                 {t('pos.cancel')}
               </button>
               <button
                 type="submit"
-                className="rounded-lg bg-violet-600 px-4 py-2 text-white"
+                disabled={editSaving}
+                className="rounded-lg bg-violet-600 px-4 py-2 text-white disabled:opacity-50"
               >
-                {t('settings.save')}
+                {editSaving ? t('common.loading') : t('settings.save')}
               </button>
             </div>
           </form>

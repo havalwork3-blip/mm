@@ -4,6 +4,7 @@ import {
   replaceFirstQueueItem,
   shiftOfflineQueue,
 } from './offlineQueue'
+import { sanitizeApiErrorText } from './sanitizeApiError'
 
 /**
  * Site origin for API calls (no `/api` suffix). Every `apiJson` path already starts with `/api/…`.
@@ -346,7 +347,7 @@ export async function apiJson<T>(path: string, init: ApiFetchOptions = {}): Prom
         /* ignore */
       }
     }
-    detail = translateApiDetail(detail)
+    detail = translateApiDetail(sanitizeApiErrorText(detail, res.status))
     throw new ApiError(detail || `HTTP ${res.status}`, res.status)
   }
   if (res.status === 204) return undefined as T

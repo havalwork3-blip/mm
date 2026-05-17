@@ -6,6 +6,7 @@ import { useSession } from '../context/SessionContext'
 import { apiJson } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
 import type { Paginated, ProductRow } from '../types/api'
+import { formatPurchaseInvoiceNumber } from '../lib/shopReceiptNumbers'
 
 type CompanyRow = {
   id: number
@@ -101,12 +102,7 @@ function digitsOnlyAscii(s: string) {
 }
 
 function purchaseReceiptDisplay(p: PurchaseHistoryRow): string {
-  const normalized = normalizeNum(String(p.invoice_number ?? '').trim())
-  if (normalized !== '' && /^\d+$/.test(normalized)) {
-    const trimmed = normalized.replace(/^0+/, '')
-    return trimmed === '' ? '0' : trimmed
-  }
-  return String(p.id)
+  return formatPurchaseInvoiceNumber(p.invoice_number) || '—'
 }
 
 function formatProductsSummaryCell(raw: string | undefined | null): string {
@@ -217,8 +213,6 @@ export function PurchaseReturnsPage() {
     for (const row of returnsHistoryRows) {
       const inv = digitsOnlyAscii(String(row.purchase_invoice_number ?? ''))
       if (inv) set.add(inv)
-      const fallback = String(row.purchase_id)
-      if (fallback) set.add(fallback)
     }
     return Array.from(set).sort((a, b) => {
       const na = parseInt(a, 10)
@@ -1191,7 +1185,9 @@ export function PurchaseReturnsPage() {
                     <tr key={row.id} className="border-t border-slate-100 dark:border-slate-700">
                       <td className="px-3 py-2 whitespace-nowrap font-mono text-xs">{formatDateTimeCell(row.occurred_at)}</td>
                       <td className="px-3 py-2">{row.company_name || '—'}</td>
-                      <td className="px-3 py-2 font-mono text-xs tabular-nums">{digitsOnlyAscii(String(row.purchase_invoice_number ?? '')) || String(row.purchase_id)}</td>
+                      <td className="px-3 py-2 font-mono text-xs tabular-nums">
+                        {formatPurchaseInvoiceNumber(row.purchase_invoice_number) || '—'}
+                      </td>
                       <td className="px-3 py-2">{row.product_name || '—'}</td>
                       <td className="px-3 py-2 text-center font-mono text-xs tabular-nums">{row.quantity}</td>
                       <td className="px-3 py-2 text-center font-mono text-xs tabular-nums">{formatMoneyCompact(row.unit_cost_usd ?? '0')}</td>

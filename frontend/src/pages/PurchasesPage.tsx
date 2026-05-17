@@ -8,6 +8,10 @@ import { useSession } from '../context/SessionContext'
 import { apiJson, isApiStatus } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
 import type { Paginated, ProductRow } from '../types/api'
+import {
+  formatPurchaseInvoiceNumber,
+  nextPurchaseInvoiceNumberFromRows,
+} from '../lib/shopReceiptNumbers'
 
 type CompanyRow = { id: number; name: string }
 type PurchaseHistoryRow = {
@@ -73,14 +77,8 @@ function digitsOnlyAscii(s: string) {
   return normalizeNum(s).replace(/\D/g, '').slice(0, 128)
 }
 
-/** Show stored receipt if it is all digits; otherwise show purchase id (numeric). */
 function purchaseReceiptDisplay(p: PurchaseHistoryRow): string {
-  const normalized = normalizeNum(String(p.invoice_number ?? '').trim())
-  if (normalized !== '' && /^\d+$/.test(normalized)) {
-    const trimmed = normalized.replace(/^0+/, '')
-    return trimmed === '' ? '0' : trimmed
-  }
-  return String(p.id)
+  return formatPurchaseInvoiceNumber(p.invoice_number) || '—'
 }
 
 function isInventoryStockIncreaseEntry(p: PurchaseHistoryRow): boolean {
@@ -163,17 +161,6 @@ function formatProductsSummaryCell(raw: string | undefined | null): string {
 
 function emptyLine(): LineForm {
   return { productId: '', productName: '', quantity: '', unitPrice: '', damaged: '' }
-}
-
-function nextReceiptNumberFromRows(rows: PurchaseHistoryRow[]): string {
-  const maxNum = rows.reduce((max, row) => {
-    const invoiceDigits = digitsOnlyAscii(String(row.invoice_number ?? ''))
-    const raw = invoiceDigits !== '' ? invoiceDigits : String(row.id)
-    const n = Number.parseInt(raw, 10)
-    if (!Number.isFinite(n)) return max
-    return Math.max(max, n)
-  }, 0)
-  return String(maxNum + 1)
 }
 
 export function PurchasesPage() {
@@ -421,7 +408,7 @@ export function PurchasesPage() {
           '/api/purchases/?page_size=50',
         )
         const rows = asList(data)
-        const next = nextReceiptNumberFromRows(rows)
+        const next = nextPurchaseInvoiceNumberFromRows(rows)
         setInvoiceNumber((prev) => (force || prev.trim() === '' ? next : prev))
       } catch {
         // If history fetch fails, leave manual entry available.

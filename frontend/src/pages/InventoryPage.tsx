@@ -10,6 +10,7 @@ import { useLocale } from '../context/LocaleContext'
 import { useSyncedSession } from '../hooks/useSyncedSession'
 import { apiJson, getGlobalView } from '../lib/api'
 import imageCompression from 'browser-image-compression'
+import { formatMoneyCompact } from '../lib/formatMoney'
 import { hasPerm } from '../lib/permissions'
 import { useInventoryProductsStore } from '../stores/inventoryProductsStore'
 import type { CurrencyRow, Paginated, ProductRow, ShopSettingsRow } from '../types/api'
@@ -533,7 +534,16 @@ export function InventoryPage() {
   async function setProductDiscontinued(p: ProductRow, next: boolean) {
     if (!hasPerm(me, 'inventory.change_product')) return
     if (next) {
-      const ok = window.confirm(t('inv.confirmStopCarrying'))
+      const qty = Math.max(0, Number(p.current_stock_quantity ?? 0))
+      const buy = parseFloat(String(p.buy_price ?? '0').replace(/,/g, '')) || 0
+      const lossUsd = qty * buy
+      const msg =
+        lossUsd > 0
+          ? t('inv.confirmStopCarryingWithLoss')
+              .replace('{qty}', String(qty))
+              .replace('{usd}', formatMoneyCompact(lossUsd))
+          : t('inv.confirmStopCarrying')
+      const ok = window.confirm(msg)
       if (!ok) return
     }
     setTogglingDiscontinuedId(p.id)
