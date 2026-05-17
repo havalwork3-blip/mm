@@ -457,8 +457,13 @@ export type JardRow = {
   category_id: number | null
   category_name: string
   remaining_qty: number
-  sold_qty: number
-  unit_buy_price_usd: string
-  remaining_value_usd: string
-  sold_value_usd: string
+  sold_qty?: number
+  unit_buy_price_usd?: string
+  remaining_value_usd?: string
+  sold_value_usd?: string
+}
+
+export type JardReportResponse = {
+  results: JardRow[]
+  show_financials?: boolean
 }

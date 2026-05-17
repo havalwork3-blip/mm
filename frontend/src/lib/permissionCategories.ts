@@ -9,6 +9,7 @@ export type PermissionCategoryId =
   | 'customers'
   | 'finance'
   | 'profit_report'
+  | 'jard'
   | 'cash'
   | 'cashier'
   | 'staff_debts'
@@ -30,6 +31,7 @@ export const PERMISSION_CATEGORY_ORDER: PermissionCategoryDef[] = [
   { id: 'customers', labelKey: 'nav.customersSection' },
   { id: 'finance', labelKey: 'nav.financeSection' },
   { id: 'profit_report', labelKey: 'nav.profit' },
+  { id: 'jard', labelKey: 'nav.jard' },
   { id: 'cash', labelKey: 'nav.cashSection' },
   { id: 'cashier', labelKey: 'nav.cashier' },
   { id: 'staff_debts', labelKey: 'nav.staffDebtsSection' },
@@ -88,6 +90,9 @@ export function getPermissionCategoryId(p: PermissionRow): PermissionCategoryId 
   }
   if (p.app_label === SHOPS && p.model === 'shop' && p.codename === 'view_cashier') {
     return 'cashier'
+  }
+  if (p.app_label === SHOPS && p.model === 'shop' && p.codename === 'view_jard_financials') {
+    return 'jard'
   }
   return MODEL_CATEGORY.get(permissionCategoryKey(p)) ?? 'other'
 }

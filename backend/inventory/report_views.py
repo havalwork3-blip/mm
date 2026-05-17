@@ -17,7 +17,9 @@ from rest_framework.views import APIView
 from shops.scoping import get_shop_id_for_request, require_shop_id
 
 from .models import Product
-from .permissions import IsShopOwnerOrPermission
+from accounts.models import UserRole
+
+from .permissions import IsShopOwnerOrPermission, _has_any_perm
 from .reports import profit_report_for_shop, profit_report_global
 
 
@@ -50,6 +52,14 @@ class ProfitReportView(APIView):
         return Response(data)
 
 
+def _user_can_view_jard_financials(user) -> bool:
+    if getattr(user, "is_superuser", False):
+        return True
+    if getattr(user, "role", None) == UserRole.OWNER:
+        return True
+    return _has_any_perm(user, ("view_jard_financials",))
+
+
 class JardReportView(APIView):
     permission_classes = [IsAuthenticated, IsShopOwnerOrPermission]
     permission_codenames_by_method = {"GET": ("view_product", "view_sale")}
@@ -67,6 +77,7 @@ class JardReportView(APIView):
             return Response({"detail": "`to` must be on or after `from`."}, status=400)
 
         shop_id = require_shop_id(request)
+        show_financials = _user_can_view_jard_financials(request.user)
         sold_filter = Q()
         if d_from:
             sold_filter &= Q(sale_lines__sale__occurred_at__date__gte=d_from)
@@ -96,24 +107,24 @@ class JardReportView(APIView):
         )
         data: list[dict] = []
         for p in rows:
-            data.append(
-                {
-                    "product_id": p.id,
-                    "product_name": p.name,
-                    "product_image_url": request.build_absolute_uri(p.image.url) if p.image else None,
-                    "category_id": p.category_id,
-                    "category_name": p.category.name if p.category_id else "",
-                    "remaining_qty": int(p.current_stock_quantity or 0),
-                    "sold_qty": int(p.sold_qty or 0),
-                    "unit_buy_price_usd": format(Decimal(p.buy_price or 0), "f"),
-                    "remaining_value_usd": format(
-                        (Decimal(p.current_stock_quantity or 0) * Decimal(p.buy_price or 0)),
-                        "f",
-                    ),
-                    "sold_value_usd": format(
-                        Decimal(p.sold_revenue_usd or 0),
-                        "f",
-                    ),
-                },
-            )
-        return Response({"results": data})
+            row = {
+                "product_id": p.id,
+                "product_name": p.name,
+                "product_image_url": request.build_absolute_uri(p.image.url) if p.image else None,
+                "category_id": p.category_id,
+                "category_name": p.category.name if p.category_id else "",
+                "remaining_qty": int(p.current_stock_quantity or 0),
+            }
+            if show_financials:
+                row["sold_qty"] = int(p.sold_qty or 0)
+                row["unit_buy_price_usd"] = format(Decimal(p.buy_price or 0), "f")
+                row["remaining_value_usd"] = format(
+                    (Decimal(p.current_stock_quantity or 0) * Decimal(p.buy_price or 0)),
+                    "f",
+                )
+                row["sold_value_usd"] = format(
+                    Decimal(p.sold_revenue_usd or 0),
+                    "f",
+                )
+            data.append(row)
+        return Response({"results": data, "show_financials": show_financials})

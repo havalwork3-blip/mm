@@ -1,10 +1,12 @@
+import html2canvas from 'html2canvas'
+import { jsPDF } from 'jspdf'
 import { Check, ChevronDown, ImageOff } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocale } from '../context/LocaleContext'
 import { useSession } from '../context/SessionContext'
 import { apiJson, resolveMediaUrl } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
-import type { JardRow } from '../types/api'
+import type { JardReportResponse, JardRow } from '../types/api'
 
 /** Products without API category — stable filter key (DB ids are positive). */
 const UNCATEGORIZED_CATEGORY_KEY = -1
@@ -13,11 +15,20 @@ function categoryKey(r: JardRow): number {
   return r.category_id ?? UNCATEGORIZED_CATEGORY_KEY
 }
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 export function JardPage() {
-  const { t } = useLocale()
+  const { t, isRtl } = useLocale()
   const { me } = useSession()
   const [rows, setRows] = useState<JardRow[]>([])
   const [loading, setLoading] = useState(false)
+  const [exportingPdf, setExportingPdf] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<number>>(
     () => new Set(),
@@ -34,6 +45,12 @@ export function JardPage() {
   const [dateTo, setDateTo] = useState('')
 
   const canView = hasPerm(me, 'view_product', 'view_sale')
+  const canViewFinancials = hasPerm(me, 'view_jard_financials')
+  const [showFinancials, setShowFinancials] = useState(canViewFinancials)
+
+  useEffect(() => {
+    setShowFinancials(canViewFinancials)
+  }, [canViewFinancials])
 
   const fetchRows = useCallback(async (from: string, to: string) => {
     if (!canView) return
@@ -45,8 +62,9 @@ export function JardPage() {
       if (to.trim()) params.set('to', to.trim())
       const query = params.toString()
       const endpoint = query ? `/api/reports/jard/?${query}` : '/api/reports/jard/'
-      const d = await apiJson<{ results: JardRow[] }>(endpoint)
+      const d = await apiJson<JardReportResponse>(endpoint)
       setRows(d.results ?? [])
+      setShowFinancials(Boolean(d.show_financials))
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
       setRows([])
@@ -147,7 +165,7 @@ export function JardPage() {
     return filtered.reduce(
       (acc, r) => {
         acc.remaining += r.remaining_qty
-        acc.sold += r.sold_qty
+        acc.sold += r.sold_qty ?? 0
         acc.remainingValueUsd += Number(r.remaining_value_usd || 0)
         acc.soldValueUsd += Number(r.sold_value_usd || 0)
         return acc
@@ -156,40 +174,173 @@ export function JardPage() {
     )
   }, [filtered])
   const formatUsd = (amount: number) => amount.toLocaleString(undefined, { maximumFractionDigits: 2 })
-  const handleDownload = () => {
-    const rowsForCsv = filtered.map((r) => [
-      r.product_name,
-      r.category_name || t('jard.noCategory'),
-      String(r.remaining_qty),
-      String(r.sold_qty),
-      r.unit_buy_price_usd,
-      r.remaining_value_usd,
-      r.sold_value_usd,
-    ])
-    const headers = [
-      t('jard.product'),
-      t('jard.categoryColumn'),
-      t('jard.remainingQty'),
-      t('jard.soldQty'),
-      t('jard.unitBuyPriceUsd'),
-      t('jard.remainingValueUsd'),
-      t('jard.soldValueUsd'),
-    ]
-    const escapeCsv = (value: string) => {
-      const escaped = value.replace(/"/g, '""')
-      return `"${escaped}"`
+
+  const downloadJardPdf = useCallback(async () => {
+    if (filtered.length === 0) return
+    setExportingPdf(true)
+    setError(null)
+    try {
+      const headers = [
+        t('jard.product'),
+        t('jard.categoryColumn'),
+        t('jard.remainingQty'),
+        ...(showFinancials
+          ? [
+              t('jard.unitBuyPriceUsd'),
+              t('jard.remainingValueUsd'),
+              t('jard.soldQty'),
+              t('jard.soldValueUsd'),
+            ]
+          : []),
+      ]
+      const pdfCell = (value: unknown, nameCell = false) =>
+        `<td${nameCell ? ' class="name-cell"' : ''}><span class="cell-text">${escapeHtml(value)}</span></td>`
+      const headerCells = headers
+        .map((h) => `<th><span>${escapeHtml(h)}</span></th>`)
+        .join('')
+      const bodyRowsHtml = filtered
+        .map((r) => {
+          const cells = [
+            pdfCell(r.product_name, true),
+            pdfCell(r.category_name || t('jard.noCategory')),
+            pdfCell(r.remaining_qty),
+            ...(showFinancials
+              ? [
+                  pdfCell(r.unit_buy_price_usd ?? '0'),
+                  pdfCell(r.remaining_value_usd ?? '0'),
+                  pdfCell(r.sold_qty ?? 0),
+                  pdfCell(r.sold_value_usd ?? '0'),
+                ]
+              : []),
+          ]
+          return `<tr>${cells.join('')}</tr>`
+        })
+        .join('')
+
+      const statCard = (label: string, value: string) =>
+        `<div class="stat"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(value)}</span></div>`
+      const statsHtml = [
+        statCard(t('jard.totalQty'), String(filtered.length)),
+        statCard(t('jard.remainingQty'), String(totals.remaining)),
+        ...(showFinancials
+          ? [
+              statCard(t('jard.remainingValueUsd'), `${formatUsd(totals.remainingValueUsd)} USD`),
+              statCard(t('jard.soldQty'), String(totals.sold)),
+              statCard(t('jard.soldValueUsd'), `${formatUsd(totals.soldValueUsd)} USD`),
+            ]
+          : []),
+      ].join('')
+      const dateRangeText =
+        dateFrom || dateTo
+          ? [
+              dateFrom ? `${t('sales.dateFrom')}: ${dateFrom}` : '',
+              dateTo ? `${t('sales.dateTo')}: ${dateTo}` : '',
+            ]
+              .filter(Boolean)
+              .join(' · ')
+          : ''
+      const colgroup = showFinancials
+        ? `
+          <col style="width:22%">
+          <col style="width:14%">
+          <col style="width:10%">
+          <col style="width:12%">
+          <col style="width:14%">
+          <col style="width:10%">
+          <col style="width:18%">
+        `
+        : `
+          <col style="width:42%">
+          <col style="width:33%">
+          <col style="width:25%">
+        `
+
+      const container = document.createElement('div')
+      container.style.position = 'fixed'
+      container.style.left = '-100000px'
+      container.style.top = '0'
+      container.style.width = '1400px'
+      container.style.background = '#ffffff'
+      container.style.color = '#0f172a'
+      container.style.fontFamily = '"Noto Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif'
+      container.style.padding = '16px'
+      container.setAttribute('dir', isRtl ? 'rtl' : 'ltr')
+      container.innerHTML = `
+        <style>
+          .sheet { border: 1px solid #dbe2ea; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 24px rgba(2,6,23,.08); }
+          .head { padding: 14px 16px; background: linear-gradient(180deg,#f5f3ff,#ede9fe); border-bottom: 1px solid #ddd6fe; }
+          h2 { margin: 0 0 4px; font-size: 20px; font-weight: 700; text-align: center; color: #5b21b6; }
+          p.meta { margin: 0; color: #475569; font-size: 12px; text-align: center; }
+          .stats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; justify-content: center; }
+          .stat { flex: 1 1 150px; max-width: 220px; padding: 8px 10px; background: #fff; border: 1px solid #ddd6fe; border-radius: 10px; text-align: center; }
+          .stat strong { display: block; font-size: 10px; color: #6d28d9; margin-bottom: 3px; line-height: 1.25; }
+          .stat span { display: block; font-size: 14px; font-weight: 700; color: #1e293b; direction: ltr; unicode-bidi: isolate; }
+          table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+          th, td { border: 1px solid #dbe2ea; padding: 0; vertical-align: middle; }
+          thead th { background: #7c3aed; color: #fff; font-weight: 700; height: 38px; }
+          thead th > span { display: flex; align-items: center; justify-content: center; height: 38px; padding: 0 8px; line-height: 1.2; text-align: center; }
+          td > span.cell-text { display: flex; align-items: center; justify-content: center; min-height: 34px; padding: 6px 8px; line-height: 1.3; text-align: center; direction: ltr; unicode-bidi: isolate; }
+          td.name-cell > span.cell-text { white-space: normal; word-break: break-word; }
+          tbody tr:nth-child(even) { background: #f8fafc; }
+        </style>
+        <div class="sheet">
+          <div class="head">
+            <h2>${escapeHtml(t('jard.title'))}</h2>
+            <p class="meta">${escapeHtml(new Date().toLocaleString('en-CA'))}${dateRangeText ? ` · ${escapeHtml(dateRangeText)}` : ''}</p>
+            <div class="stats">${statsHtml}</div>
+          </div>
+          <table>
+            <colgroup>${colgroup}</colgroup>
+            <thead><tr>${headerCells}</tr></thead>
+            <tbody>${bodyRowsHtml}</tbody>
+          </table>
+        </div>
+      `
+      document.body.appendChild(container)
+      try {
+        const canvas = await html2canvas(container, {
+          scale: 2,
+          backgroundColor: '#ffffff',
+          useCORS: true,
+          onclone: (clonedDoc) => {
+            clonedDoc.querySelectorAll('style, link[rel="stylesheet"]').forEach((el) => {
+              if (!el.textContent?.includes('.sheet {')) el.remove()
+            })
+          },
+        })
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+        const margin = 20
+        const pageWidth = pdf.internal.pageSize.getWidth() - margin * 2
+        const pageHeight = pdf.internal.pageSize.getHeight() - margin * 2
+        const sourcePageHeight = Math.floor((canvas.width * pageHeight) / pageWidth)
+        let offsetY = 0
+        let pageNo = 1
+        while (offsetY < canvas.height) {
+          const sliceHeight = Math.min(sourcePageHeight, canvas.height - offsetY)
+          const pageCanvas = document.createElement('canvas')
+          pageCanvas.width = canvas.width
+          pageCanvas.height = sliceHeight
+          const ctx = pageCanvas.getContext('2d')
+          if (ctx) {
+            ctx.drawImage(canvas, 0, offsetY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight)
+          }
+          const img = pageCanvas.toDataURL('image/png')
+          const renderedHeight = (sliceHeight * pageWidth) / canvas.width
+          if (pageNo > 1) pdf.addPage()
+          pdf.addImage(img, 'PNG', margin, margin, pageWidth, renderedHeight)
+          offsetY += sliceHeight
+          pageNo += 1
+        }
+        pdf.save(`jard-${new Date().toISOString().slice(0, 10)}.pdf`)
+      } finally {
+        document.body.removeChild(container)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('common.error'))
+    } finally {
+      setExportingPdf(false)
     }
-    const csv = [headers, ...rowsForCsv].map((row) => row.map(escapeCsv).join(',')).join('\n')
-    const blob = new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `jard-${new Date().toISOString().slice(0, 10)}.csv`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
-  }
+  }, [filtered, showFinancials, totals, dateFrom, dateTo, isRtl, t])
 
   if (!canView) {
     return (
@@ -208,11 +359,15 @@ export function JardPage() {
         Summary order (LTR; RTL mirrors visually): 1) grand total units 2) remaining units
         3) remaining value USD 4) sold units 5) sold value USD
       */}
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 no-print">
+      <div
+        className={`mb-4 grid grid-cols-1 gap-3 no-print sm:grid-cols-2 ${
+          showFinancials ? 'lg:grid-cols-5' : 'lg:grid-cols-2'
+        }`}
+      >
         <div className="rounded-lg border border-slate-300 border-t-4 border-t-indigo-500 bg-white p-4 pt-3 dark:border-slate-700 dark:border-t-indigo-400 dark:bg-slate-900">
           <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{t('jard.totalQty')}</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-100">
-            {totals.remaining + totals.sold}
+            {showFinancials ? totals.remaining + totals.sold : totals.remaining}
           </p>
         </div>
         <div className="rounded-lg border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
@@ -221,24 +376,30 @@ export function JardPage() {
             {totals.remaining}
           </p>
         </div>
-        <div className="rounded-lg border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-          <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{t('jard.remainingValueUsd')}</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-100">
-            {formatUsd(totals.remainingValueUsd)}
-          </p>
-        </div>
-        <div className="rounded-lg border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-          <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{t('jard.soldQty')}</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-100">
-            {totals.sold}
-          </p>
-        </div>
-        <div className="rounded-lg border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-          <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{t('jard.soldValueUsd')}</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-100">
-            {formatUsd(totals.soldValueUsd)}
-          </p>
-        </div>
+        {showFinancials ? (
+          <>
+            <div className="rounded-lg border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                {t('jard.remainingValueUsd')}
+              </p>
+              <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-100">
+                {formatUsd(totals.remainingValueUsd)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{t('jard.soldQty')}</p>
+              <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-100">
+                {totals.sold}
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{t('jard.soldValueUsd')}</p>
+              <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-100">
+                {formatUsd(totals.soldValueUsd)}
+              </p>
+            </div>
+          </>
+        ) : null}
       </div>
 
       <div className="mb-4 rounded-lg border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-900 no-print">
@@ -516,10 +677,11 @@ export function JardPage() {
           <div className="ms-auto flex w-full flex-wrap items-center gap-2 lg:w-auto">
             <button
               type="button"
-              onClick={handleDownload}
-              className="min-h-11 flex-1 rounded-md bg-violet-600 px-4 text-sm font-medium text-white hover:bg-violet-700 lg:flex-none"
+              onClick={() => void downloadJardPdf()}
+              disabled={exportingPdf || filtered.length === 0}
+              className="min-h-11 flex-1 rounded-md bg-violet-600 px-4 text-sm font-medium text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60 lg:flex-none"
             >
-              {t('companiesPage.download')}
+              {exportingPdf ? t('common.loading') : t('companiesPage.downloadPdf')}
             </button>
             <button
               type="button"
@@ -549,21 +711,25 @@ export function JardPage() {
                   <th className="sticky top-0 z-10 border-b border-e border-slate-300 bg-slate-100 px-3 py-2 text-start text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
                     {t('jard.categoryColumn')}
                   </th>
-                  <th className="sticky top-0 z-10 border-b border-e border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
+                  <th className="sticky top-0 z-10 border-b border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
                     {t('jard.remainingQty')}
                   </th>
-                  <th className="sticky top-0 z-10 border-b border-e border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
-                    {t('jard.unitBuyPriceUsd')}
-                  </th>
-                  <th className="sticky top-0 z-10 border-b border-e border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
-                    {t('jard.remainingValueUsd')}
-                  </th>
-                  <th className="sticky top-0 z-10 border-b border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
-                    {t('jard.soldQty')}
-                  </th>
-                  <th className="sticky top-0 z-10 border-b border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
-                    {t('jard.soldValueUsd')}
-                  </th>
+                  {showFinancials ? (
+                    <>
+                      <th className="sticky top-0 z-10 border-b border-e border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
+                        {t('jard.unitBuyPriceUsd')}
+                      </th>
+                      <th className="sticky top-0 z-10 border-b border-e border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
+                        {t('jard.remainingValueUsd')}
+                      </th>
+                      <th className="sticky top-0 z-10 border-b border-e border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
+                        {t('jard.soldQty')}
+                      </th>
+                      <th className="sticky top-0 z-10 border-b border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
+                        {t('jard.soldValueUsd')}
+                      </th>
+                    </>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -588,21 +754,25 @@ export function JardPage() {
                     <td className="border-b border-e border-slate-200 px-3 py-2 text-slate-700 dark:border-slate-700 dark:text-slate-200">
                       {r.category_name || t('jard.noCategory')}
                     </td>
-                    <td className="border-b border-e border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
+                    <td className="border-b border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
                       {r.remaining_qty}
                     </td>
-                    <td className="border-b border-e border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
-                      {formatUsd(Number(r.unit_buy_price_usd || 0))}
-                    </td>
-                    <td className="border-b border-e border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
-                      {formatUsd(Number(r.remaining_value_usd || 0))}
-                    </td>
-                    <td className="border-b border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
-                      {r.sold_qty}
-                    </td>
-                    <td className="border-b border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
-                      {formatUsd(Number(r.sold_value_usd || 0))}
-                    </td>
+                    {showFinancials ? (
+                      <>
+                        <td className="border-b border-e border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
+                          {formatUsd(Number(r.unit_buy_price_usd || 0))}
+                        </td>
+                        <td className="border-b border-e border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
+                          {formatUsd(Number(r.remaining_value_usd || 0))}
+                        </td>
+                        <td className="border-b border-e border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
+                          {r.sold_qty ?? 0}
+                        </td>
+                        <td className="border-b border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
+                          {formatUsd(Number(r.sold_value_usd || 0))}
+                        </td>
+                      </>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>

@@ -262,6 +262,11 @@ const en: Record<string, string> = {
   'admin.permGuide.cashier': 'Cashier (Qasa)',
   'admin.permGuide.cashierDesc':
     'The Cashier (Qasa) screen requires Shop permission “Cashier (Qasa) | View” (view_cashier). Opening cash amounts are edited on the Opening cash page (opening-cash permissions). Payment history on customer/supplier debt pages uses the same ledger API and is allowed with view_customer or view_purchase.',
+  'admin.permissionsHelp.jardFinancials':
+    'Jard page: without “Jard — costs & sales totals” (view_jard_financials), staff only see product name, category, and remaining quantity. Superusers and shop owners always see buy price, stock value, sold qty, and sold value.',
+  'admin.permGuide.jard': 'Jard (inventory count)',
+  'admin.permGuide.jardDesc':
+    'Under the “Jard” section in the permission list, enable “Jard — view buy price, stock value, sold qty & sales total”. Without it, employees only see product, category, and remaining qty on /jard. Superusers and shop owners always see all columns.',
   'admin.permGuide.qrSocial': 'QR landing & social',
   'admin.permGuide.qrSocialDesc':
     'Editing the public scan page (headline, logo, colours, social links, extra buttons) lives under Admin → QR & social media. Enable the rows in the “QR & social media” permission group for that user.',
@@ -287,6 +292,10 @@ const en: Record<string, string> = {
   'admin.permVerb.change': 'Change',
   'admin.permVerb.delete': 'Delete',
   'admin.permVerb.view': 'View',
+  'admin.permLabel.view_profitreport': 'Profit report — view',
+  'admin.permLabel.view_cashier': 'Cashier (Qasa) — view',
+  'admin.permLabel.view_jard_financials':
+    'Jard — view buy price, stock value, sold qty & sales total (USD)',
   'admin.permModel.logentry': 'Log entry',
   'admin.permModel.group': 'Group',
   'admin.permModel.permission': 'Permission',
@@ -301,6 +310,7 @@ const en: Record<string, string> = {
   'admin.permModel.shop': 'Shop',
   'admin.permModel.profitreport': 'Profit report',
   'admin.permModel.cashier': 'Cashier (Qasa)',
+  'admin.permModel.jard_financials': 'Jard — costs & sales totals',
   'admin.permModel.currency': 'Currency',
   'admin.permModel.shareholder': 'Shareholder',
   'admin.permModel.company': 'Company',
@@ -437,7 +447,7 @@ const en: Record<string, string> = {
     'Amount you record for this partner’s money invested / held in the shop. Used on the profit report next to their profit share.',
   'settings.ownerOnly': 'This page is only available to shop owners.',
   'settings.noShop':
-    'This account is not linked to a shop, so these settings are unavailable. Ask an administrator to assign a shop to your user (Django admin or the app’s user management, if available).',
+    'Select Shop.',
   'settings.accessDenied': 'You do not have access to this page.',
   'cashier.title': 'Cashier (Qasa)',
   'cashier.openingCash': 'Opening cash (USD)',
@@ -1209,6 +1219,9 @@ const ar: Record<string, string> = {
   'admin.permGuide.reports': 'التقارير',
   'admin.permGuide.reportsDesc':
     'تقرير الأرباح له صلاحية مستقلة: من قسم المحل عيّن «تقرير الأرباح | عرض» (view_profitreport). منفصلة عن صلاحيات البيع أو المساهمين.',
+  'admin.permGuide.jard': 'الجرد',
+  'admin.permGuide.jardDesc':
+    'من قسم «الجرد» في قائمة الصلاحيات، فعّل «الجرد — عرض سعر الشراء وقيمة المخزون والمبيعات». بدونه يرى الموظف فقط المنتج والفئة والكمية المتبقية في /jard. المشرف العام وصاحب المحل يرون كل الأعمدة دائماً.',
   'admin.permGuide.expenses': 'المصروفات',
   'admin.permGuide.expensesDesc': 'تسجيل مصروفات المحل اليومية.',
   'admin.permGuide.cashier': 'أمين الصندوق (قاسا)',
@@ -1239,6 +1252,10 @@ const ar: Record<string, string> = {
   'admin.permVerb.change': 'تعديل',
   'admin.permVerb.delete': 'حذف',
   'admin.permVerb.view': 'عرض',
+  'admin.permLabel.view_profitreport': 'تقرير الأرباح — عرض',
+  'admin.permLabel.view_cashier': 'أمين الصندوق (قاسا) — عرض',
+  'admin.permLabel.view_jard_financials':
+    'الجرد — عرض سعر الشراء وقيمة المخزون والمبيعات (دولار)',
   'admin.permModel.logentry': 'سجل',
   'admin.permModel.group': 'مجموعة',
   'admin.permModel.permission': 'صلاحية',
@@ -1252,6 +1269,7 @@ const ar: Record<string, string> = {
   'admin.permModel.saleline': 'سطر بيع',
   'admin.permModel.shop': 'محل',
   'admin.permModel.profitreport': 'تقرير الأرباح',
+  'admin.permModel.jard_financials': 'الجرد — أسعار الشراء وإجمالي المبيعات',
   'admin.permModel.cashier': 'أمين الصندوق (قاسا)',
   'admin.permModel.currency': 'سعر صرف',
   'admin.permModel.shareholder': 'مساهم',
@@ -1674,7 +1692,7 @@ const ar: Record<string, string> = {
     'لا يوجد سعر دينار محفوظ — تُعرض المبالغ بالدولار فقط. عيّن سعر اليوم من المخزون.',
   'settings.ownerOnly': 'هذه الصفحة متاحة لأصحاب المحلات فقط.',
   'settings.noShop':
-    'هذا الحساب غير مربوط بأي محل، لذلك لا تُعرض الإعدادات. اطلب من المسؤول ربط حسابك بمحل من لوحة إدارة Django أو من إدارة المستخدمين في التطبيق.',
+    'يرجى اختيار المتجر',
   'settings.accessDenied': 'لا تملك صلاحية الوصول إلى هذه الصفحة.',
   'debts.title': 'ديون الموظفين',
   'debts.remainingDebt': 'الأرصدة المتبقية',
@@ -2106,6 +2124,9 @@ const ku: Record<string, string> = {
   'admin.permGuide.reports': 'ڕاپۆرتەکان',
   'admin.permGuide.reportsDesc':
     'ڕاپۆرتی قازانج مۆڵەتێکی تایبەت هەیە: لە بەشی فرۆشگا «راپۆرتی قازانج | بینین» (view_profitreport) بدە. جیا لە مۆڵەتی فرۆشتن یان هاوبەشەکانە.',
+  'admin.permGuide.jard': 'جەرد',
+  'admin.permGuide.jardDesc':
+    'لە بەشی «جەرد» لە لیستی مۆڵەتەکان، «بینینی جەرد (نرخی کڕین، بەهای کۆگا، بڕ و کۆی فرۆشتن بە USD)» چالاک بکە. بەبێ ئەم مۆڵەتە کارمەند تەنها ناو و پۆل و کۆی ماوە دەبینێت لە /jard. سوپەر یوسەر و خاوەن فرۆشگا هەمیشە هەموو خانەکان دەبینن.',
   'admin.permGuide.expenses': 'خەرجییەکان',
   'admin.permGuide.expensesDesc': 'تۆمارکردنی خەرجییەکانی ڕۆژانەی دوکان.',
   'admin.permGuide.cashier': 'قاسە',
@@ -2136,6 +2157,10 @@ const ku: Record<string, string> = {
   'admin.permVerb.change': 'گۆڕین',
   'admin.permVerb.delete': 'سڕینەوە',
   'admin.permVerb.view': 'بینین',
+  'admin.permLabel.view_profitreport': 'ڕاپۆرتی قازانج — بینین',
+  'admin.permLabel.view_cashier': 'قاسە — بینین',
+  'admin.permLabel.view_jard_financials':
+    'بینینی جەرد (نرخی کڕین، بەهای کۆگا، بڕ و کۆی فرۆشتن بە USD)',
   'admin.permModel.logentry': 'تۆمار',
   'admin.permModel.group': 'گرووپ',
   'admin.permModel.permission': 'مۆڵەت',
@@ -2150,6 +2175,7 @@ const ku: Record<string, string> = {
   'admin.permModel.shop': 'فرۆشگا',
   'admin.permModel.profitreport': 'راپۆرتی قازانج',
   'admin.permModel.cashier': 'قاسە',
+  'admin.permModel.jard_financials': 'جەرد — نرخی کڕین و کۆی فرۆشتن',
   'admin.permModel.currency': 'نرخی دراو',
   'admin.permModel.shareholder': 'هاوبەش',
   'admin.permModel.company': 'کۆمپانیا',

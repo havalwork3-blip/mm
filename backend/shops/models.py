@@ -16,6 +16,10 @@ class Shop(models.Model):
         permissions = [
             ("view_profitreport", "Can view profit report"),
             ("view_cashier", "Can use cashier (Qasa)"),
+            (
+                "view_jard_financials",
+                "Can view Jard buy prices, stock value, and sales totals",
+            ),
         ]
 
     def __str__(self) -> str:

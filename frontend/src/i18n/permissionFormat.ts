@@ -18,6 +18,13 @@ function titleCase(s: string): string {
     .join(' ')
 }
 
+/** Shop custom permissions — single clear label (not "model | verb"). */
+const CUSTOM_PERMISSION_LABEL_KEYS: Record<string, string> = {
+  view_profitreport: 'admin.permLabel.view_profitreport',
+  view_cashier: 'admin.permLabel.view_cashier',
+  view_jard_financials: 'admin.permLabel.view_jard_financials',
+}
+
 /**
  * Human-friendly label: "Model | Action" using i18n where keys exist.
  */
@@ -25,6 +32,11 @@ export function formatPermissionLabel(
   p: PermissionRow,
   t: (key: string) => string,
 ): string {
+  const customKey = CUSTOM_PERMISSION_LABEL_KEYS[p.codename]
+  if (customKey) {
+    const custom = t(customKey)
+    if (custom !== customKey) return custom
+  }
   const { verb, rest } = parseCodename(p.codename)
   const modelKey = `admin.permModel.${rest}`
   const verbKey = verb ? `admin.permVerb.${verb}` : ''

@@ -153,6 +153,7 @@ export function AdminUserEditModal({ userId, open, onClose, onSaved }: Props) {
         { titleKey: 'admin.permGuide.products', descKey: 'admin.permGuide.productsDesc' },
         { titleKey: 'admin.permGuide.sales', descKey: 'admin.permGuide.salesDesc' },
         { titleKey: 'admin.permGuide.reports', descKey: 'admin.permGuide.reportsDesc' },
+        { titleKey: 'admin.permGuide.jard', descKey: 'admin.permGuide.jardDesc' },
         { titleKey: 'admin.permGuide.expenses', descKey: 'admin.permGuide.expensesDesc' },
         { titleKey: 'admin.permGuide.cashier', descKey: 'admin.permGuide.cashierDesc' },
         { titleKey: 'admin.permGuide.qrSocial', descKey: 'admin.permGuide.qrSocialDesc' },
