@@ -150,10 +150,6 @@ export async function buildReceiptHtml(args: {
         ? fmtIqd(sum.balanceUsd * rateVal)
         : ''
     const paidIqdText = showIqdOnPdf ? fmtIqd(paidIqdRaw) : ''
-    const rateLineText =
-      showIqdOnPdf && rateVal > 0 && !Number.isNaN(rateVal)
-        ? `نرخی (دۆلار): ${Math.round(rateVal * 100).toLocaleString('en-US')} IQD / 100 USD`
-        : ''
 
     const rawLines = blankMode
       ? Array.from({ length: BLANK_RECEIPT_ROWS }, (_, idx) => ({
@@ -651,7 +647,6 @@ export async function buildReceiptHtml(args: {
         .meta-card { padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; border-inline-start: 3px solid #6366f1; background: #fff; }
         .meta-label { font-size: 7px; font-weight: 700; color: #64748b; margin-bottom: 2px; }
         .meta-value { font-size: 9px; font-weight: 700; word-break: break-word; }
-        .rate-line { margin: 0 8px 8px; padding: 6px 8px; font-size: 8px; font-weight: 600; background: #eef2ff; border: 1px solid #a5b4fc; border-radius: 4px; color: #312e81; }
         .section-title { margin: 0 8px 4px; font-size: 7px; font-weight: 800; letter-spacing: 0.06em; color: #64748b; }
         .receipt-table-wrap { margin: 0 8px 8px; border: 1px solid #334155; border-radius: 2px; overflow: hidden; }
         table.receipt-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 8px; }
@@ -901,11 +896,10 @@ export async function buildReceiptHtml(args: {
           </table>
         </div>
         ${
-          sale.note || rateLineText
+          sale.note || returnedSummary
             ? `<div class="receipt-extra">
           ${sale.note ? `<p class="receipt-extra__line"><strong>تێبینی:</strong> ${escapeHtml(String(sale.note))}</p>` : ''}
           ${returnedSummary ? `<p class="receipt-extra__line"><strong>کاڵای گەڕاوە:</strong> ${escapeHtml(returnedSummary)}</p>` : ''}
-          ${rateLineText ? `<p class="receipt-extra__line">${escapeHtml(rateLineText)}</p>` : ''}
         </div>`
             : ''
         }
