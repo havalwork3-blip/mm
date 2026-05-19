@@ -37,6 +37,8 @@ import type {
 } from '../types/api'
 
 type CartLine = {
+  /** Unique row key — same catalog product may appear on multiple lines (e.g. different prices). */
+  lineId: number
   product: Pick<
     ProductRow,
     'id' | 'name' | 'image_url' | 'current_stock_quantity'
@@ -195,17 +197,31 @@ export function PosPage() {
   const newCustNoteRef = useRef<HTMLTextAreaElement | null>(null)
   const newCustSaveRef = useRef<HTMLButtonElement | null>(null)
   const manualLineSeedRef = useRef(-1)
+  const cartLineSeedRef = useRef(0)
 
-  const setCartQtyRef = useCallback((productId: number) => (el: HTMLInputElement | null) => {
-    const m = cartQtyRefsRef.current
-    if (el) m.set(productId, el)
-    else m.delete(productId)
+  const allocLineId = useCallback(() => {
+    cartLineSeedRef.current += 1
+    return cartLineSeedRef.current
   }, [])
 
-  const setCartPriceRef = useCallback((productId: number) => (el: HTMLInputElement | null) => {
+  const bumpLineIdSeed = useCallback((lines: CartLine[]) => {
+    for (const l of lines) {
+      if (l.lineId > cartLineSeedRef.current) {
+        cartLineSeedRef.current = l.lineId
+      }
+    }
+  }, [])
+
+  const setCartQtyRef = useCallback((lineId: number) => (el: HTMLInputElement | null) => {
+    const m = cartQtyRefsRef.current
+    if (el) m.set(lineId, el)
+    else m.delete(lineId)
+  }, [])
+
+  const setCartPriceRef = useCallback((lineId: number) => (el: HTMLInputElement | null) => {
     const m = cartPriceRefsRef.current
-    if (el) m.set(productId, el)
-    else m.delete(productId)
+    if (el) m.set(lineId, el)
+    else m.delete(lineId)
   }, [])
 
   const setProductSearchHitRef = useCallback((productId: number) => (el: HTMLButtonElement | null) => {
@@ -388,6 +404,7 @@ export function PosPage() {
             const p = byProductId.get(ln.product)
             if (!p) continue
             cartLines.push({
+              lineId: cartLines.length + 1,
               product: {
                 id: p.id,
                 name: p.name,
@@ -402,6 +419,7 @@ export function PosPage() {
             manualLineSeedRef.current -= 1
             const name = (ln.manual_name || ln.product_name || '').trim() || '—'
             cartLines.push({
+              lineId: cartLines.length + 1,
               product: {
                 id: mid,
                 name,
@@ -414,6 +432,7 @@ export function PosPage() {
             })
           }
         }
+        cartLineSeedRef.current = cartLines.length
         setCart(cartLines)
         setRate(Number(sale.exchange_rate_usd_to_iqd))
         setDiscountUsd(formatMoneyCompact(sale.invoice_discount_usd))
@@ -574,30 +593,25 @@ export function PosPage() {
   }
 
   function addProduct(p: ProductRow) {
-    setCart((prev) => {
-      const i = prev.findIndex((l) => l.product.id === p.id)
-      if (i >= 0) {
-        const next = [...prev]
-        next[i] = {
-          ...next[i],
-          quantity: next[i].quantity + 1,
-        }
-        return next
-      }
-      return [
-        ...prev,
-        {
-          product: p,
-          // Start like a normal in-stock line to avoid zero-qty calculation issues.
-          quantity: 1,
-          unitPriceUsd: '',
+    const lineId = allocLineId()
+    setCart((prev) => [
+      ...prev,
+      {
+        lineId,
+        product: {
+          id: p.id,
+          name: p.name,
+          image_url: p.image_url,
+          current_stock_quantity: p.current_stock_quantity,
         },
-      ]
-    })
+        quantity: 1,
+        unitPriceUsd: '',
+      },
+    ])
     setSearchOpen(false)
     setProductQuery('')
     window.setTimeout(() => {
-      const qtyInput = cartQtyRefsRef.current.get(p.id)
+      const qtyInput = cartQtyRefsRef.current.get(lineId)
       if (qtyInput) {
         qtyInput.focus()
         qtyInput.select()
@@ -612,9 +626,11 @@ export function PosPage() {
     if (!trimmed) return
     const manualId = manualLineSeedRef.current
     manualLineSeedRef.current -= 1
+    const lineId = allocLineId()
     setCart((prev) => [
       ...prev,
       {
+        lineId,
         product: {
           id: manualId,
           name: trimmed,
@@ -622,7 +638,6 @@ export function PosPage() {
           current_stock_quantity: 0,
           manual_entry: true,
         },
-        // Manual items should also start as a valid line.
         quantity: 1,
         unitPriceUsd: '',
       },
@@ -630,7 +645,7 @@ export function PosPage() {
     setSearchOpen(false)
     setProductQuery('')
     window.setTimeout(() => {
-      const qtyInput = cartQtyRefsRef.current.get(manualId)
+      const qtyInput = cartQtyRefsRef.current.get(lineId)
       if (qtyInput) {
         qtyInput.focus()
         qtyInput.select()
@@ -647,10 +662,66 @@ export function PosPage() {
     setCustomerSearchOpen(false)
   }
 
-  function focusAfterCustomerPick() {
+  function focusProductSearch() {
     window.setTimeout(() => {
-      productSearchRef.current?.focus()
+      const el = productSearchRef.current
+      el?.focus()
+      el?.select()
     }, 0)
+  }
+
+  function focusAfterCustomerPick() {
+    focusProductSearch()
+  }
+
+  function getPaymentFocusFields(): (HTMLInputElement | HTMLTextAreaElement)[] {
+    return [
+      paymentUsdInputRef.current,
+      paymentIqdInputRef.current,
+      discountUsdInputRef.current,
+      discountInputRef.current,
+      noteTextareaRef.current,
+    ].filter((el): el is HTMLInputElement | HTMLTextAreaElement => el != null)
+  }
+
+  function focusNextEmptyPaymentFrom(
+    fromEl: HTMLElement,
+    direction: 'forward' | 'backward' = 'forward',
+  ) {
+    const fields = getPaymentFocusFields()
+    if (fields.length === 0) return
+    const idx = fields.indexOf(fromEl as HTMLInputElement | HTMLTextAreaElement)
+    if (direction === 'forward') {
+      const start = idx < 0 ? 0 : idx + 1
+      for (let i = start; i < fields.length; i += 1) {
+        if (!fields[i].value.trim()) {
+          fields[i].focus()
+          return
+        }
+      }
+      for (let i = 0; i < (idx < 0 ? fields.length : idx); i += 1) {
+        if (!fields[i].value.trim()) {
+          fields[i].focus()
+          return
+        }
+      }
+      if (idx >= 0 && idx < fields.length - 1) fields[idx + 1].focus()
+      return
+    }
+    const start = idx < 0 ? fields.length - 1 : idx - 1
+    for (let i = start; i >= 0; i -= 1) {
+      if (!fields[i].value.trim()) {
+        fields[i].focus()
+        return
+      }
+    }
+    for (let i = fields.length - 1; i > (idx < 0 ? -1 : idx); i -= 1) {
+      if (!fields[i].value.trim()) {
+        fields[i].focus()
+        return
+      }
+    }
+    if (idx > 0) fields[idx - 1].focus()
   }
 
   const focusCustomerSearchOption = useCallback(
@@ -706,22 +777,22 @@ export function PosPage() {
     [productQuery, searchHits],
   )
 
-  function updateLineQty(pid: number, qty: number) {
+  function updateLineQty(lineId: number, qty: number) {
     if (qty < 1) {
-      setCart((c) => c.filter((l) => l.product.id !== pid))
+      setCart((c) => c.filter((l) => l.lineId !== lineId))
       return
     }
     setCart((c) =>
       c.map((l) =>
-        l.product.id === pid ? { ...l, quantity: qty } : l,
+        l.lineId === lineId ? { ...l, quantity: qty } : l,
       ),
     )
   }
 
-  function updateLinePrice(pid: number, price: string) {
+  function updateLinePrice(lineId: number, price: string) {
     setCart((c) =>
       c.map((l) =>
-        l.product.id === pid ? { ...l, unitPriceUsd: price } : l,
+        l.lineId === lineId ? { ...l, unitPriceUsd: price } : l,
       ),
     )
   }
@@ -793,7 +864,12 @@ export function PosPage() {
   const applyDraft = useCallback((draft: PosDraft) => {
     setCustomerQuery(draft.customerQuery)
     setSelectedCustomerId(draft.selectedCustomerId)
-    setCart(draft.cart)
+    const restoredCart = draft.cart.map((line, i) => ({
+      ...line,
+      lineId: line.lineId ?? i + 1,
+    }))
+    bumpLineIdSeed(restoredCart)
+    setCart(restoredCart)
     setDiscountIqd(draft.discountIqd)
     setDiscountUsd(draft.discountUsd)
     setAmountPaidIqd(draft.amountPaidIqd)
@@ -1532,6 +1608,12 @@ export function PosPage() {
                     focusCustomerSearchOption(e.key === 'ArrowDown' ? 'next' : 'prev')
                     return
                   }
+                  if (e.key === 'Tab' && !e.shiftKey) {
+                    e.preventDefault()
+                    setCustomerSearchOpen(false)
+                    focusAfterCustomerPick()
+                    return
+                  }
                   if (e.key !== 'Enter') return
                   e.preventDefault()
                   if (customerHits.length > 0 && selectedCustomerId === null) {
@@ -1639,15 +1721,19 @@ export function PosPage() {
                   }
                   return
                 }
-                if (e.key !== 'Tab' || e.shiftKey) return
-                if (productQuery.trim().length === 0) return
-                e.preventDefault()
-                if (searchHits.length > 0) {
+                if (e.key !== 'Tab') return
+                if (e.shiftKey) return
+                const query = productQuery.trim()
+                if (query.length > 0 && searchHits.length > 0) {
+                  e.preventDefault()
                   const firstId = searchHits[0].id
                   window.requestAnimationFrame(() => {
                     productSearchHitRefsRef.current.get(firstId)?.focus()
                   })
+                  return
                 }
+                e.preventDefault()
+                focusProductSearch()
               }}
               placeholder={t('pos.searchPlaceholder')}
               className="w-full rounded-xl border border-slate-200 bg-white py-3 ps-4 pe-3 text-start shadow-sm outline-none ring-violet-500/20 focus:ring-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
@@ -1755,9 +1841,9 @@ export function PosPage() {
               </p>
             ) : (
               <ul className="mt-3 divide-y divide-slate-100">
-                {cart.map((l, lineIndex) => (
+                {cart.map((l) => (
                   <li
-                    key={l.product.id}
+                    key={l.lineId}
                     className={`flex flex-wrap items-center gap-3 py-3 ${
                       l.product.manual_entry
                         ? 'rounded-lg border border-violet-300 bg-violet-50/60 px-2'
@@ -1790,48 +1876,56 @@ export function PosPage() {
                       ) : null}
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <input
-                          ref={setCartQtyRef(l.product.id)}
+                          ref={setCartQtyRef(l.lineId)}
                           type="text"
                           inputMode="numeric"
                           value={l.quantity > 0 ? String(l.quantity) : ''}
                           onChange={(e) => {
                             const digitsOnly = e.target.value.replace(/\D+/g, '')
                             updateLineQty(
-                              l.product.id,
+                              l.lineId,
                               digitsOnly ? Number.parseInt(digitsOnly, 10) : 0,
                             )
                           }}
                           onKeyDown={(e) => {
+                            if (e.key === 'Tab') {
+                              e.preventDefault()
+                              if (e.shiftKey) {
+                                focusProductSearch()
+                              } else {
+                                cartPriceRefsRef.current.get(l.lineId)?.focus()
+                              }
+                              return
+                            }
                             if (e.key !== 'Enter') return
                             e.preventDefault()
-                            focusNextEmptyInputFrom(
-                              e.currentTarget,
-                              () => cartPriceRefsRef.current.get(l.product.id)?.focus(),
-                            )
+                            cartPriceRefsRef.current.get(l.lineId)?.focus()
                           }}
                           className="w-20 rounded border border-slate-200 px-2 py-1 text-center text-sm tabular-nums"
                           aria-label={t('pos.qtyAria')}
                           placeholder="0"
                         />
                         <input
-                          ref={setCartPriceRef(l.product.id)}
+                          ref={setCartPriceRef(l.lineId)}
                           type="text"
                           inputMode="decimal"
                           value={l.unitPriceUsd}
                           onChange={(e) =>
-                            updateLinePrice(l.product.id, e.target.value)
+                            updateLinePrice(l.lineId, e.target.value)
                           }
                           onKeyDown={(e) => {
+                            if (e.key === 'Tab') {
+                              e.preventDefault()
+                              if (e.shiftKey) {
+                                cartQtyRefsRef.current.get(l.lineId)?.focus()
+                              } else {
+                                focusProductSearch()
+                              }
+                              return
+                            }
                             if (e.key !== 'Enter') return
                             e.preventDefault()
-                            const next = cart[lineIndex + 1]
-                            focusNextEmptyInputFrom(e.currentTarget, () => {
-                              if (next) {
-                                cartQtyRefsRef.current.get(next.product.id)?.focus()
-                              } else {
-                                paymentUsdInputRef.current?.focus()
-                              }
-                            })
+                            focusProductSearch()
                           }}
                           className="w-24 rounded border border-slate-200 px-2 py-1 text-end text-sm tabular-nums"
                           aria-label={t('pos.unitPriceUsdAria')}
@@ -1842,7 +1936,7 @@ export function PosPage() {
                         <button
                           type="button"
                           tabIndex={-1}
-                          onClick={() => updateLineQty(l.product.id, 0)}
+                          onClick={() => updateLineQty(l.lineId, 0)}
                           className="ms-auto text-slate-400 hover:text-red-600"
                           aria-label={t('pos.remove')}
                         >
@@ -1907,12 +2001,17 @@ export function PosPage() {
                   value={amountPaidUsd}
                   onChange={(e) => onAmountPaidUsdChange(e.target.value)}
                   onKeyDown={(e) => {
+                    if (e.key === 'Tab') {
+                      e.preventDefault()
+                      focusNextEmptyPaymentFrom(
+                        e.currentTarget,
+                        e.shiftKey ? 'backward' : 'forward',
+                      )
+                      return
+                    }
                     if (e.key !== 'Enter') return
                     e.preventDefault()
-                    focusNextEmptyInputFrom(
-                      e.currentTarget,
-                      () => paymentIqdInputRef.current?.focus(),
-                    )
+                    focusNextEmptyPaymentFrom(e.currentTarget, 'forward')
                   }}
                   className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-start tabular-nums dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                   inputMode="decimal"
@@ -1956,12 +2055,17 @@ export function PosPage() {
                   value={amountPaidIqd}
                   onChange={(e) => onAmountPaidIqdChange(e.target.value)}
                   onKeyDown={(e) => {
+                    if (e.key === 'Tab') {
+                      e.preventDefault()
+                      focusNextEmptyPaymentFrom(
+                        e.currentTarget,
+                        e.shiftKey ? 'backward' : 'forward',
+                      )
+                      return
+                    }
                     if (e.key !== 'Enter') return
                     e.preventDefault()
-                    focusNextEmptyInputFrom(
-                      e.currentTarget,
-                      () => discountInputRef.current?.focus(),
-                    )
+                    focusNextEmptyPaymentFrom(e.currentTarget, 'forward')
                   }}
                   className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-start tabular-nums dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                   inputMode="numeric"
@@ -1994,12 +2098,17 @@ export function PosPage() {
                   value={discountUsd}
                   onChange={(e) => setDiscountUsd(e.target.value)}
                   onKeyDown={(e) => {
+                    if (e.key === 'Tab') {
+                      e.preventDefault()
+                      focusNextEmptyPaymentFrom(
+                        e.currentTarget,
+                        e.shiftKey ? 'backward' : 'forward',
+                      )
+                      return
+                    }
                     if (e.key !== 'Enter') return
                     e.preventDefault()
-                    focusNextEmptyInputFrom(
-                      e.currentTarget,
-                      () => discountInputRef.current?.focus(),
-                    )
+                    focusNextEmptyPaymentFrom(e.currentTarget, 'forward')
                   }}
                   className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-start tabular-nums dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                   inputMode="decimal"
@@ -2018,12 +2127,17 @@ export function PosPage() {
                   value={discountIqd}
                   onChange={(e) => setDiscountIqd(e.target.value)}
                   onKeyDown={(e) => {
+                    if (e.key === 'Tab') {
+                      e.preventDefault()
+                      focusNextEmptyPaymentFrom(
+                        e.currentTarget,
+                        e.shiftKey ? 'backward' : 'forward',
+                      )
+                      return
+                    }
                     if (e.key !== 'Enter') return
                     e.preventDefault()
-                    focusNextEmptyInputFrom(
-                      e.currentTarget,
-                      () => noteTextareaRef.current?.focus(),
-                    )
+                    focusNextEmptyPaymentFrom(e.currentTarget, 'forward')
                   }}
                   className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-start tabular-nums dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                   inputMode="numeric"
@@ -2042,6 +2156,14 @@ export function PosPage() {
                   value={saleNote}
                   onChange={(e) => setSaleNote(e.target.value)}
                   onKeyDown={(e) => {
+                    if (e.key === 'Tab') {
+                      e.preventDefault()
+                      focusNextEmptyPaymentFrom(
+                        e.currentTarget,
+                        e.shiftKey ? 'backward' : 'forward',
+                      )
+                      return
+                    }
                     if (e.key !== 'Enter') return
                     if (e.shiftKey) return
                     e.preventDefault()

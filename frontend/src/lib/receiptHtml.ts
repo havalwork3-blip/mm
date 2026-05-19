@@ -201,6 +201,13 @@ export async function buildReceiptHtml(args: {
       receiptSettings?.footer_note || 'هەڵە و سەهوو دەگەڕێتەوە بۆ هەردوولا',
     )
     const shopAddress = escapeHtml((receiptSettings?.address ?? '').trim())
+    const sigShopNameBlock =
+      shopKu || shopEn
+        ? `<div class="sig-shop-name">
+          ${shopKu ? `<div class="sig-shop-name__ku">${shopKu}</div>` : ''}
+          ${shopEn ? `<div class="sig-shop-name__en">${shopEn}</div>` : ''}
+        </div>`
+        : ''
     const customerPhone = escapeHtml(String(sale.customer_phone ?? ''))
     const customerAddress = escapeHtml(String(sale.customer_address ?? ''))
     const customerNameDisp = escapeHtml(customerNameDisplay || '')
@@ -575,6 +582,21 @@ export async function buildReceiptHtml(args: {
           color: #6b7280;
           font-size: 10px;
         }
+        .sig-shop-name {
+          margin-bottom: 8px;
+          color: #0f172a;
+        }
+        .sig-shop-name__ku {
+          font-size: 16px;
+          font-weight: 900;
+          line-height: 1.2;
+        }
+        .sig-shop-name__en {
+          margin-top: 2px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #334155;
+        }
         .sig .line {
           border-top: 1px solid #9ca3af;
           width: 140px;
@@ -845,8 +867,6 @@ export async function buildReceiptHtml(args: {
           <div class="invoice-hero__brand">
             ${logo}
             <div class="receipt-titles">
-              <h1>${shopKu || '—'}</h1>
-              ${shopEn ? `<p class="en">${shopEn}</p>` : ''}
               <p class="tag">${sub}</p>
               ${shopAddress ? `<p class="shop-addr" dir="auto">${shopAddress}</p>` : ''}
             </div>
@@ -916,6 +936,7 @@ export async function buildReceiptHtml(args: {
         <div class="receipt-bottom">
           <div></div>
           <div class="sig">
+            ${sigShopNameBlock}
             <div class="line"></div>
             <div>واژووی بەرپرسی فرۆشتن</div>
           </div>
