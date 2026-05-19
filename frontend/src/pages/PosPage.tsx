@@ -1022,7 +1022,7 @@ export function PosPage() {
         customer: selectedCustomerId,
         occurred_at: isEdit ? editingOccurredAt || new Date().toISOString() : new Date().toISOString(),
         exchange_rate_usd_to_iqd: String(rate),
-        invoice_discount_usd: discountAmt > 0 ? String(discountAmt) : '0',
+        invoice_discount_usd: discountAmt > 0 ? discountAmt.toFixed(4) : '0',
         /** Mirrored fields = same cash; backend sums USD + IQD/rate — send one stream only */
         amount_paid_iqd: String(checkoutPaidIqd),
         amount_paid_usd: String(checkoutPaidUsd),
