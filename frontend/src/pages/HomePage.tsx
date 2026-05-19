@@ -371,11 +371,14 @@ export function HomePage() {
     if (!globalAdminStats) return [] as Array<{ name: string; value: number; color: string }>
     const sales = parseFloat(globalAdminStats.global_sales_usd ?? '0') || 0
     const expenses = parseFloat(globalAdminStats.global_expenses_usd ?? '0') || 0
-    const profit = parseFloat(globalAdminStats.global_profit_usd) || 0
+    const pettyCash = (globalAdminStats.top_shops ?? []).reduce(
+      (acc, shop) => acc + (parseFloat(shop.period_cash_drawer_usd ?? '0') || 0),
+      0,
+    )
     const discounts = parseFloat(globalAdminStats.global_discounts_usd) || 0
     return [
       { name: t('dash.totalSold'), value: Math.max(sales, 0), color: '#10b981' },
-      { name: t('dash.netProfit'), value: Math.max(profit, 0), color: '#6366f1' },
+      { name: t('dash.cashVsExpenses'), value: pettyCash, color: '#6366f1' },
       { name: t('dash.totalExpenses'), value: Math.max(expenses, 0), color: '#f59e0b' },
       { name: t('dash.totalDiscounts'), value: Math.max(discounts, 0), color: '#f43f5e' },
     ]
@@ -427,18 +430,6 @@ export function HomePage() {
       total: topShopsData.total,
     }
   }, [topShopsData])
-  const adminPositionRadialData = useMemo(() => {
-    if (!globalAdminStats) return [] as Array<{ name: string; value: number; pct: number; fill: string }>
-    const stock = parseFloat(globalAdminStats.global_stock_value_usd) || 0
-    const profit = parseFloat(globalAdminStats.global_profit_usd) || 0
-    const sales = parseFloat(globalAdminStats.global_sales_usd ?? '0') || 0
-    const max = Math.max(stock, profit, sales, 1)
-    return [
-      { name: t('admin.globalStockValue'), value: stock, pct: Math.round((stock / max) * 100), fill: '#10b981' },
-      { name: t('admin.globalProfit'), value: profit, pct: Math.round((profit / max) * 100), fill: '#06b6d4' },
-      { name: t('dash.totalSold'), value: sales, pct: Math.round((sales / max) * 100), fill: '#6366f1' },
-    ]
-  }, [globalAdminStats, t])
   const cashVsExpensesDelta = useMemo(() => {
     if (!stats) return { value: '0', positive: true }
     const cashAfterExpenses = parseFloat(stats.period_cash_drawer_usd ?? '0')
@@ -502,28 +493,39 @@ export function HomePage() {
     if (!stats) return [] as Array<{ name: string; value: number; color: string }>
     const sales = parseFloat(stats.total_sales_usd) || 0
     const expenses = parseFloat(stats.total_expenses_usd) || 0
-    const profit = parseFloat(stats.net_profit_usd) || 0
+    const pettyCash = parseFloat(stats.period_cash_drawer_usd ?? '0') || 0
     const discounts = parseFloat(stats.total_discounts_usd ?? '0') || 0
     return [
       { name: t('dash.totalSold'), value: Math.max(sales, 0), color: '#10b981' },
-      { name: t('dash.netProfit'), value: Math.max(profit, 0), color: '#6366f1' },
+      { name: t('dash.cashVsExpenses'), value: pettyCash, color: '#6366f1' },
       { name: t('dash.totalExpenses'), value: Math.max(expenses, 0), color: '#f59e0b' },
       { name: t('dash.totalDiscounts'), value: Math.max(discounts, 0), color: '#f43f5e' },
     ]
   }, [stats, t])
-  const positionRadialData = useMemo(() => {
-    if (!stats)
-      return [] as Array<{ name: string; value: number; pct: number; fill: string }>
-    const cash = parseFloat(stats.current_cash_usd ?? '0') || 0
-    const stock = parseFloat(stats.total_stock_value_usd ?? '0') || 0
-    const recv = parseFloat(stats.total_receivables_usd ?? '0') || 0
-    const max = Math.max(cash, stock, recv, 1)
-    return [
-      { name: t('dash.stockValue'), value: stock, pct: Math.round((stock / max) * 100), fill: '#10b981' },
-      { name: t('dash.cashInDrawer'), value: cash, pct: Math.round((cash / max) * 100), fill: '#06b6d4' },
-      { name: t('dash.receivables'), value: recv, pct: Math.round((recv / max) * 100), fill: '#f59e0b' },
-    ]
-  }, [stats, t])
+  const periodCashFlowMetrics = useMemo(() => {
+    if (!stats) return null
+    const cashIn = Math.max(parseFloat(stats.period_cash_in_usd ?? '0') || 0, 0)
+    const cashOut = Math.max(parseFloat(stats.period_cash_out_usd ?? '0') || 0, 0)
+    const net = parseFloat(stats.period_cash_drawer_usd ?? '0') || 0
+    return { cashIn, cashOut, net }
+  }, [stats])
+
+  const adminPettyCashByShopData = useMemo(() => {
+    if (!globalAdminStats?.top_shops?.length) {
+      return [] as Array<{ name: string; value: number; color: string }>
+    }
+    return [...globalAdminStats.top_shops]
+      .map((shop, idx) => ({
+        name:
+          shop.shop_name.length > 14
+            ? `${shop.shop_name.slice(0, 13)}…`
+            : shop.shop_name,
+        value: parseFloat(shop.period_cash_drawer_usd ?? '0') || 0,
+        color: PRODUCT_DONUT_COLORS[idx % PRODUCT_DONUT_COLORS.length],
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5)
+  }, [globalAdminStats])
   const returnsRatio = useMemo(() => {
     if (!stats) return { pct: 0, returned: 0, sales: 0 }
     const sales = parseFloat(stats.total_sales_usd) || 0
@@ -920,17 +922,18 @@ export function HomePage() {
                   emptyLabel={t('admin.topShopsEmpty')}
                 />
               </section>
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                <div className="mb-3 flex items-center justify-between gap-2">
+              <section className="relative overflow-hidden rounded-2xl border border-violet-200/70 bg-gradient-to-br from-white via-violet-50/40 to-fuchsia-50/30 p-5 shadow-sm ring-1 ring-violet-100/80 dark:border-violet-500/25 dark:from-slate-800 dark:via-violet-950/25 dark:to-slate-800 dark:ring-violet-500/15">
+                <div className="pointer-events-none absolute -end-8 -top-8 h-28 w-28 rounded-full bg-violet-300/20 blur-2xl dark:bg-violet-500/10" />
+                <div className="relative mb-3 flex items-center justify-between gap-2">
                   <h2 className="flex items-center gap-2 text-start text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
-                      <Coins className="h-4 w-4" />
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-md shadow-violet-500/30">
+                      <Store className="h-4 w-4" />
                     </span>
-                    {t('dash.cashAndStock')}
+                    {t('admin.pettyCashByShop')}
                   </h2>
                 </div>
-                <PositionRadialPanel
-                  data={adminPositionRadialData}
+                <PettyCashByShopPanel
+                  data={adminPettyCashByShopData}
                   currencyLabel={t('common.currencyUsd')}
                   emptyLabel={t('common.noData')}
                 />
@@ -1084,19 +1087,29 @@ export function HomePage() {
                   emptyLabel={t('dash.topSellingEmpty')}
                 />
               </section>
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                <div className="mb-3 flex items-center justify-between gap-2">
+              <section className="relative overflow-hidden rounded-2xl border border-cyan-200/70 bg-gradient-to-br from-white via-cyan-50/50 to-teal-50/30 p-5 shadow-sm ring-1 ring-cyan-100/80 dark:border-cyan-500/25 dark:from-slate-800 dark:via-cyan-950/30 dark:to-slate-800 dark:ring-cyan-500/15">
+                <div className="pointer-events-none absolute -start-6 -top-6 h-24 w-24 rounded-full bg-cyan-300/25 blur-2xl dark:bg-cyan-500/10" />
+                <div className="pointer-events-none absolute -bottom-8 -end-6 h-20 w-20 rounded-full bg-teal-300/20 blur-2xl dark:bg-teal-500/10" />
+                <div className="relative mb-1 flex items-center justify-between gap-2">
                   <h2 className="flex items-center gap-2 text-start text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
-                      <Coins className="h-4 w-4" />
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 text-white shadow-md shadow-cyan-500/35">
+                      <Activity className="h-4 w-4" />
                     </span>
-                    {t('dash.cashAndStock')}
+                    {t('dash.periodCashFlow')}
                   </h2>
                 </div>
-                <PositionRadialPanel
-                  data={positionRadialData}
+                <p className="relative mb-4 text-start text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                  {t('dash.periodCashFlowHint')}
+                </p>
+                <PeriodCashFlowPanel
+                  cashIn={periodCashFlowMetrics?.cashIn ?? 0}
+                  cashOut={periodCashFlowMetrics?.cashOut ?? 0}
+                  net={periodCashFlowMetrics?.net ?? 0}
                   currencyLabel={t('common.currencyUsd')}
                   emptyLabel={t('common.noData')}
+                  labelIn={t('dash.cashInPeriod')}
+                  labelOut={t('dash.cashOutPeriod')}
+                  labelNet={t('dash.periodCashNet')}
                 />
               </section>
             </div>
@@ -1481,6 +1494,178 @@ function DonutPanel({
         })}
       </ul>
     </div>
+  )
+}
+
+function PeriodCashFlowPanel({
+  cashIn,
+  cashOut,
+  net,
+  currencyLabel,
+  emptyLabel,
+  labelIn,
+  labelOut,
+  labelNet,
+}: {
+  cashIn: number
+  cashOut: number
+  net: number
+  currencyLabel: string
+  emptyLabel: string
+  labelIn: string
+  labelOut: string
+  labelNet: string
+}) {
+  const flowTotal = cashIn + cashOut
+  if (flowTotal === 0 && net === 0) {
+    return (
+      <div className="flex h-52 items-center justify-center rounded-2xl border border-dashed border-cyan-200/80 bg-white/60 text-sm text-slate-500 backdrop-blur-sm dark:border-cyan-500/30 dark:bg-slate-900/40 dark:text-slate-400">
+        {emptyLabel}
+      </div>
+    )
+  }
+  const inShare = flowTotal > 0 ? (cashIn / flowTotal) * 100 : 50
+  const outShare = flowTotal > 0 ? (cashOut / flowTotal) * 100 : 50
+  const netPositive = net >= 0
+
+  return (
+    <div className="relative space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="group relative overflow-hidden rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 via-white to-teal-50/90 p-4 shadow-sm transition hover:shadow-md dark:border-emerald-500/30 dark:from-emerald-950/40 dark:via-slate-900/50 dark:to-teal-950/30">
+          <div className="pointer-events-none absolute -end-4 -top-4 h-16 w-16 rounded-full bg-emerald-300/30 blur-xl dark:bg-emerald-500/15" />
+          <div className="relative flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                {labelIn}
+              </p>
+              <p className="mt-1.5 text-2xl font-bold tabular-nums tracking-tight text-emerald-900 dark:text-emerald-100">
+                {formatCompactNumber(cashIn)}
+              </p>
+              <p className="mt-0.5 text-[11px] font-medium text-emerald-600/80 dark:text-emerald-400/80">
+                {currencyLabel}
+              </p>
+            </div>
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-300">
+              <TrendingUp className="h-4 w-4" aria-hidden />
+            </span>
+          </div>
+        </div>
+        <div className="group relative overflow-hidden rounded-2xl border border-rose-200/80 bg-gradient-to-br from-rose-50 via-white to-orange-50/90 p-4 shadow-sm transition hover:shadow-md dark:border-rose-500/30 dark:from-rose-950/40 dark:via-slate-900/50 dark:to-orange-950/30">
+          <div className="pointer-events-none absolute -end-4 -top-4 h-16 w-16 rounded-full bg-rose-300/30 blur-xl dark:bg-rose-500/15" />
+          <div className="relative flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">
+                {labelOut}
+              </p>
+              <p className="mt-1.5 text-2xl font-bold tabular-nums tracking-tight text-rose-900 dark:text-rose-100">
+                {formatCompactNumber(cashOut)}
+              </p>
+              <p className="mt-0.5 text-[11px] font-medium text-rose-600/80 dark:text-rose-400/80">
+                {currencyLabel}
+              </p>
+            </div>
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-600 ring-1 ring-rose-500/20 dark:bg-rose-500/20 dark:text-rose-300">
+              <TrendingDown className="h-4 w-4" aria-hidden />
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200/80 bg-white/70 p-3 shadow-inner backdrop-blur-sm dark:border-slate-600/50 dark:bg-slate-900/50">
+        <div className="mb-2 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <span className="text-emerald-600 dark:text-emerald-400">{labelIn}</span>
+          <span className="text-rose-600 dark:text-rose-400">{labelOut}</span>
+        </div>
+        <div className="flex h-3.5 overflow-hidden rounded-full bg-slate-100 shadow-inner dark:bg-slate-800">
+          <div
+            className="h-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 transition-all duration-500"
+            style={{ width: `${Math.max(inShare, cashIn > 0 ? 8 : 0)}%` }}
+          />
+          <div
+            className="h-full bg-gradient-to-r from-rose-400 via-rose-500 to-orange-500 transition-all duration-500"
+            style={{ width: `${Math.max(outShare, cashOut > 0 ? 8 : 0)}%` }}
+          />
+        </div>
+        <div className="mt-2 flex justify-between text-[10px] tabular-nums text-slate-600 dark:text-slate-400">
+          <span>{Math.round(inShare)}%</span>
+          <span>{Math.round(outShare)}%</span>
+        </div>
+      </div>
+
+      <div
+        className={`relative overflow-hidden rounded-2xl border px-4 py-3.5 text-center shadow-sm ${
+          netPositive
+            ? 'border-emerald-200/90 bg-gradient-to-r from-emerald-50 via-teal-50/80 to-cyan-50/60 dark:border-emerald-500/35 dark:from-emerald-950/50 dark:via-teal-950/30 dark:to-cyan-950/20'
+            : 'border-rose-200/90 bg-gradient-to-r from-rose-50 via-orange-50/80 to-amber-50/60 dark:border-rose-500/35 dark:from-rose-950/50 dark:via-orange-950/30 dark:to-amber-950/20'
+        }`}
+      >
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+          {labelNet}
+        </p>
+        <p
+          className={`mt-1 text-2xl font-extrabold tabular-nums tracking-tight ${
+            netPositive
+              ? 'text-emerald-700 dark:text-emerald-200'
+              : 'text-rose-700 dark:text-rose-200'
+          }`}
+        >
+          {formatCompactNumber(net)}{' '}
+          <span className="text-sm font-semibold opacity-80">{currencyLabel}</span>
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function PettyCashByShopPanel({
+  data,
+  currencyLabel,
+  emptyLabel,
+}: {
+  data: Array<{ name: string; value: number; color: string }>
+  currencyLabel: string
+  emptyLabel: string
+}) {
+  const max = data.reduce((acc, r) => Math.max(acc, r.value), 0)
+  if (data.length === 0 || max <= 0) {
+    return (
+      <div className="flex h-52 items-center justify-center rounded-2xl border border-dashed border-violet-200/80 bg-white/60 text-sm text-slate-500 backdrop-blur-sm dark:border-violet-500/30 dark:bg-slate-900/40 dark:text-slate-400">
+        {emptyLabel}
+      </div>
+    )
+  }
+  return (
+    <ul className="relative space-y-2.5">
+      {data.map((row, idx) => {
+        const widthPct = max > 0 ? Math.max((row.value / max) * 100, 6) : 0
+        return (
+          <li
+            key={`petty-shop-${idx}-${row.name}`}
+            className="rounded-xl border border-white/80 bg-white/80 p-2.5 shadow-sm backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/50"
+          >
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-violet-100 text-[10px] font-bold text-violet-700 dark:bg-violet-500/20 dark:text-violet-200">
+                  {idx + 1}
+                </span>
+                <span className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100" title={row.name}>
+                  {row.name}
+                </span>
+              </span>
+              <span className="shrink-0 text-xs font-bold tabular-nums text-violet-700 dark:text-violet-200">
+                {formatCompactNumber(row.value)} {currencyLabel}
+              </span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 shadow-sm transition-all duration-500"
+                style={{ width: `${widthPct}%`, opacity: 1 - idx * 0.12 }}
+              />
+            </div>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
