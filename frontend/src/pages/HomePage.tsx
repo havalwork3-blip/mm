@@ -1,4 +1,4 @@
-import {
+﻿import {
   Activity,
   BarChart3,
   Banknote,
@@ -518,7 +518,7 @@ export function HomePage() {
       .map((shop, idx) => ({
         name:
           shop.shop_name.length > 14
-            ? `${shop.shop_name.slice(0, 13)}…`
+            ? `${shop.shop_name.slice(0, 13)}â€¦`
             : shop.shop_name,
         value: parseFloat(shop.period_cash_drawer_usd ?? '0') || 0,
         color: PRODUCT_DONUT_COLORS[idx % PRODUCT_DONUT_COLORS.length],
@@ -1728,73 +1728,6 @@ function FinancialBarPanel({
   )
 }
 
-function PositionRadialPanel({
-  data,
-  currencyLabel,
-  emptyLabel,
-}: {
-  data: Array<{ name: string; value: number; pct: number; fill: string }>
-  currencyLabel: string
-  emptyLabel: string
-}) {
-  const total = data.reduce((acc, r) => acc + r.value, 0)
-  if (data.length === 0 || total === 0) {
-    return (
-      <div className="flex h-56 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
-        {emptyLabel}
-      </div>
-    )
-  }
-  return (
-    <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="h-44 w-full" dir="ltr">
-        <ResponsiveContainer width="100%" height="100%">
-          <RadialBarChart
-            innerRadius="38%"
-            outerRadius="98%"
-            data={data}
-            startAngle={90}
-            endAngle={-270}
-            barSize={11}
-          >
-            <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-            <RadialBar background={{ fill: 'rgba(148, 163, 184, 0.18)' }} dataKey="pct" cornerRadius={8} />
-            <Tooltip
-              contentStyle={{
-                borderRadius: '12px',
-                border: '1px solid #e2e8f0',
-                boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
-                fontSize: '12px',
-              }}
-              formatter={(_v, _n, item) => {
-                const payload = (item as { payload?: { value?: number } } | undefined)?.payload
-                const raw = typeof payload?.value === 'number' ? payload.value : 0
-                return `${formatCompactNumber(raw)} ${currencyLabel}`
-              }}
-            />
-          </RadialBarChart>
-        </ResponsiveContainer>
-      </div>
-      <ul className="space-y-2">
-        {data.map((entry, idx) => (
-          <li key={`radial-legend-${idx}`} className="flex items-center justify-between gap-2 text-xs">
-            <span className="flex min-w-0 items-center gap-2">
-              <span
-                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: entry.fill }}
-                aria-hidden
-              />
-              <span className="truncate text-slate-700 dark:text-slate-200">{entry.name}</span>
-            </span>
-            <span className="shrink-0 font-semibold tabular-nums text-slate-700 dark:text-slate-100">
-              {formatCompactNumber(entry.value)}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
 
 function CompactTopSellersPanel({
   rows,
@@ -1925,7 +1858,7 @@ function TopShopsSalesBarChart({
     .map((r) => ({
       shop_id: r.shop_id,
       name: r.name,
-      shortName: r.name.length > 16 ? `${r.name.slice(0, 16)}…` : r.name,
+      shortName: r.name.length > 16 ? `${r.name.slice(0, 16)}â€¦` : r.name,
       sales: Math.max(r.sales, 0),
       fill: r.color,
     }))
