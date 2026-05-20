@@ -121,6 +121,7 @@ class StorefrontSettings(ShopScopedModel):
     catalog_subtitle = models.CharField(max_length=500, blank=True, default="")
     welcome_message = models.CharField(max_length=1000, blank=True, default="")
     accent_color = models.CharField(max_length=32, default="#fbbf24")
+    banner_rotate_seconds = models.PositiveSmallIntegerField(default=5)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -133,6 +134,42 @@ class StorefrontSettings(ShopScopedModel):
 
     def __str__(self) -> str:
         return f"StorefrontSettings({self.shop_id})"
+
+
+class StorefrontBanner(ShopScopedModel):
+    """Rotating hero banners on the public online storefront."""
+
+    class LinkType(models.TextChoices):
+        NONE = "none", "None"
+        URL = "url", "External URL"
+        CATEGORY = "category", "Product category"
+
+    sort_order = models.PositiveIntegerField(default=0)
+    title = models.CharField(max_length=255, blank=True, default="")
+    subtitle = models.CharField(max_length=500, blank=True, default="")
+    image = models.ImageField(upload_to="storefront-banners/%Y/%m/", blank=True, null=True)
+    link_type = models.CharField(
+        max_length=16,
+        choices=LinkType.choices,
+        default=LinkType.NONE,
+    )
+    link_url = models.URLField(max_length=500, blank=True, default="")
+    category = models.ForeignKey(
+        "inventory.Category",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="storefront_banners",
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+
+    def __str__(self) -> str:
+        return f"StorefrontBanner({self.shop_id}, #{self.pk})"
 
 
 class ShopSettings(ShopScopedModel):

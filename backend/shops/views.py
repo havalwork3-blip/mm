@@ -28,6 +28,7 @@ from .models import (
     ReceiptSettings,
     Shop,
     ShopSettings,
+    StorefrontBanner,
     StorefrontSettings,
 )
 from .storefront_settings_utils import get_or_create_storefront_settings
@@ -50,6 +51,8 @@ from .serializers import (
     ReceiptSettingsSerializer,
     ShopSerializer,
     ShopSettingsSerializer,
+    StorefrontBannerReorderSerializer,
+    StorefrontBannerSerializer,
     StorefrontSettingsSerializer,
 )
 
@@ -491,3 +494,89 @@ class MerchantStorefrontSettingsView(APIView):
         ser.is_valid(raise_exception=True)
         ser.save()
         return Response(ser.data)
+
+
+def _storefront_shop_id(request) -> int:
+    shop_id = require_shop_id(request)
+    shop = Shop.objects.filter(pk=shop_id, online_storefront_enabled=True).first()
+    if shop is None:
+        raise PermissionDenied("Online storefront is not enabled for this shop.")
+    return int(shop_id)
+
+
+class MerchantStorefrontBannersView(APIView):
+    """GET list / POST create hero banners for the active shop."""
+
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
+    http_method_names = ["get", "post", "patch", "options", "head"]
+
+    def get(self, request):
+        shop_id = _storefront_shop_id(request)
+        qs = StorefrontBanner.objects.filter(shop_id=shop_id).order_by("sort_order", "id")
+        ser = StorefrontBannerSerializer(qs, many=True, context={"request": request, "shop_id": shop_id})
+        return Response(ser.data)
+
+    def post(self, request):
+        shop_id = _storefront_shop_id(request)
+        ser = StorefrontBannerSerializer(
+            data=request.data,
+            context={"request": request, "shop_id": shop_id},
+        )
+        ser.is_valid(raise_exception=True)
+        ser.save()
+        return Response(ser.data, status=201)
+
+    def patch(self, request):
+        """Reorder banners: body `{ "order": [3, 1, 2] }`."""
+        shop_id = _storefront_shop_id(request)
+        reorder = StorefrontBannerReorderSerializer(data=request.data)
+        reorder.is_valid(raise_exception=True)
+        ids = reorder.validated_data["order"]
+        banners = {
+            b.id: b
+            for b in StorefrontBanner.objects.filter(shop_id=shop_id, pk__in=ids)
+        }
+        if len(banners) != len(set(ids)):
+            return Response({"detail": "Invalid banner id in order list."}, status=400)
+        for idx, bid in enumerate(ids):
+            banners[bid].sort_order = idx
+            banners[bid].save(update_fields=["sort_order", "updated_at"])
+        qs = StorefrontBanner.objects.filter(shop_id=shop_id).order_by("sort_order", "id")
+        ser = StorefrontBannerSerializer(qs, many=True, context={"request": request, "shop_id": shop_id})
+        return Response(ser.data)
+
+
+class MerchantStorefrontBannerDetailView(APIView):
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
+    http_method_names = ["patch", "delete", "options", "head"]
+
+    def _get_banner(self, request, pk: int) -> StorefrontBanner:
+        shop_id = _storefront_shop_id(request)
+        row = StorefrontBanner.objects.filter(pk=pk, shop_id=shop_id).first()
+        if row is None:
+            from rest_framework.exceptions import NotFound
+
+            raise NotFound()
+        return row
+
+    def patch(self, request, pk: int):
+        obj = self._get_banner(request, pk)
+        shop_id = obj.shop_id
+        ser = StorefrontBannerSerializer(
+            obj,
+            data=request.data,
+            partial=True,
+            context={"request": request, "shop_id": shop_id},
+        )
+        ser.is_valid(raise_exception=True)
+        ser.save()
+        return Response(ser.data)
+
+    def delete(self, request, pk: int):
+        obj = self._get_banner(request, pk)
+        if obj.image:
+            obj.image.delete(save=False)
+        obj.delete()
+        return Response(status=204)

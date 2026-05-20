@@ -7,6 +7,7 @@ export type MerchantStorefrontSettings = {
   catalog_subtitle: string
   welcome_message: string
   accent_color: string
+  banner_rotate_seconds: number
   storefront_host: string
   storefront_url: string
   updated_at: string
@@ -22,7 +23,11 @@ export async function patchMerchantStorefrontSettings(
   body: Partial<
     Pick<
       MerchantStorefrontSettings,
-      'catalog_title' | 'catalog_subtitle' | 'welcome_message' | 'accent_color'
+      | 'catalog_title'
+      | 'catalog_subtitle'
+      | 'welcome_message'
+      | 'accent_color'
+      | 'banner_rotate_seconds'
     >
   >,
 ): Promise<MerchantStorefrontSettings> {

@@ -17,6 +17,7 @@ const DEFAULT_APPEARANCE: PublicStorefrontAppearance = {
   catalog_subtitle: '',
   welcome_message: '',
   accent_color: '#fbbf24',
+  banner_rotate_seconds: 5,
 }
 
 type Ctx = {

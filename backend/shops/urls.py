@@ -23,5 +23,15 @@ urlpatterns = [
         views.MerchantStorefrontSettingsView.as_view(),
         name="merchant-storefront-settings",
     ),
+    path(
+        "merchant/storefront-banners/",
+        views.MerchantStorefrontBannersView.as_view(),
+        name="merchant-storefront-banners",
+    ),
+    path(
+        "merchant/storefront-banners/<int:pk>/",
+        views.MerchantStorefrontBannerDetailView.as_view(),
+        name="merchant-storefront-banner-detail",
+    ),
     path("", include(router.urls)),
 ]

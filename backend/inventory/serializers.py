@@ -284,10 +284,25 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(required=False, allow_null=True)
+    image_url = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Category
-        fields = ["id", "shop", "name"]
-        read_only_fields = ["id", "shop"]
+        fields = ["id", "shop", "name", "image", "image_url"]
+        read_only_fields = ["id", "shop", "image_url"]
+
+    def get_image_url(self, obj: Category) -> str | None:
+        if not obj.image:
+            return None
+        try:
+            request = self.context.get("request")
+            url = obj.image.url
+            if request:
+                return request.build_absolute_uri(url)
+            return url
+        except Exception:
+            return None
 
 
 class ProductSerializer(serializers.ModelSerializer):

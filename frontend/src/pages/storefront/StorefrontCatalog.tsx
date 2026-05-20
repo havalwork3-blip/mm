@@ -12,9 +12,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   fetchPublicCatalog,
+  type PublicStorefrontBanner,
   type PublicStorefrontCategory,
   type PublicStorefrontProduct,
 } from '../../api/storefrontApi'
+import { StorefrontHeroCarousel } from './StorefrontHeroCarousel'
 import { resolveMediaUrl } from '../../lib/api'
 import { useLocale } from '../../context/LocaleContext'
 import { useCartStore } from '../../store/cartStore'
@@ -115,6 +117,8 @@ export function StorefrontCatalog() {
   const cartLines = useCartStore((st) => st.lines)
 
   const [categories, setCategories] = useState<PublicStorefrontCategory[]>([])
+  const [banners, setBanners] = useState<PublicStorefrontBanner[]>([])
+  const [rotateSeconds, setRotateSeconds] = useState(5)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -124,6 +128,14 @@ export function StorefrontCatalog() {
   const accent = resolveAccent(appearance.accent_color)
   const promoText = appearance.welcome_message || appearance.catalog_subtitle || s.promoDefault
 
+  function handleBannerCategory(categoryId: number) {
+    setSelectedCategoryId(categoryId)
+    setSearch('')
+    window.setTimeout(() => {
+      document.getElementById('sf-products')?.scrollIntoView({ behavior: 'smooth' })
+    }, 50)
+  }
+
   const load = useCallback(async () => {
     if (shopId == null) return
     setLoading(true)
@@ -131,6 +143,8 @@ export function StorefrontCatalog() {
     try {
       const data = await fetchPublicCatalog(shopId)
       setCategories(data.categories)
+      setBanners(data.banners ?? [])
+      setRotateSeconds(data.storefront?.banner_rotate_seconds ?? 5)
     } catch (e) {
       setError(e instanceof Error ? e.message : s.loadError)
       setCategories([])
@@ -207,16 +221,14 @@ export function StorefrontCatalog() {
 
       {!loading && totalProducts > 0 ? (
         <>
-          <div
-            className="mx-4 mt-4 overflow-hidden rounded-2xl p-4 text-white"
-            style={{
-              background: `linear-gradient(120deg, ${accent} 0%, ${accent}dd 50%, #ff9340 100%)`,
-              boxShadow: `0 10px 28px ${accentAlpha(accent, 0.28)}`,
-            }}
-          >
-            <p className="text-base font-bold leading-snug">{promoText}</p>
-            <p className="mt-1 text-xs text-white/85">{shopName}</p>
-          </div>
+          <StorefrontHeroCarousel
+            banners={banners}
+            accent={accent}
+            rotateSeconds={rotateSeconds}
+            fallbackTitle={promoText}
+            fallbackSubtitle={shopName}
+            onCategoryClick={handleBannerCategory}
+          />
 
           <div className="mx-4 mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             {[
@@ -279,8 +291,9 @@ export function StorefrontCatalog() {
                   {s.allCategories}
                 </button>
                 {categories.map((cat, index) => {
-                  const firstImg = cat.products.find((p) => p.image_url)
-                  const img = resolveMediaUrl(firstImg?.image_url ?? null)
+                  const img = resolveMediaUrl(
+                    cat.image_url ?? cat.products.find((p) => p.image_url)?.image_url ?? null,
+                  )
                   const selected = selectedCategoryId === cat.id
                   return (
                     <button

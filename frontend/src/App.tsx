@@ -15,6 +15,7 @@ import { PosPage } from './pages/PosPage'
 import { ProfitReportPage } from './pages/ProfitReportPage'
 import { PurchasesPage } from './pages/PurchasesPage'
 import { PurchaseReturnsPage } from './pages/PurchaseReturnsPage'
+import { CategoriesManagePage } from './pages/CategoriesManagePage'
 import { ResourceCrudPage } from './pages/ResourceCrudPage'
 import { SalesListPage } from './pages/SalesListPage'
 import { SalesReturnsPage } from './pages/SalesReturnsPage'
@@ -60,6 +61,7 @@ function App() {
           <Route path="/company-debts" element={<CompanyDebtsPage />} />
           <Route path="/manage/purchases" element={<PurchasesPage />} />
           <Route path="/manage/purchase-returns" element={<PurchaseReturnsPage />} />
+          <Route path="/manage/categories" element={<CategoriesManagePage />} />
           <Route path="/manage/:resource" element={<ResourceCrudPage />} />
           {/* Superuser UI — must not use `/admin/*` (reserved for Django admin in nginx). */}
           <Route path="/system" element={<AdminLayout />}>

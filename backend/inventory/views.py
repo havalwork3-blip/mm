@@ -7,6 +7,7 @@ from django.db.models import Prefetch, Q
 
 from shops.storefront_settings_utils import (
     get_or_create_storefront_settings,
+    storefront_banners_public_list,
     storefront_settings_public_dict,
 )
 from django.utils import timezone
@@ -843,7 +844,24 @@ def public_storefront_catalog(request):
         is_unregistered_placeholder=False,
     ).select_related("category").order_by("category__name", "name")
 
+    def _category_image_url(cat: Category) -> str | None:
+        if not cat.image:
+            return None
+        try:
+            url = cat.image.url
+            return request.build_absolute_uri(url) if request else url
+        except Exception:
+            return None
+
     by_category: dict[int, dict] = {}
+    for cat in Category.objects.filter(shop_id=shop.pk).order_by("name"):
+        by_category[cat.id] = {
+            "id": cat.id,
+            "name": cat.name,
+            "image_url": _category_image_url(cat),
+            "products": [],
+        }
+
     for product in product_qs:
         cat = product.category
         block = by_category.get(cat.id)
@@ -851,6 +869,7 @@ def public_storefront_catalog(request):
             block = {
                 "id": cat.id,
                 "name": cat.name,
+                "image_url": _category_image_url(cat),
                 "products": [],
             }
             by_category[cat.id] = block
@@ -861,6 +880,7 @@ def public_storefront_catalog(request):
     return Response(
         {
             "storefront": storefront_settings_public_dict(settings, shop),
+            "banners": storefront_banners_public_list(shop, request),
             "categories": categories,
         },
     )

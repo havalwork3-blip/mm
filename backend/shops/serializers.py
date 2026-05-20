@@ -3,12 +3,15 @@ from rest_framework import serializers
 
 from shops.storefront_hosts import normalize_storefront_host, validate_storefront_host
 
+from inventory.models import Category
+
 from .models import (
     Currency,
     QrLandingCustomLink,
     ReceiptSettings,
     Shop,
     ShopSettings,
+    StorefrontBanner,
     StorefrontSettings,
 )
 
@@ -181,6 +184,7 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
             "catalog_subtitle",
             "welcome_message",
             "accent_color",
+            "banner_rotate_seconds",
             "storefront_host",
             "storefront_url",
             "updated_at",
@@ -195,6 +199,90 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
         if not host:
             return ""
         return f"https://{host}"
+
+    def validate_banner_rotate_seconds(self, value: int) -> int:
+        if value < 2:
+            return 2
+        if value > 60:
+            return 60
+        return value
+
+
+class StorefrontBannerSerializer(serializers.ModelSerializer):
+    shop = serializers.PrimaryKeyRelatedField(read_only=True)
+    image_url = serializers.SerializerMethodField(read_only=True)
+    category_name = serializers.CharField(source="category.name", read_only=True, allow_null=True)
+
+    class Meta:
+        model = StorefrontBanner
+        fields = [
+            "id",
+            "shop",
+            "sort_order",
+            "title",
+            "subtitle",
+            "image",
+            "image_url",
+            "link_type",
+            "link_url",
+            "category",
+            "category_name",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "shop", "image_url", "category_name", "created_at", "updated_at"]
+        extra_kwargs = {"image": {"required": False}}
+
+    def get_image_url(self, obj: StorefrontBanner) -> str | None:
+        if not obj.image:
+            return None
+        try:
+            request = self.context.get("request")
+            url = obj.image.url
+            if request:
+                return request.build_absolute_uri(url)
+            return url
+        except Exception:
+            return None
+
+    def validate(self, attrs):
+        link_type = attrs.get(
+            "link_type",
+            getattr(self.instance, "link_type", StorefrontBanner.LinkType.NONE),
+        )
+        link_url = (attrs.get("link_url") or getattr(self.instance, "link_url", "") or "").strip()
+        category = attrs.get("category", getattr(self.instance, "category", None))
+        if link_type == StorefrontBanner.LinkType.URL and not link_url:
+            raise serializers.ValidationError({"link_url": "URL is required for link type URL."})
+        if link_type == StorefrontBanner.LinkType.CATEGORY and category is None:
+            raise serializers.ValidationError({"category": "Category is required for link type category."})
+        if link_type != StorefrontBanner.LinkType.URL:
+            attrs["link_url"] = ""
+        if link_type != StorefrontBanner.LinkType.CATEGORY:
+            attrs["category"] = None
+        return attrs
+
+    def validate_category(self, value: Category | None) -> Category | None:
+        if value is None:
+            return None
+        shop_id = self.context.get("shop_id")
+        if shop_id is not None and value.shop_id != int(shop_id):
+            raise serializers.ValidationError("Category does not belong to this shop.")
+        return value
+
+    def create(self, validated_data):
+        shop_id = self.context["shop_id"]
+        if not validated_data.get("image"):
+            raise serializers.ValidationError({"image": "Banner image is required."})
+        return StorefrontBanner.objects.create(shop_id=shop_id, **validated_data)
+
+
+class StorefrontBannerReorderSerializer(serializers.Serializer):
+    order = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=True,
+    )
 
 
 QR_PRESET_IDS = frozenset(

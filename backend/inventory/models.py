@@ -11,6 +11,7 @@ from shops.models import ShopScopedModel
 
 class Category(ShopScopedModel):
     name = models.CharField(max_length=255)
+    image = models.ImageField(upload_to="categories/%Y/%m/", blank=True, null=True)
 
     class Meta:
         ordering = ["name"]

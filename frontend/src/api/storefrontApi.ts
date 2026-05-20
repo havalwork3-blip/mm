@@ -11,6 +11,18 @@ export type PublicStorefrontAppearance = {
   catalog_subtitle: string
   welcome_message: string
   accent_color: string
+  banner_rotate_seconds: number
+}
+
+export type PublicStorefrontBanner = {
+  id: number
+  title: string
+  subtitle: string
+  image_url: string | null
+  link_type: 'none' | 'url' | 'category'
+  link_url: string
+  category_id: number | null
+  category_name: string
 }
 
 export type PublicStorefrontResolve = {
@@ -23,11 +35,13 @@ export type PublicStorefrontResolve = {
 export type PublicStorefrontCategory = {
   id: number
   name: string
+  image_url: string | null
   products: PublicStorefrontProduct[]
 }
 
 export type PublicStorefrontCatalog = {
   storefront: PublicStorefrontAppearance
+  banners: PublicStorefrontBanner[]
   categories: PublicStorefrontCategory[]
 }
 

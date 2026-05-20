@@ -24,6 +24,7 @@ import {
 } from '../../lib/merchantStorefrontSettingsApi'
 import { StorefrontPreview } from '../storefront/StorefrontPreview'
 import { storefrontStrings } from '../storefront/storefrontStrings'
+import { MerchantStorefrontBannersSection } from './MerchantStorefrontBannersSection'
 
 const COLOR_PRESETS = [
   { id: 'orange', hex: '#FF5A00', label: 'Orange' },
@@ -70,6 +71,7 @@ export function MerchantOnlineShopPage() {
   const [catalogSubtitle, setCatalogSubtitle] = useState('')
   const [welcomeMessage, setWelcomeMessage] = useState('')
   const [accentColor, setAccentColor] = useState('#FF5A00')
+  const [bannerRotateSeconds, setBannerRotateSeconds] = useState(5)
   const [storefrontUrl, setStorefrontUrl] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -86,6 +88,7 @@ export function MerchantOnlineShopPage() {
       setCatalogSubtitle(row.catalog_subtitle || '')
       setWelcomeMessage(row.welcome_message || '')
       setAccentColor(row.accent_color || '#FF5A00')
+      setBannerRotateSeconds(row.banner_rotate_seconds ?? 5)
       setStorefrontUrl(row.storefront_url || '')
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
@@ -115,6 +118,7 @@ export function MerchantOnlineShopPage() {
         catalog_subtitle: catalogSubtitle.trim(),
         welcome_message: welcomeMessage.trim(),
         accent_color: accentColor.trim() || '#FF5A00',
+        banner_rotate_seconds: Math.max(2, Math.min(60, bannerRotateSeconds)),
       })
       setSaved(true)
       await load()
@@ -222,6 +226,11 @@ export function MerchantOnlineShopPage() {
       ) : (
         <form onSubmit={(e) => void save(e)} className="grid gap-8 lg:grid-cols-[1fr_300px]">
           <div className="space-y-5">
+            <MerchantStorefrontBannersSection
+              rotateSeconds={bannerRotateSeconds}
+              onRotateSecondsChange={setBannerRotateSeconds}
+            />
+
             <SectionCard title={t('onlineShop.brandingSection')} icon={Globe}>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -252,10 +261,11 @@ export function MerchantOnlineShopPage() {
                 <textarea
                   value={welcomeMessage}
                   onChange={(e) => setWelcomeMessage(e.target.value)}
-                  rows={3}
+                  rows={2}
                   placeholder={t('onlineShop.welcomeMessageHint')}
                   className={`${inputClass} resize-none`}
                 />
+                <p className="mt-1 text-[11px] text-slate-400">{t('onlineShop.welcomeFallbackHint')}</p>
               </div>
             </SectionCard>
 
