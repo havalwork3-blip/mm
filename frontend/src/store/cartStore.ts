@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 import type { PublicStorefrontProduct } from '../api/storefrontApi'
-import { effectiveOnlineUnitPrice, parsePrice } from '../lib/storefrontPrice'
+import { effectiveOnlineUnitPrice } from '../lib/storefrontPrice'
 
 export type CartLine = {
   productId: number
