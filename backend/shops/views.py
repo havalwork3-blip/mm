@@ -19,7 +19,18 @@ from inventory.permissions import (
 
 from shops.scoping import get_shop_id_for_request, require_shop_id
 
-from .models import Currency, QrLandingCustomLink, QrLandingSettings, ReceiptSettings, Shop, ShopSettings
+from inventory.permissions import IsShopStaffWithOnlineStorefront
+
+from .models import (
+    Currency,
+    QrLandingCustomLink,
+    QrLandingSettings,
+    ReceiptSettings,
+    Shop,
+    ShopSettings,
+    StorefrontSettings,
+)
+from .storefront_settings_utils import get_or_create_storefront_settings
 
 QR_PRESET_META = (
     ("instagram", "Instagram"),
@@ -39,6 +50,7 @@ from .serializers import (
     ReceiptSettingsSerializer,
     ShopSerializer,
     ShopSettingsSerializer,
+    StorefrontSettingsSerializer,
 )
 
 
@@ -448,4 +460,34 @@ class ShopSettingsView(APIView):
         )
         ser.is_valid(raise_exception=True)
         ser.save(shop_id=obj.shop_id)
+        return Response(ser.data)
+
+
+class MerchantStorefrontSettingsView(APIView):
+    """GET/PATCH online shop appearance for the active tenant."""
+
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    http_method_names = ["get", "patch", "options", "head"]
+
+    def _get_settings(self, request) -> StorefrontSettings:
+        shop_id = require_shop_id(request)
+        shop = Shop.objects.filter(pk=shop_id, online_storefront_enabled=True).first()
+        if shop is None:
+            raise PermissionDenied("Online storefront is not enabled for this shop.")
+        return get_or_create_storefront_settings(shop)
+
+    def get(self, request):
+        obj = self._get_settings(request)
+        return Response(StorefrontSettingsSerializer(obj, context={"request": request}).data)
+
+    def patch(self, request):
+        obj = self._get_settings(request)
+        ser = StorefrontSettingsSerializer(
+            obj,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
+        ser.is_valid(raise_exception=True)
+        ser.save()
         return Response(ser.data)

@@ -191,6 +191,25 @@ export function MerchantOnlineOrdersPage() {
     )
   }
 
+  if (me && !me.online_storefront_enabled) {
+    return (
+      <div className="mx-auto max-w-lg rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900">
+        <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
+          {t('onlineOrders.title')}
+        </h1>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          {t('onlineOrders.notEnabled')}
+        </p>
+        <Link
+          to="/"
+          className="mt-4 inline-block text-sm font-medium text-violet-600 hover:underline dark:text-violet-400"
+        >
+          {t('nav.dashboard')}
+        </Link>
+      </div>
+    )
+  }
+
   if (needsShop) {
     return (
       <div className="mx-auto max-w-lg rounded-xl border border-amber-200 bg-amber-50 p-6 dark:border-amber-900/50 dark:bg-amber-950/30">

@@ -23,6 +23,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { QrCodeSocialLandingPage } from './pages/QrCodeSocialLandingPage'
 import { AdminQrSocialPage } from './pages/admin/AdminQrSocialPage'
 import { MerchantOnlineOrdersPage } from './pages/merchant/MerchantOnlineOrdersPage'
+import { MerchantOnlineShopPage } from './pages/merchant/MerchantOnlineShopPage'
 import { StorefrontRoutes } from './pages/storefront/StorefrontRoutes'
 
 const storefrontHost = isStorefrontMode()
@@ -49,6 +50,7 @@ function App() {
           <Route path="/profit" element={<ProfitReportPage />} />
           <Route path="/sales" element={<SalesListPage />} />
           <Route path="/sales-returns" element={<SalesReturnsPage />} />
+          <Route path="/online-shop" element={<MerchantOnlineShopPage />} />
           <Route path="/online-orders" element={<MerchantOnlineOrdersPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/catalog" element={<CatalogPage />} />

@@ -82,10 +82,21 @@ class PublicProductSerializer(serializers.ModelSerializer):
         read_only=True,
     )
     image_url = serializers.SerializerMethodField(read_only=True)
+    category_id = serializers.IntegerField(source="category_id", read_only=True)
+    category_name = serializers.CharField(source="category.name", read_only=True)
 
     class Meta:
         model = Product
-        fields = ["id", "name", "sell_price", "barcode", "image", "image_url"]
+        fields = [
+            "id",
+            "name",
+            "sell_price",
+            "barcode",
+            "image",
+            "image_url",
+            "category_id",
+            "category_name",
+        ]
         read_only_fields = fields
 
     def get_image_url(self, obj: Product) -> str | None:

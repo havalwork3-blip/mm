@@ -41,6 +41,11 @@ urlpatterns = [
         name="public-storefront-products",
     ),
     path(
+        "public/storefront/catalog/",
+        views.public_storefront_catalog,
+        name="public-storefront-catalog",
+    ),
+    path(
         "public/storefront/submit_order/",
         views.public_storefront_submit_order,
         name="public-storefront-submit-order",

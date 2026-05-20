@@ -37,6 +37,37 @@ class IsShopOwnerOrEmployee(permissions.BasePermission):
         )
 
 
+class IsShopStaffWithOnlineStorefront(permissions.BasePermission):
+    """
+    Online order dashboard: any staff of a shop with online_storefront_enabled.
+    Superusers need an active shop scope (shop_id / X-Shop-ID).
+    """
+
+    message = "Online storefront is not enabled for this shop."
+
+    def has_permission(self, request, view) -> bool:
+        u = request.user
+        if not u.is_authenticated:
+            return False
+        if getattr(u, "role", None) not in (
+            UserRole.OWNER,
+            UserRole.MANAGER,
+            UserRole.RECEIPT_EDITOR,
+            UserRole.EMPLOYEE,
+        ) and not getattr(u, "is_superuser", False):
+            return False
+        from shops.scoping import get_shop_id_for_request
+        from shops.models import Shop
+
+        sid = get_shop_id_for_request(request) or getattr(u, "shop_id", None)
+        if sid is None:
+            return bool(getattr(u, "is_superuser", False))
+        return Shop.objects.filter(
+            pk=sid,
+            online_storefront_enabled=True,
+        ).exists()
+
+
 def _has_any_perm(user, codenames: list[str] | tuple[str, ...]) -> bool:
     """
     Accept either full permission names (app_label.codename) or bare codenames.

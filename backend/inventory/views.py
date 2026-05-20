@@ -4,6 +4,11 @@ from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import Prefetch, Q
+
+from shops.storefront_settings_utils import (
+    get_or_create_storefront_settings,
+    storefront_settings_public_dict,
+)
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import filters, viewsets
@@ -54,6 +59,7 @@ from .permissions import (
     IsShopOwnerOrDjangoModelPermissionOrPosCustomerCreate,
     IsShopOwnerOrDjangoModelPermissionOrPosProductRead,
     IsShopOwnerOrPermission,
+    IsShopStaffWithOnlineStorefront,
 )
 from .serializers import (
     CategorySerializer,
@@ -805,11 +811,57 @@ def public_storefront_resolve(request):
             {"detail": "Online storefront not found for this address."},
             status=404,
         )
+    settings = get_or_create_storefront_settings(shop)
     return Response(
         {
             "shop_id": shop.id,
             "name": shop.name,
             "storefront_host": shop.storefront_host or "",
+            "storefront": storefront_settings_public_dict(settings, shop),
+        },
+    )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_storefront_catalog(request):
+    """GET — settings + products grouped by category for the public storefront."""
+    shop = _storefront_shop_from_request(request)
+    if shop is None:
+        if not (request.query_params.get("shop_id") or request.query_params.get("host")):
+            raise ValidationError(
+                {"shop_id": "shop_id or host query parameter is required."},
+            )
+        raise ValidationError(
+            {"detail": "Shop not found, inactive, or online storefront is disabled."},
+        )
+
+    settings = get_or_create_storefront_settings(shop)
+    product_qs = Product.objects.filter(
+        shop_id=shop.pk,
+        is_discontinued=False,
+        is_unregistered_placeholder=False,
+    ).select_related("category").order_by("category__name", "name")
+
+    by_category: dict[int, dict] = {}
+    for product in product_qs:
+        cat = product.category
+        block = by_category.get(cat.id)
+        if block is None:
+            block = {
+                "id": cat.id,
+                "name": cat.name,
+                "products": [],
+            }
+            by_category[cat.id] = block
+        ser = PublicProductSerializer(product, context={"request": request})
+        block["products"].append(ser.data)
+
+    categories = sorted(by_category.values(), key=lambda row: row["name"].casefold())
+    return Response(
+        {
+            "storefront": storefront_settings_public_dict(settings, shop),
+            "categories": categories,
         },
     )
 
@@ -834,6 +886,7 @@ def public_storefront_products(request):
             is_discontinued=False,
             is_unregistered_placeholder=False,
         )
+        .select_related("category")
         .order_by("name")
     )
     ser = PublicProductSerializer(qs, many=True, context={"request": request})
@@ -860,10 +913,17 @@ class MerchantStorefrontOrderViewSet(ShopScopedViewSet):
         .all()
     )
     serializer_class = MerchantStorefrontOrderSerializer
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
     http_method_names = ["get", "head", "options", "patch"]
 
     def get_queryset(self):
-        return super().get_queryset().order_by("-created_at", "-id")
+        qs = super().get_queryset()
+        shop_id = get_shop_id_for_request(self.request)
+        if shop_id is not None:
+            shop = Shop.objects.filter(pk=shop_id).only("online_storefront_enabled").first()
+            if shop is None or not shop.online_storefront_enabled:
+                return qs.none()
+        return qs.order_by("-created_at", "-id")
 
 
 class EmployeeDebtViewSet(OwnerScopedViewSet):

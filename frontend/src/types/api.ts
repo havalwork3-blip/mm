@@ -183,6 +183,8 @@ export type Me = {
   shop: number | null
   /** Resolved shop display name when the user has a shop (from API). */
   shop_name?: string
+  /** True when the active shop has online storefront enabled (superuser: selected shop). */
+  online_storefront_enabled?: boolean
   role: string
   is_active: boolean
   is_staff: boolean

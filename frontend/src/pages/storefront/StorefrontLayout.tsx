@@ -1,4 +1,4 @@
-import { ShoppingBag } from 'lucide-react'
+import { Home, ShoppingBag } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 
@@ -9,11 +9,13 @@ import { cartItemCount, useCartStore } from '../../store/cartStore'
 import { CartDrawer } from './CartDrawer'
 import { CheckoutModal } from './CheckoutModal'
 import { storefrontStrings } from './storefrontStrings'
+import { resolveAccent } from './storefrontTheme'
 
 export function StorefrontLayout() {
-  const { lang, setLang, isRtl } = useLocale()
+  const { lang, setLang } = useLocale()
   const s = storefrontStrings(lang)
-  const { shopName, loading: shopLoading, error: shopError } = useStorefrontShop()
+  const { appearance, loading: shopLoading, error: shopError } = useStorefrontShop()
+  const accent = resolveAccent(appearance.accent_color)
   const lines = useCartStore((st) => st.lines)
   const count = cartItemCount(lines)
 
@@ -26,95 +28,100 @@ export function StorefrontLayout() {
     }
   }, [setLang])
 
+  function scrollHome() {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
-    <div className="relative min-h-dvh overflow-x-hidden bg-[#020617] text-slate-50">
-      <div
-        className="pointer-events-none fixed inset-0 z-0"
-        aria-hidden
-        style={{
-          background: `
-            radial-gradient(ellipse 80% 55% at 15% 0%, rgba(99, 102, 241, 0.22), transparent 55%),
-            radial-gradient(ellipse 70% 50% at 90% 80%, rgba(251, 191, 36, 0.12), transparent 50%),
-            linear-gradient(165deg, #020617 0%, #0f172a 45%, #1e1b4b 100%)
-          `,
-        }}
-      />
-
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <div className="min-w-0">
-            <p className="truncate text-lg font-bold tracking-tight text-[#fde68a] sm:text-xl">
-              {shopName}
-            </p>
-            <p className="truncate text-xs text-slate-400 sm:text-sm">{s.shopTagline}</p>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <div
-              className="hidden rounded-full border border-white/10 bg-white/5 p-0.5 text-xs sm:flex"
-              role="group"
-              aria-label="Language"
-            >
-              {(['ku', 'ar', 'en'] as const).map((code) => (
-                <button
-                  key={code}
-                  type="button"
-                  onClick={() => setLang(code)}
-                  className={[
-                    'rounded-full px-2.5 py-1 font-medium transition-colors',
-                    lang === code
-                      ? 'bg-[#fbbf24] text-[#0f172a]'
-                      : 'text-slate-400 hover:text-slate-200',
-                  ].join(' ')}
-                >
-                  {code === 'ku' ? 'کوردی' : code === 'ar' ? 'عربي' : 'EN'}
-                </button>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setCartOpen(true)}
-              className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-[#fbbf24]/30 bg-[#fbbf24]/10 text-[#fde68a] transition hover:border-[#fbbf24]/50 hover:bg-[#fbbf24]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#fbbf24]"
-              aria-label={s.cart}
-            >
-              <ShoppingBag className="h-5 w-5" strokeWidth={2} aria-hidden />
-              {count > 0 ? (
-                <span
-                  className={[
-                    'absolute -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#fbbf24] px-1 text-[10px] font-bold text-[#0f172a]',
-                    isRtl ? '-start-1' : '-end-1',
-                  ].join(' ')}
-                >
-                  {count > 99 ? '99+' : count}
-                </span>
-              ) : null}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="relative z-10 mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6 sm:py-8">
+    <div
+      className="relative min-h-dvh overflow-x-hidden bg-[#f5f5f7] text-slate-900"
+      style={{ '--sf-accent': accent } as React.CSSProperties}
+    >
+      <main className="relative z-10 mx-auto max-w-lg pb-24">
         {shopError ? (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <div className="mx-4 mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {shopError}
           </div>
         ) : shopLoading ? (
-          <p className="text-center text-slate-400">{s.loading}</p>
+          <p className="py-16 text-center text-sm text-slate-500">{s.loading}</p>
         ) : (
           <Outlet />
         )}
       </main>
 
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-lg border-t border-slate-200/80 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] backdrop-blur-md"
+        aria-label="Navigation"
+      >
+        <div className="flex items-stretch justify-around gap-1">
+          <button
+            type="button"
+            onClick={scrollHome}
+            className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-semibold transition"
+            style={{ color: accent }}
+          >
+            <span
+              className="flex h-9 w-9 items-center justify-center rounded-full"
+              style={{ backgroundColor: `color-mix(in srgb, ${accent} 14%, white)` }}
+            >
+              <Home className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+            </span>
+            {s.home}
+          </button>
+
+          <div
+            className="hidden rounded-full border border-slate-200 bg-slate-50 p-0.5 text-[10px] sm:flex"
+            role="group"
+            aria-label="Language"
+          >
+            {(['ku', 'ar', 'en'] as const).map((code) => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => setLang(code)}
+                className={[
+                  'rounded-full px-2 py-1 font-medium transition-colors',
+                  lang === code ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-800',
+                ].join(' ')}
+                style={lang === code ? { backgroundColor: accent } : undefined}
+              >
+                {code === 'ku' ? 'کوردی' : code === 'ar' ? 'عربي' : 'EN'}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setCartOpen(true)}
+            className="relative flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium text-slate-500 transition hover:text-slate-800"
+            aria-label={s.cart}
+          >
+            <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+              <ShoppingBag className="h-5 w-5" strokeWidth={2} aria-hidden />
+              {count > 0 ? (
+                <span
+                  className="absolute -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white end-0"
+                  style={{ backgroundColor: accent }}
+                >
+                  {count > 99 ? '99+' : count}
+                </span>
+              ) : null}
+            </span>
+            {s.cart}
+          </button>
+        </div>
+      </nav>
+
       <CartDrawer
         open={cartOpen}
+        accent={accent}
         onClose={() => setCartOpen(false)}
         onCheckout={() => {
           setCartOpen(false)
           setCheckoutOpen(true)
         }}
       />
-      <CheckoutModal open={checkoutOpen} onClose={() => setCheckoutOpen(false)} />
+      <CheckoutModal open={checkoutOpen} accent={accent} onClose={() => setCheckoutOpen(false)} />
     </div>
   )
 }

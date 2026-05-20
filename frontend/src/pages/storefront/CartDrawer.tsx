@@ -10,14 +10,16 @@ import {
   useCartStore,
 } from '../../store/cartStore'
 import { formatUsd, storefrontStrings } from './storefrontStrings'
+import { accentAlpha } from './storefrontTheme'
 
 type Props = {
   open: boolean
+  accent: string
   onClose: () => void
   onCheckout: () => void
 }
 
-export function CartDrawer({ open, onClose, onCheckout }: Props) {
+export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
   const { lang, isRtl } = useLocale()
   const s = storefrontStrings(lang)
   const lines = useCartStore((st) => st.lines)
@@ -41,23 +43,26 @@ export function CartDrawer({ open, onClose, onCheckout }: Props) {
     <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label={s.cart}>
       <button
         type="button"
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
         onClick={onClose}
         aria-label={s.close}
       />
 
       <aside
         className={[
-          'relative flex h-full w-full max-w-md flex-col border-white/10 bg-[#0f172a] shadow-2xl',
-          isRtl ? 'ms-auto border-s' : 'me-auto border-e',
+          'relative flex h-full w-full max-w-md flex-col bg-white shadow-2xl',
+          isRtl ? 'ms-auto' : 'me-auto',
         ].join(' ')}
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
+        <div
+          className="flex items-center justify-between px-4 py-4 text-white"
+          style={{ backgroundColor: accent }}
+        >
           <div className="flex items-center gap-2">
-            <ShoppingBag className="h-5 w-5 text-[#fbbf24]" aria-hidden />
-            <h2 className="text-lg font-semibold text-white">{s.cart}</h2>
+            <ShoppingBag className="h-5 w-5" aria-hidden />
+            <h2 className="text-lg font-bold">{s.cart}</h2>
             {count > 0 ? (
-              <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-slate-300">
+              <span className="rounded-full bg-white/25 px-2 py-0.5 text-xs font-semibold">
                 {count}
               </span>
             ) : null}
@@ -65,18 +70,23 @@ export function CartDrawer({ open, onClose, onCheckout }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white/10 hover:text-white"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 transition hover:bg-white/30"
             aria-label={s.close}
           >
             <X className="h-5 w-5" aria-hidden />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-3">
+        <div className="flex-1 overflow-y-auto bg-[#f5f5f7] px-4 py-3">
           {lines.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-              <ShoppingBag className="h-12 w-12 text-slate-600" strokeWidth={1.25} aria-hidden />
-              <p className="font-medium text-slate-300">{s.cartEmpty}</p>
+              <div
+                className="flex h-16 w-16 items-center justify-center rounded-full"
+                style={{ backgroundColor: accentAlpha(accent, 0.12) }}
+              >
+                <ShoppingBag className="h-8 w-8" style={{ color: accent }} strokeWidth={1.25} aria-hidden />
+              </div>
+              <p className="font-semibold text-slate-800">{s.cartEmpty}</p>
               <p className="text-sm text-slate-500">{s.cartEmptyHint}</p>
             </div>
           ) : (
@@ -86,9 +96,9 @@ export function CartDrawer({ open, onClose, onCheckout }: Props) {
                 return (
                   <li
                     key={line.productId}
-                    className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3"
+                    className="flex gap-3 rounded-2xl bg-white p-3 shadow-[0_2px_12px_rgba(0,0,0,0.05)] ring-1 ring-slate-100"
                   >
-                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-800">
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-100">
                       {img ? (
                         <img
                           src={img}
@@ -97,32 +107,32 @@ export function CartDrawer({ open, onClose, onCheckout }: Props) {
                           loading="lazy"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-xs text-slate-500">
+                        <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
                           —
                         </div>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-slate-100">{line.name}</p>
-                      <p className="mt-0.5 text-sm text-[#fde68a]">
+                      <p className="truncate font-semibold text-slate-800">{line.name}</p>
+                      <p className="mt-0.5 text-sm font-bold" style={{ color: accent }}>
                         ${formatUsd(cartLineTotal(line))} {s.usd}
                       </p>
                       <div className="mt-2 flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => setQuantity(line.productId, line.quantity - 1)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                           aria-label={s.decrease}
                         >
                           <Minus className="h-4 w-4" aria-hidden />
                         </button>
-                        <span className="min-w-[2ch] text-center text-sm font-medium tabular-nums">
+                        <span className="min-w-[2ch] text-center text-sm font-semibold tabular-nums text-slate-800">
                           {line.quantity}
                         </span>
                         <button
                           type="button"
                           onClick={() => setQuantity(line.productId, line.quantity + 1)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                           aria-label={s.increase}
                         >
                           <Plus className="h-4 w-4" aria-hidden />
@@ -130,7 +140,7 @@ export function CartDrawer({ open, onClose, onCheckout }: Props) {
                         <button
                           type="button"
                           onClick={() => removeItem(line.productId)}
-                          className="ms-auto flex h-8 w-8 items-center justify-center rounded-lg text-red-400 hover:bg-red-500/10"
+                          className="ms-auto flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50"
                           aria-label={s.remove}
                         >
                           <Trash2 className="h-4 w-4" aria-hidden />
@@ -144,10 +154,10 @@ export function CartDrawer({ open, onClose, onCheckout }: Props) {
           )}
         </div>
 
-        <div className="border-t border-white/10 p-4">
-          <div className="mb-4 flex items-center justify-between text-sm">
-            <span className="text-slate-400">{s.total}</span>
-            <span className="text-xl font-bold text-[#fde68a]">
+        <div className="border-t border-slate-200 bg-white p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <span className="text-sm text-slate-500">{s.total}</span>
+            <span className="text-xl font-bold" style={{ color: accent }}>
               ${formatUsd(total)} {s.usd}
             </span>
           </div>
@@ -155,7 +165,11 @@ export function CartDrawer({ open, onClose, onCheckout }: Props) {
             type="button"
             disabled={lines.length === 0}
             onClick={onCheckout}
-            className="w-full rounded-2xl bg-gradient-to-l from-[#fbbf24] to-[#f59e0b] py-3.5 text-base font-bold text-[#0f172a] shadow-lg shadow-amber-500/20 transition enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full rounded-2xl py-3.5 text-base font-bold text-white shadow-lg transition enabled:hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
+            style={{
+              backgroundColor: accent,
+              boxShadow: lines.length > 0 ? `0 8px 24px ${accentAlpha(accent, 0.35)}` : undefined,
+            }}
           >
             {s.proceedCheckout}
           </button>

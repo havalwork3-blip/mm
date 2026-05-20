@@ -3,12 +3,32 @@ import { ApiError, getPublicApiBase, joinApiOrigin, publicApiJson } from '../lib
 /** Paths under config.urls → api/ → inventory.urls (no extra api/ prefix in Django). */
 const STOREFRONT_RESOLVE_PATH = '/api/public/storefront/resolve/'
 const STOREFRONT_PRODUCTS_PATH = '/api/public/storefront/products/'
+const STOREFRONT_CATALOG_PATH = '/api/public/storefront/catalog/'
 const STOREFRONT_SUBMIT_PATH = '/api/public/storefront/submit_order/'
+
+export type PublicStorefrontAppearance = {
+  catalog_title: string
+  catalog_subtitle: string
+  welcome_message: string
+  accent_color: string
+}
 
 export type PublicStorefrontResolve = {
   shop_id: number
   name: string
   storefront_host: string
+  storefront?: PublicStorefrontAppearance
+}
+
+export type PublicStorefrontCategory = {
+  id: number
+  name: string
+  products: PublicStorefrontProduct[]
+}
+
+export type PublicStorefrontCatalog = {
+  storefront: PublicStorefrontAppearance
+  categories: PublicStorefrontCategory[]
 }
 
 function resolveQuery(): string {
@@ -44,6 +64,8 @@ export type PublicStorefrontProduct = {
   barcode: string | null
   image: string | null
   image_url: string | null
+  category_id?: number
+  category_name?: string
 }
 
 export type StorefrontOrderPayload = {
@@ -79,6 +101,15 @@ export async function fetchPublicProducts(
   const sid = encodeURIComponent(String(shopId))
   return publicApiJson<PublicStorefrontProduct[]>(
     `${STOREFRONT_PRODUCTS_PATH}?shop_id=${sid}`,
+  )
+}
+
+export async function fetchPublicCatalog(
+  shopId: string | number,
+): Promise<PublicStorefrontCatalog> {
+  const sid = encodeURIComponent(String(shopId))
+  return publicApiJson<PublicStorefrontCatalog>(
+    `${STOREFRONT_CATALOG_PATH}?shop_id=${sid}`,
   )
 }
 

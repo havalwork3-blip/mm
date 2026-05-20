@@ -7,11 +7,22 @@ import {
   useState,
 } from 'react'
 
-import { resolvePublicStorefront } from '../../api/storefrontApi'
+import {
+  resolvePublicStorefront,
+  type PublicStorefrontAppearance,
+} from '../../api/storefrontApi'
+
+const DEFAULT_APPEARANCE: PublicStorefrontAppearance = {
+  catalog_title: '',
+  catalog_subtitle: '',
+  welcome_message: '',
+  accent_color: '#fbbf24',
+}
 
 type Ctx = {
   shopId: number | null
   shopName: string
+  appearance: PublicStorefrontAppearance
   loading: boolean
   error: string | null
   reload: () => void
@@ -22,6 +33,7 @@ const StorefrontShopContext = createContext<Ctx | null>(null)
 export function StorefrontShopProvider({ children }: { children: React.ReactNode }) {
   const [shopId, setShopId] = useState<number | null>(null)
   const [shopName, setShopName] = useState('')
+  const [appearance, setAppearance] = useState<PublicStorefrontAppearance>(DEFAULT_APPEARANCE)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -31,10 +43,12 @@ export function StorefrontShopProvider({ children }: { children: React.ReactNode
     try {
       const row = await resolvePublicStorefront()
       setShopId(row.shop_id)
-      setShopName(row.name)
+      setShopName(row.storefront?.catalog_title || row.name)
+      setAppearance(row.storefront ?? { ...DEFAULT_APPEARANCE, catalog_title: row.name })
     } catch (e) {
       setShopId(null)
       setShopName('')
+      setAppearance(DEFAULT_APPEARANCE)
       setError(e instanceof Error ? e.message : 'Could not load storefront.')
     } finally {
       setLoading(false)
@@ -46,8 +60,8 @@ export function StorefrontShopProvider({ children }: { children: React.ReactNode
   }, [load])
 
   const value = useMemo(
-    () => ({ shopId, shopName, loading, error, reload: load }),
-    [shopId, shopName, loading, error, load],
+    () => ({ shopId, shopName, appearance, loading, error, reload: load }),
+    [shopId, shopName, appearance, loading, error, load],
   )
 
   return (

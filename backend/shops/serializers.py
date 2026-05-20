@@ -9,6 +9,7 @@ from .models import (
     ReceiptSettings,
     Shop,
     ShopSettings,
+    StorefrontSettings,
 )
 
 
@@ -164,6 +165,36 @@ class ShopSettingsSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "shop", "updated_at"]
+
+
+class StorefrontSettingsSerializer(serializers.ModelSerializer):
+    shop = serializers.PrimaryKeyRelatedField(read_only=True)
+    storefront_host = serializers.SerializerMethodField(read_only=True)
+    storefront_url = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = StorefrontSettings
+        fields = [
+            "id",
+            "shop",
+            "catalog_title",
+            "catalog_subtitle",
+            "welcome_message",
+            "accent_color",
+            "storefront_host",
+            "storefront_url",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "shop", "storefront_host", "storefront_url", "updated_at"]
+
+    def get_storefront_host(self, obj: StorefrontSettings) -> str:
+        return (obj.shop.storefront_host or "").strip()
+
+    def get_storefront_url(self, obj: StorefrontSettings) -> str:
+        host = (obj.shop.storefront_host or "").strip()
+        if not host:
+            return ""
+        return f"https://{host}"
 
 
 QR_PRESET_IDS = frozenset(

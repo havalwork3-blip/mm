@@ -18,5 +18,10 @@ urlpatterns = [
     path("admin/qr-landing/logo/", views.QrLandingPrimaryLogoView.as_view(), name="admin-qr-landing-logo"),
     path("receipt-settings/", views.ReceiptSettingsView.as_view(), name="receipt-settings"),
     path("shop-settings/", views.ShopSettingsView.as_view(), name="shop-settings"),
+    path(
+        "merchant/storefront-settings/",
+        views.MerchantStorefrontSettingsView.as_view(),
+        name="merchant-storefront-settings",
+    ),
     path("", include(router.urls)),
 ]

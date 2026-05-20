@@ -114,6 +114,27 @@ class ReceiptSettings(ShopScopedModel):
         return f"ReceiptSettings({self.shop_id})"
 
 
+class StorefrontSettings(ShopScopedModel):
+    """Customer-facing online shop copy and theme (per tenant)."""
+
+    catalog_title = models.CharField(max_length=255, blank=True, default="")
+    catalog_subtitle = models.CharField(max_length=500, blank=True, default="")
+    welcome_message = models.CharField(max_length=1000, blank=True, default="")
+    accent_color = models.CharField(max_length=32, default="#fbbf24")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["shop"],
+                name="uniq_storefront_settings_shop",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"StorefrontSettings({self.shop_id})"
+
+
 class ShopSettings(ShopScopedModel):
     class DefaultMode(models.TextChoices):
         LIGHT = "light", "Light"

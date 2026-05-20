@@ -51,7 +51,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       return
     }
     try {
-      const profile = await apiJson<Me>('/api/users/me/')
+      const profile = await apiJson<Me>('/api/users/me/', { shopScoped: true })
       applyProfile(profile)
     } catch (e) {
       if (isApiStatus(e, 401)) {
@@ -91,7 +91,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setBasicAuth(email, password)
       persistSessionAuth(email, password)
       try {
-        const profile = await apiJson<Me>('/api/users/me/')
+        const profile = await apiJson<Me>('/api/users/me/', { shopScoped: true })
         applyProfile(profile)
       } catch (e) {
         if (isApiStatus(e, 401)) {

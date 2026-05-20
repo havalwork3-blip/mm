@@ -42,6 +42,8 @@ type NavLeaf = {
   end?: boolean
   anyPermission?: string[]
   ownerOrSuperuserOnly?: boolean
+  /** Visible when the active shop has online storefront enabled (all shop staff). */
+  requiresOnlineStorefront?: boolean
   /** Shop POS settings (receipt, shortcuts): visible to owner or employee, not superuser sidebar. */
   employeeOnly?: boolean
 }
@@ -70,6 +72,16 @@ function navLeafVisible(me: Me | null, item: NavLeaf): boolean {
   if (item.ownerOrSuperuserOnly) {
     return Boolean(
       me?.is_superuser || me?.role === 'owner' || me?.role === 'manager',
+    )
+  }
+  if (item.requiresOnlineStorefront) {
+    if (!me?.online_storefront_enabled) return false
+    return Boolean(
+      me.is_superuser ||
+        me.role === 'owner' ||
+        me.role === 'manager' ||
+        me.role === 'employee' ||
+        me.role === 'receipt_editor',
     )
   }
   if (item.anyPermission?.length) return hasPerm(me, ...item.anyPermission)
@@ -117,10 +129,16 @@ const SHOP_NAV: ShopNavEntry[] = [
         anyPermission: ['view_sale', 'add_sale'],
       },
       {
+        to: '/online-shop',
+        labelKey: 'nav.onlineShop',
+        icon: Globe,
+        requiresOnlineStorefront: true,
+      },
+      {
         to: '/online-orders',
         labelKey: 'nav.onlineOrders',
-        icon: Globe,
-        ownerOrSuperuserOnly: true,
+        icon: ShoppingCart,
+        requiresOnlineStorefront: true,
       },
     ],
   },
@@ -359,6 +377,7 @@ export function MainLayout() {
     setShopOverride(v)
     setShopTick((n) => n + 1)
     window.dispatchEvent(new Event('mm-dashboard-refresh'))
+    window.dispatchEvent(new Event('mm-session-refresh'))
   }
 
   function toggleGlobalView(checked: boolean) {
@@ -372,6 +391,7 @@ export function MainLayout() {
     }
     setShopTick((n) => n + 1)
     window.dispatchEvent(new Event('mm-dashboard-refresh'))
+    window.dispatchEvent(new Event('mm-session-refresh'))
   }
 
   const showSidebar = Boolean(me)

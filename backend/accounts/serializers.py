@@ -32,6 +32,7 @@ def _permission_to_dict(p: Permission) -> dict:
 
 class UserSerializer(serializers.ModelSerializer):
     shop_name = serializers.SerializerMethodField()
+    online_storefront_enabled = serializers.SerializerMethodField()
     user_permissions = serializers.SerializerMethodField()
 
     class Meta:
@@ -41,6 +42,7 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "shop",
             "shop_name",
+            "online_storefront_enabled",
             "role",
             "is_active",
             "is_staff",
@@ -51,8 +53,26 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+    def _active_shop_for_user(self, obj: User) -> Shop | None:
+        if obj.shop_id:
+            return obj.shop
+        request = self.context.get("request")
+        if request is None or not obj.is_superuser:
+            return None
+        from shops.scoping import get_shop_id_for_request
+
+        sid = get_shop_id_for_request(request)
+        if sid is None:
+            return None
+        return Shop.objects.filter(pk=sid).first()
+
     def get_shop_name(self, obj: User) -> str:
-        return obj.shop.name if obj.shop_id else ""
+        shop = self._active_shop_for_user(obj)
+        return shop.name if shop else ""
+
+    def get_online_storefront_enabled(self, obj: User) -> bool:
+        shop = self._active_shop_for_user(obj)
+        return bool(shop and shop.online_storefront_enabled)
 
     def get_user_permissions(self, obj: User) -> list[str]:
         # Includes both direct user permissions and group-inherited permissions.

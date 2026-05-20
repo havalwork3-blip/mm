@@ -2,9 +2,19 @@ import type { Lang } from '../../i18n/strings'
 
 const STRINGS = {
   ku: {
+    hello: 'سڵاو',
+    searchPlaceholder: 'گەڕان بۆ بەرهەم…',
+    categories: 'پۆلەکان',
+    viewAll: 'هەمووی ببینە',
+    offers: 'پێشکەشەکان',
+    shopNow: 'ئێستا بکڕە',
+    home: 'سەرەکی',
     shopTagline: 'ئێکسسواراتی مۆدێرن و ناوازە',
     catalogTitle: 'بەرهەمەکان',
     catalogSubtitle: 'هەڵبژاردە بکە و داواکاری بنێرە',
+    promoDefault: 'گەیاندنی خێرا · داواکاری ئاسان',
+    categoriesCount: '{n} پۆل',
+    productCount: '{n} بەرهەم',
     addToCart: 'زیادکردن بۆ سەبەتە',
     inCart: 'لە سەبەتەدا',
     cart: 'سەبەتە',
@@ -34,9 +44,19 @@ const STRINGS = {
     quantity: 'ژمارە',
   },
   ar: {
+    hello: 'مرحباً',
+    searchPlaceholder: 'ابحث عن منتج…',
+    categories: 'الأقسام',
+    viewAll: 'عرض الكل',
+    offers: 'العروض',
+    shopNow: 'تسوق الآن',
+    home: 'الرئيسية',
     shopTagline: 'إكسسوارات عصرية ومميزة',
     catalogTitle: 'المنتجات',
     catalogSubtitle: 'اختر وأرسل طلبك',
+    promoDefault: 'توصيل سريع · طلب سهل',
+    categoriesCount: '{n} أقسام',
+    productCount: '{n} منتج',
     addToCart: 'أضف إلى السلة',
     inCart: 'في السلة',
     cart: 'السلة',
@@ -66,9 +86,19 @@ const STRINGS = {
     quantity: 'الكمية',
   },
   en: {
+    hello: 'Hello',
+    searchPlaceholder: 'Search products…',
+    categories: 'Categories',
+    viewAll: 'View all',
+    offers: 'Offers',
+    shopNow: 'Shop now',
+    home: 'Home',
     shopTagline: 'Modern & unique accessories',
     catalogTitle: 'Products',
     catalogSubtitle: 'Browse and place your order',
+    promoDefault: 'Fast delivery · Easy ordering',
+    categoriesCount: '{n} categories',
+    productCount: '{n} products',
     addToCart: 'Add to cart',
     inCart: 'In cart',
     cart: 'Cart',
@@ -100,9 +130,19 @@ const STRINGS = {
 }
 
 export type StorefrontStrings = {
+  hello: string
+  searchPlaceholder: string
+  categories: string
+  viewAll: string
+  offers: string
+  shopNow: string
+  home: string
+  promoDefault: string
   shopTagline: string
   catalogTitle: string
   catalogSubtitle: string
+  categoriesCount: string
+  productCount: string
   addToCart: string
   inCart: string
   cart: string

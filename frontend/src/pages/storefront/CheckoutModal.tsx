@@ -1,4 +1,4 @@
-import { CheckCircle2, Loader2, X } from 'lucide-react'
+import { CheckCircle2, Loader2, User, MapPin, Phone, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { submitPublicOrder } from '../../api/storefrontApi'
@@ -7,13 +7,15 @@ import { useLocale } from '../../context/LocaleContext'
 import { cartTotal, useCartStore } from '../../store/cartStore'
 import { useStorefrontShop } from './StorefrontShopContext'
 import { formatUsd, storefrontStrings } from './storefrontStrings'
+import { accentAlpha } from './storefrontTheme'
 
 type Props = {
   open: boolean
+  accent: string
   onClose: () => void
 }
 
-export function CheckoutModal({ open, onClose }: Props) {
+export function CheckoutModal({ open, accent, onClose }: Props) {
   const { lang } = useLocale()
   const s = storefrontStrings(lang)
   const { shopId } = useStorefrontShop()
@@ -89,107 +91,131 @@ export function CheckoutModal({ open, onClose }: Props) {
     onClose()
   }
 
+  const inputClass =
+    'w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pe-4 ps-11 text-slate-800 outline-none transition focus:border-transparent focus:bg-white focus:ring-2'
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center p-4 sm:items-center" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+    >
       <button
         type="button"
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
         onClick={handleClose}
         aria-label={s.close}
       />
 
-      <div className="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#0f172a] p-5 shadow-2xl sm:p-6">
-        <button
-          type="button"
-          onClick={handleClose}
-          disabled={submitting}
-          className="absolute end-4 top-4 flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-white/10 hover:text-white disabled:opacity-50"
-          aria-label={s.close}
+      <div className="relative flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
+        <div
+          className="flex shrink-0 items-center justify-between px-5 py-4 text-white"
+          style={{ backgroundColor: accent }}
         >
-          <X className="h-5 w-5" aria-hidden />
-        </button>
+          <h2 className="text-lg font-bold">{success ? s.successTitle : s.checkout}</h2>
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={submitting}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 hover:bg-white/30 disabled:opacity-50"
+            aria-label={s.close}
+          >
+            <X className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
 
-        {success ? (
-          <div className="flex flex-col items-center gap-4 py-6 text-center">
-            <CheckCircle2 className="h-14 w-14 text-emerald-400" strokeWidth={1.5} aria-hidden />
-            <h2 className="text-xl font-bold text-white">{s.successTitle}</h2>
-            <p className="max-w-sm text-sm text-slate-400">{s.successBody}</p>
-            <button
-              type="button"
-              onClick={handleClose}
-              className="mt-2 w-full rounded-2xl bg-[#fbbf24] py-3 font-bold text-[#0f172a]"
-            >
-              {s.close}
-            </button>
-          </div>
-        ) : (
-          <>
-            <h2 className="mb-1 pe-10 text-xl font-bold text-white">{s.checkout}</h2>
-            <p className="mb-5 text-sm text-slate-400">
-              {s.total}:{' '}
-              <span className="font-semibold text-[#fde68a]">
-                ${formatUsd(total)} {s.usd}
-              </span>
-            </p>
-
-            <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="text-slate-300">{s.customerName}</span>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoComplete="name"
-                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-[#fbbf24]/50 focus:ring-1 focus:ring-[#fbbf24]/30"
-                  disabled={submitting}
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="text-slate-300">{s.customerPhone}</span>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  autoComplete="tel"
-                  dir="ltr"
-                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-[#fbbf24]/50 focus:ring-1 focus:ring-[#fbbf24]/30"
-                  disabled={submitting}
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm">
-                <span className="text-slate-300">{s.customerAddress}</span>
-                <textarea
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  rows={3}
-                  className="resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-[#fbbf24]/50 focus:ring-1 focus:ring-[#fbbf24]/30"
-                  disabled={submitting}
-                />
-              </label>
-
-              {error ? (
-                <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-                  {error}
-                </p>
-              ) : null}
-
+        <div className="overflow-y-auto px-5 py-5">
+          {success ? (
+            <div className="flex flex-col items-center gap-4 py-4 text-center">
+              <CheckCircle2 className="h-16 w-16 text-emerald-500" strokeWidth={1.5} aria-hidden />
+              <p className="max-w-sm text-sm text-slate-600">{s.successBody}</p>
               <button
-                type="submit"
-                disabled={submitting || lines.length === 0}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-[#fbbf24] to-[#f59e0b] py-3.5 font-bold text-[#0f172a] disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                onClick={handleClose}
+                className="mt-2 w-full rounded-2xl py-3 font-bold text-white"
+                style={{ backgroundColor: accent }}
               >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-                    {s.submitting}
-                  </>
-                ) : (
-                  s.submitOrder
-                )}
+                {s.close}
               </button>
-            </form>
-          </>
-        )}
+            </div>
+          ) : (
+            <>
+              <p className="mb-5 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                {s.total}:{' '}
+                <span className="font-bold" style={{ color: accent }}>
+                  ${formatUsd(total)} {s.usd}
+                </span>
+              </p>
+
+              <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
+                <label className="relative flex flex-col gap-1.5 text-sm">
+                  <span className="font-medium text-slate-700">{s.customerName}</span>
+                  <User className="pointer-events-none absolute start-3 top-[2.65rem] h-4 w-4 text-slate-400" aria-hidden />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoComplete="name"
+                    className={inputClass}
+                    style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.35) }}
+                    disabled={submitting}
+                  />
+                </label>
+                <label className="relative flex flex-col gap-1.5 text-sm">
+                  <span className="font-medium text-slate-700">{s.customerPhone}</span>
+                  <Phone className="pointer-events-none absolute start-3 top-[2.65rem] h-4 w-4 text-slate-400" aria-hidden />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    autoComplete="tel"
+                    dir="ltr"
+                    className={inputClass}
+                    style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.35) }}
+                    disabled={submitting}
+                  />
+                </label>
+                <label className="relative flex flex-col gap-1.5 text-sm">
+                  <span className="font-medium text-slate-700">{s.customerAddress}</span>
+                  <MapPin className="pointer-events-none absolute start-3 top-[2.65rem] h-4 w-4 text-slate-400" aria-hidden />
+                  <textarea
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    rows={3}
+                    className={`${inputClass} resize-none`}
+                    style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.35) }}
+                    disabled={submitting}
+                  />
+                </label>
+
+                {error ? (
+                  <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                    {error}
+                  </p>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={submitting || lines.length === 0}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 font-bold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{
+                    backgroundColor: accent,
+                    boxShadow: `0 8px 24px ${accentAlpha(accent, 0.35)}`,
+                  }}
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                      {s.submitting}
+                    </>
+                  ) : (
+                    s.submitOrder
+                  )}
+                </button>
+              </form>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
