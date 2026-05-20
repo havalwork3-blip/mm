@@ -9,7 +9,7 @@ import { accentAlpha } from './storefrontTheme'
 
 function formatPrice(price: number, usdLabel: string): string {
   if (!Number.isFinite(price) || price <= 0) return '—'
-  return `$${formatUsd(price)}`
+  return `$${formatUsd(price)} ${usdLabel}`
 }
 
 type Props = {
