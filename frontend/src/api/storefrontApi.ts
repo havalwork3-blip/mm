@@ -81,6 +81,9 @@ export type PublicStorefrontProduct = {
   id: number
   name: string
   sell_price: string
+  online_base_price?: string
+  online_discount_percent?: string | number
+  online_discount_min_quantity?: number
   barcode: string | null
   image: string | null
   image_url: string | null

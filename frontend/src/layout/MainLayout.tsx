@@ -2,6 +2,7 @@ import {
   BookOpen,
   ChevronDown,
   ClipboardList,
+  DollarSign,
   FolderKanban,
   Globe,
   LayoutDashboard,
@@ -133,6 +134,12 @@ const SHOP_NAV: ShopNavEntry[] = [
         to: '/online-shop',
         labelKey: 'nav.onlineShop',
         icon: Globe,
+        requiresOnlineStorefront: true,
+      },
+      {
+        to: '/online-pricing',
+        labelKey: 'nav.onlinePricing',
+        icon: DollarSign,
         requiresOnlineStorefront: true,
       },
       {

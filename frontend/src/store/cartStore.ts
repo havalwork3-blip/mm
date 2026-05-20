@@ -1,11 +1,14 @@
 import { create } from 'zustand'
 
 import type { PublicStorefrontProduct } from '../api/storefrontApi'
+import { effectiveOnlineUnitPrice, parsePrice } from '../lib/storefrontPrice'
 
 export type CartLine = {
   productId: number
   name: string
-  sellPrice: string
+  unitBasePrice: string
+  discountPercent: number
+  discountMinQty: number
   imageUrl: string | null
   quantity: number
 }
@@ -18,13 +21,34 @@ type CartState = {
   clearCart: () => void
 }
 
-function parsePrice(value: string): number {
-  const n = Number.parseFloat(value)
-  return Number.isFinite(n) ? n : 0
+function productPricing(product: PublicStorefrontProduct) {
+  const base =
+    product.online_base_price != null && String(product.online_base_price).trim() !== ''
+      ? String(product.online_base_price)
+      : product.sell_price
+  const discountPercent = Number.parseFloat(String(product.online_discount_percent ?? 0))
+  const discountMinQty = Math.max(
+    1,
+    Number.parseInt(String(product.online_discount_min_quantity ?? 1), 10) || 1,
+  )
+  return {
+    unitBasePrice: base,
+    discountPercent: Number.isFinite(discountPercent) ? discountPercent : 0,
+    discountMinQty,
+  }
+}
+
+export function cartLineUnitPrice(line: CartLine): number {
+  return effectiveOnlineUnitPrice(
+    line.unitBasePrice,
+    line.quantity,
+    line.discountPercent,
+    line.discountMinQty,
+  )
 }
 
 export function cartLineTotal(line: CartLine): number {
-  return parsePrice(line.sellPrice) * line.quantity
+  return cartLineUnitPrice(line) * line.quantity
 }
 
 export function cartTotal(lines: CartLine[]): number {
@@ -41,6 +65,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   addItem: (product, quantity = 1) => {
     const qty = Math.max(1, Math.floor(quantity))
     const imageUrl = product.image_url ?? null
+    const pricing = productPricing(product)
     set((state) => {
       const idx = state.lines.findIndex((l) => l.productId === product.id)
       if (idx >= 0) {
@@ -54,9 +79,9 @@ export const useCartStore = create<CartState>((set, get) => ({
           {
             productId: product.id,
             name: product.name,
-            sellPrice: product.sell_price,
             imageUrl,
             quantity: qty,
+            ...pricing,
           },
         ],
       }

@@ -51,6 +51,11 @@ urlpatterns = [
         views.public_storefront_submit_order,
         name="public-storefront-submit-order",
     ),
+    path(
+        "merchant/online-product-pricing/",
+        views.MerchantOnlineProductPricingView.as_view(),
+        name="merchant-online-product-pricing",
+    ),
     path("admin/stats/", GlobalAdminStatsView.as_view(), name="admin-global-stats"),
     path("reports/profit/", ProfitReportView.as_view(), name="profit-report"),
     path("reports/jard/", JardReportView.as_view(), name="jard-report"),

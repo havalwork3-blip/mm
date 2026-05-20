@@ -24,6 +24,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { QrCodeSocialLandingPage } from './pages/QrCodeSocialLandingPage'
 import { AdminQrSocialPage } from './pages/admin/AdminQrSocialPage'
 import { MerchantOnlineOrdersPage } from './pages/merchant/MerchantOnlineOrdersPage'
+import { MerchantOnlinePricingPage } from './pages/merchant/MerchantOnlinePricingPage'
 import { MerchantOnlineShopPage } from './pages/merchant/MerchantOnlineShopPage'
 import { StorefrontRoutes } from './pages/storefront/StorefrontRoutes'
 
@@ -53,6 +54,7 @@ function App() {
           <Route path="/sales-returns" element={<SalesReturnsPage />} />
           <Route path="/online-shop" element={<MerchantOnlineShopPage />} />
           <Route path="/online-orders" element={<MerchantOnlineOrdersPage />} />
+          <Route path="/online-pricing" element={<MerchantOnlinePricingPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/cashier" element={<CashierPage />} />

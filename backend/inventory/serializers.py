@@ -75,12 +75,14 @@ def _inventory_loss_note(
 class PublicProductSerializer(serializers.ModelSerializer):
     """Public storefront catalog — no buy price; exposes availability for UI."""
 
-    sell_price = serializers.DecimalField(
-        source="sale_price_retail",
-        max_digits=18,
-        decimal_places=4,
+    sell_price = serializers.SerializerMethodField(read_only=True)
+    online_base_price = serializers.SerializerMethodField(read_only=True)
+    online_discount_percent = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
         read_only=True,
     )
+    online_discount_min_quantity = serializers.IntegerField(read_only=True)
     image_url = serializers.SerializerMethodField(read_only=True)
     category_id = serializers.IntegerField(read_only=True)
     category_name = serializers.CharField(source="category.name", read_only=True)
@@ -93,6 +95,9 @@ class PublicProductSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "sell_price",
+            "online_base_price",
+            "online_discount_percent",
+            "online_discount_min_quantity",
             "barcode",
             "image",
             "image_url",
@@ -102,6 +107,16 @@ class PublicProductSerializer(serializers.ModelSerializer):
             "unavailable_reason",
         ]
         read_only_fields = fields
+
+    def get_sell_price(self, obj: Product) -> str:
+        from inventory.online_pricing import effective_online_unit_price
+
+        return str(effective_online_unit_price(obj, 1))
+
+    def get_online_base_price(self, obj: Product) -> str:
+        from inventory.online_pricing import online_base_price
+
+        return str(online_base_price(obj).quantize(Decimal("0.0001")))
 
     def get_is_available(self, obj: Product) -> bool:
         if obj.is_discontinued or obj.is_unregistered_placeholder:
@@ -204,7 +219,9 @@ class StorefrontOrderSerializer(serializers.ModelSerializer):
                             ),
                         },
                     )
-                unit_price = Decimal(product.sale_price_retail).quantize(Decimal("0.0001"))
+                from inventory.online_pricing import effective_online_unit_price
+
+                unit_price = effective_online_unit_price(product, qty)
                 line_total = (unit_price * Decimal(qty)).quantize(Decimal("0.0001"))
                 total += line_total
                 line_blocks.append(
@@ -300,6 +317,92 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
             order.status = new_status
             order.save(update_fields=["status", "updated_at"])
         return order
+
+
+class OnlineProductPricingSerializer(serializers.ModelSerializer):
+    """Merchant online storefront price + discount per product."""
+
+    category_name = serializers.CharField(source="category.name", read_only=True)
+    sale_price_retail = serializers.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        read_only=True,
+    )
+    image_url = serializers.SerializerMethodField(read_only=True)
+    effective_price = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Product
+        fields = [
+            "id",
+            "name",
+            "category_name",
+            "sale_price_retail",
+            "online_sale_price",
+            "online_discount_percent",
+            "online_discount_min_quantity",
+            "current_stock_quantity",
+            "is_discontinued",
+            "image_url",
+            "effective_price",
+        ]
+        read_only_fields = [
+            "id",
+            "name",
+            "category_name",
+            "sale_price_retail",
+            "current_stock_quantity",
+            "is_discontinued",
+            "image_url",
+            "effective_price",
+        ]
+
+    def get_image_url(self, obj: Product) -> str | None:
+        if not obj.image:
+            return None
+        try:
+            request = self.context.get("request")
+            url = obj.image.url
+            if request:
+                return request.build_absolute_uri(url)
+            return url
+        except Exception:
+            return None
+
+    def get_effective_price(self, obj: Product) -> str:
+        from inventory.online_pricing import effective_online_unit_price
+
+        return str(effective_online_unit_price(obj, 1))
+
+    def validate_online_discount_percent(self, value: Decimal) -> Decimal:
+        pct = Decimal(value)
+        if pct < 0 or pct > 100:
+            raise serializers.ValidationError("Discount must be between 0 and 100.")
+        return pct
+
+    def validate_online_discount_min_quantity(self, value: int) -> int:
+        qty = int(value)
+        if qty < 1:
+            raise serializers.ValidationError("Minimum quantity must be at least 1.")
+        return qty
+
+
+class OnlineProductPricingPatchSerializer(serializers.Serializer):
+    items = serializers.ListField(child=serializers.DictField(), required=False)
+    bulk_discount = serializers.DictField(required=False)
+
+    def validate_bulk_discount(self, value: dict | None) -> dict | None:
+        if value is None:
+            return None
+        pct = value.get("online_discount_percent")
+        min_qty = value.get("online_discount_min_quantity", 1)
+        if pct is not None:
+            p = Decimal(str(pct))
+            if p < 0 or p > 100:
+                raise serializers.ValidationError("Discount percent must be 0–100.")
+        if int(min_qty) < 1:
+            raise serializers.ValidationError("Minimum quantity must be at least 1.")
+        return value
 
 
 class CategorySerializer(serializers.ModelSerializer):

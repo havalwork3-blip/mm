@@ -66,6 +66,18 @@ class Product(ShopScopedModel):
     buy_price = models.DecimalField(max_digits=18, decimal_places=4)
     sale_price_retail = models.DecimalField(max_digits=18, decimal_places=4)
     sale_price_wholesale = models.DecimalField(max_digits=18, decimal_places=4)
+    online_sale_price = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        null=True,
+        blank=True,
+    )
+    online_discount_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+    )
+    online_discount_min_quantity = models.PositiveSmallIntegerField(default=1)
     current_stock_quantity = models.IntegerField(default=0)
     low_stock_threshold = models.PositiveIntegerField(null=True, blank=True)
 

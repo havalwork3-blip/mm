@@ -15,6 +15,7 @@ from django.utils.dateparse import parse_datetime
 from rest_framework import filters, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -69,6 +70,8 @@ from .serializers import (
     EmployeeDebtSerializer,
     ExpenseSerializer,
     MerchantStorefrontOrderSerializer,
+    OnlineProductPricingPatchSerializer,
+    OnlineProductPricingSerializer,
     ProductSerializer,
     PublicProductSerializer,
     PurchaseSerializer,
@@ -963,6 +966,96 @@ class MerchantStorefrontOrderViewSet(ShopScopedViewSet):
             if shop is None or not shop.online_storefront_enabled:
                 return qs.none()
         return qs.order_by("-created_at", "-id")
+
+
+class MerchantOnlineProductPricingView(APIView):
+    """GET/PATCH online storefront prices and quantity-tier discounts per product."""
+
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    http_method_names = ["get", "patch", "options", "head"]
+
+    def _products_qs(self, shop_id: int):
+        return (
+            Product.objects.filter(shop_id=shop_id, is_unregistered_placeholder=False)
+            .select_related("category")
+            .order_by("name")
+        )
+
+    def get(self, request):
+        shop_id = require_shop_id(request)
+        shop = Shop.objects.filter(pk=shop_id, online_storefront_enabled=True).first()
+        if shop is None:
+            raise PermissionDenied("Online storefront is not enabled for this shop.")
+        rows = self._products_qs(shop_id)
+        ser = OnlineProductPricingSerializer(rows, many=True, context={"request": request})
+        return Response(ser.data)
+
+    def patch(self, request):
+        shop_id = require_shop_id(request)
+        shop = Shop.objects.filter(pk=shop_id, online_storefront_enabled=True).first()
+        if shop is None:
+            raise PermissionDenied("Online storefront is not enabled for this shop.")
+        body = OnlineProductPricingPatchSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        data = body.validated_data
+
+        bulk = data.get("bulk_discount")
+        if bulk:
+            updates: dict = {}
+            if "online_discount_percent" in bulk:
+                updates["online_discount_percent"] = Decimal(
+                    str(bulk["online_discount_percent"]),
+                )
+            if "online_discount_min_quantity" in bulk:
+                updates["online_discount_min_quantity"] = int(
+                    bulk["online_discount_min_quantity"],
+                )
+            if updates:
+                Product.objects.filter(
+                    shop_id=shop_id,
+                    is_unregistered_placeholder=False,
+                ).update(**updates)
+
+        items = data.get("items") or []
+        allowed_fields = {
+            "online_sale_price",
+            "online_discount_percent",
+            "online_discount_min_quantity",
+        }
+        for row in items:
+            pid = row.get("id")
+            if pid is None:
+                continue
+            product = Product.objects.filter(
+                pk=pid,
+                shop_id=shop_id,
+                is_unregistered_placeholder=False,
+            ).first()
+            if product is None:
+                continue
+            patch: dict = {}
+            for key in allowed_fields:
+                if key not in row:
+                    continue
+                val = row[key]
+                if key == "online_sale_price":
+                    if val is None or (isinstance(val, str) and not str(val).strip()):
+                        patch[key] = None
+                    else:
+                        patch[key] = Decimal(str(val))
+                elif key == "online_discount_percent":
+                    patch[key] = Decimal(str(val))
+                elif key == "online_discount_min_quantity":
+                    patch[key] = max(1, int(val))
+            for k, v in patch.items():
+                setattr(product, k, v)
+            product.save(
+                update_fields=list(patch.keys()) + ["updated_at"],
+            )
+
+        rows = self._products_qs(shop_id)
+        ser = OnlineProductPricingSerializer(rows, many=True, context={"request": request})
+        return Response(ser.data)
 
 
 class EmployeeDebtViewSet(OwnerScopedViewSet):
