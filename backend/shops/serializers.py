@@ -211,7 +211,7 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
 class StorefrontBannerSerializer(serializers.ModelSerializer):
     shop = serializers.PrimaryKeyRelatedField(read_only=True)
     image_url = serializers.SerializerMethodField(read_only=True)
-    category_name = serializers.CharField(source="category.name", read_only=True, allow_null=True)
+    category_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = StorefrontBanner
@@ -232,19 +232,55 @@ class StorefrontBannerSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "shop", "image_url", "category_name", "created_at", "updated_at"]
-        extra_kwargs = {"image": {"required": False}}
+        extra_kwargs = {"image": {"required": False, "write_only": True}}
+
+    def get_category_name(self, obj: StorefrontBanner) -> str | None:
+        if obj.category_id is None:
+            return None
+        cat = obj.category
+        if cat is None:
+            return None
+        return (getattr(cat, "name_ku", None) or cat.name or "").strip() or None
 
     def get_image_url(self, obj: StorefrontBanner) -> str | None:
         if not obj.image:
             return None
         try:
-            request = self.context.get("request")
             url = obj.image.url
-            if request:
-                return request.build_absolute_uri(url)
-            return url
         except Exception:
             return None
+        request = self.context.get("request")
+        if not request:
+            return url
+        try:
+            return request.build_absolute_uri(url)
+        except Exception:
+            return url
+
+    def to_internal_value(self, data):
+        if hasattr(data, "get"):
+            mutable = data.copy() if hasattr(data, "copy") else data
+            if hasattr(mutable, "get"):
+                for key in ("is_active",):
+                    if key in mutable and isinstance(mutable.get(key), str):
+                        raw = mutable.get(key).strip().lower()
+                        if raw in ("true", "1", "yes", "on"):
+                            if hasattr(mutable, "_mutable"):
+                                mutable._mutable = True
+                            mutable[key] = True
+                        elif raw in ("false", "0", "no", "off"):
+                            if hasattr(mutable, "_mutable"):
+                                mutable._mutable = True
+                            mutable[key] = False
+                if "sort_order" in mutable and isinstance(mutable.get("sort_order"), str):
+                    try:
+                        if hasattr(mutable, "_mutable"):
+                            mutable._mutable = True
+                        mutable["sort_order"] = int(mutable.get("sort_order") or 0)
+                    except (TypeError, ValueError):
+                        pass
+            data = mutable
+        return super().to_internal_value(data)
 
     def validate(self, attrs):
         link_type = attrs.get(

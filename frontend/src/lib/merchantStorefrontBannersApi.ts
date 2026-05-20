@@ -1,4 +1,5 @@
 import { apiFetch, apiJson } from './api'
+import { parseApiErrorBody } from './parseApiError'
 
 export type StorefrontBannerLinkType = 'none' | 'url' | 'category'
 
@@ -34,8 +35,8 @@ export async function createMerchantStorefrontBanner(
     body: form,
   })
   if (!res.ok) {
-    const j = (await res.json().catch(() => ({}))) as { detail?: string }
-    throw new Error(j.detail || res.statusText)
+    const j = (await res.json().catch(() => ({}))) as Record<string, unknown>
+    throw new Error(parseApiErrorBody(j, res.statusText))
   }
   return res.json() as Promise<MerchantStorefrontBanner>
 }
@@ -50,8 +51,8 @@ export async function updateMerchantStorefrontBanner(
     body: form,
   })
   if (!res.ok) {
-    const j = (await res.json().catch(() => ({}))) as { detail?: string }
-    throw new Error(j.detail || res.statusText)
+    const j = (await res.json().catch(() => ({}))) as Record<string, unknown>
+    throw new Error(parseApiErrorBody(j, res.statusText))
   }
   return res.json() as Promise<MerchantStorefrontBanner>
 }
@@ -62,8 +63,8 @@ export async function deleteMerchantStorefrontBanner(id: number): Promise<void> 
     shopScoped: true,
   })
   if (!res.ok && res.status !== 204) {
-    const j = (await res.json().catch(() => ({}))) as { detail?: string }
-    throw new Error(j.detail || res.statusText)
+    const j = (await res.json().catch(() => ({}))) as Record<string, unknown>
+    throw new Error(parseApiErrorBody(j, res.statusText))
   }
 }
 

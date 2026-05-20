@@ -25,6 +25,18 @@ type CategoryOption = { id: number; name: string }
 const inputClass =
   'w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:bg-white focus:ring-2 focus:ring-violet-400/20 dark:border-slate-600 dark:bg-slate-800/80 dark:text-white'
 
+/** Ensure uploaded file has an extension Django/Pillow accepts. */
+function normalizeBannerImageFile(file: File): File {
+  const name = file.name?.trim() || ''
+  if (/\.(jpe?g|png|gif|webp|bmp|avif)$/i.test(name)) return file
+  const mime = (file.type || '').toLowerCase()
+  let ext = 'jpg'
+  if (mime.includes('png')) ext = 'png'
+  else if (mime.includes('webp')) ext = 'webp'
+  else if (mime.includes('gif')) ext = 'gif'
+  return new File([file], `banner-${Date.now()}.${ext}`, { type: file.type || 'image/jpeg' })
+}
+
 type Props = {
   rotateSeconds: number
   onRotateSecondsChange: (n: number) => void
@@ -105,17 +117,30 @@ export function MerchantStorefrontBannersSection({
       setError(t('onlineShop.bannerImageRequired'))
       return
     }
+    if (linkType === 'url' && !linkUrl.trim()) {
+      setError(t('onlineShop.bannerUrlRequired'))
+      return
+    }
+    if (linkType === 'category' && !categoryId) {
+      setError(t('onlineShop.bannerCategoryRequired'))
+      return
+    }
     setBusy(true)
     setError(null)
     try {
+      const upload = normalizeBannerImageFile(imageFile)
       const form = new FormData()
-      form.append('image', imageFile)
+      form.append('image', upload, upload.name)
       form.append('title', title.trim())
       form.append('subtitle', subtitle.trim())
       form.append('link_type', linkType)
       form.append('is_active', 'true')
       form.append('sort_order', String(banners.length))
-      if (linkType === 'url') form.append('link_url', linkUrl.trim())
+      if (linkType === 'url') {
+        let url = linkUrl.trim()
+        if (url && !/^https?:\/\//i.test(url)) url = `https://${url}`
+        form.append('link_url', url)
+      }
       if (linkType === 'category' && categoryId) form.append('category', categoryId)
       await createMerchantStorefrontBanner(form)
       resetForm()
