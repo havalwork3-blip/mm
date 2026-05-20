@@ -22,8 +22,29 @@ router.register(r"purchases", views.PurchaseViewSet, basename="purchase")
 router.register(r"sales", views.SaleViewSet, basename="sale")
 router.register(r"shareholders", views.ShareholderViewSet, basename="shareholder")
 router.register(r"employee-debts", views.EmployeeDebtViewSet, basename="employee-debt")
+router.register(
+    r"merchant/storefront-orders",
+    views.MerchantStorefrontOrderViewSet,
+    basename="merchant-storefront-order",
+)
 
 urlpatterns = [
+    # Public storefront (mounted at /api/ in config.urls — do NOT prefix with api/ here).
+    path(
+        "public/storefront/resolve/",
+        views.public_storefront_resolve,
+        name="public-storefront-resolve",
+    ),
+    path(
+        "public/storefront/products/",
+        views.public_storefront_products,
+        name="public-storefront-products",
+    ),
+    path(
+        "public/storefront/submit_order/",
+        views.public_storefront_submit_order,
+        name="public-storefront-submit-order",
+    ),
     path("admin/stats/", GlobalAdminStatsView.as_view(), name="admin-global-stats"),
     path("reports/profit/", ProfitReportView.as_view(), name="profit-report"),
     path("reports/jard/", JardReportView.as_view(), name="jard-report"),

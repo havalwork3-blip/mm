@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSession } from '../context/SessionContext'
+import { resolveActiveShopId } from '../lib/activeShop'
 import { hasPersistedSessionAuth, setSuperuserShopId } from '../lib/api'
 import { useResyncLocalMe } from './useResyncLocalMe'
 
@@ -51,10 +52,9 @@ export function useSyncedSession() {
 
   const authPending = loading || (hasPersistedSessionAuth() && !me)
   const showLogin = !authPending && !me
-  const canAccessShopData = Boolean(
-    me && (!me.is_superuser || me.shop !== null || Boolean(shopImpersonation)),
-  )
-  const needsShop = Boolean(me?.is_superuser && me.shop === null && !shopImpersonation)
+  const activeShopId = resolveActiveShopId(me, shopImpersonation)
+  const canAccessShopData = Boolean(me && activeShopId != null)
+  const needsShop = Boolean(me?.is_superuser && activeShopId == null)
 
   return {
     me,

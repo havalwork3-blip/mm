@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { isStorefrontMode } from './lib/storefrontConfig'
 import { MainLayout } from './layout/MainLayout'
 import { AdminLayout } from './pages/admin/AdminLayout'
 import { AdminShopsPage } from './pages/admin/AdminShopsPage'
@@ -21,12 +22,25 @@ import { CatalogPage } from './pages/CatalogPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { QrCodeSocialLandingPage } from './pages/QrCodeSocialLandingPage'
 import { AdminQrSocialPage } from './pages/admin/AdminQrSocialPage'
+import { MerchantOnlineOrdersPage } from './pages/merchant/MerchantOnlineOrdersPage'
+import { StorefrontRoutes } from './pages/storefront/StorefrontRoutes'
+
+const storefrontHost = isStorefrontMode()
 
 function App() {
+  if (storefrontHost) {
+    return (
+      <BrowserRouter>
+        <StorefrontRoutes />
+      </BrowserRouter>
+    )
+  }
+
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/qr-code" element={<QrCodeSocialLandingPage />} />
+        <Route path="/store/*" element={<StorefrontRoutes />} />
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/inventory" element={<InventoryPage />} />
@@ -35,6 +49,7 @@ function App() {
           <Route path="/profit" element={<ProfitReportPage />} />
           <Route path="/sales" element={<SalesListPage />} />
           <Route path="/sales-returns" element={<SalesReturnsPage />} />
+          <Route path="/online-orders" element={<MerchantOnlineOrdersPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/cashier" element={<CashierPage />} />

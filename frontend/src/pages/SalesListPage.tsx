@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
 import { PageAuthLoading } from '../components/PageAuthLoading'
 import { SaleListRow } from '../components/sales/SaleListRow'
 import { useLocale } from '../context/LocaleContext'
 import { useSyncedSession } from '../hooks/useSyncedSession'
-import { apiJson } from '../lib/api'
+import { resolveActiveShopId } from '../lib/activeShop'
+import { apiJson, type ApiFetchOptions } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
 import { withReceiptPrefs } from '../lib/receiptPrefs'
+import { digitsOnlyAscii } from '../lib/shopReceiptNumbers'
 import { useSalesListStore } from '../stores/salesListStore'
 import type {
   CustomerRow,
@@ -17,9 +19,52 @@ import type {
   SaleListRow as SaleRow,
 } from '../types/api'
 
+type PaymentStatusFilter = 'all' | 'debt' | 'paid'
+
+type SalesListFilters = {
+  productName: string
+  customerName: string
+  customerId: number | null
+  receiptNumber: string
+  dateFrom: string
+  dateTo: string
+  paymentStatus: PaymentStatusFilter
+}
+
+/** Tenant APIs: always send active `pos_shop_id` (even when Global View is on). */
+const SHOP_SCOPED: ApiFetchOptions = { shopScoped: true }
+
+const EMPTY_FILTERS: SalesListFilters = {
+  productName: '',
+  customerName: '',
+  customerId: null,
+  receiptNumber: '',
+  dateFrom: '',
+  dateTo: '',
+  paymentStatus: 'all',
+}
+
+function buildSalesQuery(filters: SalesListFilters): string {
+  const params = new URLSearchParams()
+  if (filters.productName) params.set('product_name', filters.productName)
+  if (filters.customerId != null) {
+    params.set('customer', String(filters.customerId))
+  } else if (filters.customerName) {
+    params.set('customer_name', filters.customerName)
+  }
+  const receiptDigits = digitsOnlyAscii(filters.receiptNumber)
+  if (receiptDigits) params.set('receipt_number', receiptDigits)
+  if (filters.dateFrom) params.set('date_from', filters.dateFrom)
+  if (filters.dateTo) params.set('date_to', filters.dateTo)
+  if (filters.paymentStatus !== 'all') {
+    params.set('payment_status', filters.paymentStatus)
+  }
+  const qs = params.toString()
+  return qs ? `/api/sales/?${qs}` : '/api/sales/'
+}
+
 export function SalesListPage() {
   const { t } = useLocale()
-  type PaymentStatusFilter = 'all' | 'debt' | 'paid'
   const {
     me,
     authPending,
@@ -35,18 +80,9 @@ export function SalesListPage() {
   const [shopOverride, setShopOverride] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [productSearchInput, setProductSearchInput] = useState('')
-  const [customerSearchInput, setCustomerSearchInput] = useState('')
-  const [receiptNumberInput, setReceiptNumberInput] = useState('')
-  const [dateFromInput, setDateFromInput] = useState('')
-  const [dateToInput, setDateToInput] = useState('')
-  const [appliedProductSearch, setAppliedProductSearch] = useState('')
-  const [appliedCustomerSearch, setAppliedCustomerSearch] = useState('')
-  const [appliedReceiptNumber, setAppliedReceiptNumber] = useState('')
-  const [appliedDateFrom, setAppliedDateFrom] = useState('')
-  const [appliedDateTo, setAppliedDateTo] = useState('')
-  const [paymentStatusInput, setPaymentStatusInput] = useState<PaymentStatusFilter>('all')
-  const [appliedPaymentStatus, setAppliedPaymentStatus] = useState<PaymentStatusFilter>('all')
+  const [filters, setFilters] = useState<SalesListFilters>(EMPTY_FILTERS)
+  const filtersRef = useRef(filters)
+  filtersRef.current = filters
   const [receiptSettings, setReceiptSettings] = useState<ReceiptSettingsRow | null>(null)
   const [debouncedProductQ, setDebouncedProductQ] = useState('')
   const [debouncedCustomerQ, setDebouncedCustomerQ] = useState('')
@@ -59,9 +95,27 @@ export function SalesListPage() {
   const resetSales = useSalesListStore((s) => s.reset)
   const saleItems = useSalesListStore((s) => s.items)
 
+  const activeShopId = useMemo(
+    () => resolveActiveShopId(me, shopImpersonation),
+    [me, shopImpersonation],
+  )
+
+  const salesForActiveShop = useCallback(
+    (items: SaleRow[]) => {
+      if (activeShopId == null) return []
+      return items.filter((s) => Number(s.shop) === activeShopId)
+    },
+    [activeShopId],
+  )
+
   useEffect(() => {
     if (!me) resetSales()
   }, [me, resetSales])
+
+  useEffect(() => {
+    resetSales()
+    setError(null)
+  }, [activeShopId, resetSales])
 
   useEffect(() => {
     setShopOverride(shopImpersonation ?? '')
@@ -69,19 +123,19 @@ export function SalesListPage() {
 
   useEffect(() => {
     const id = window.setTimeout(
-      () => setDebouncedProductQ(productSearchInput.trim()),
+      () => setDebouncedProductQ(filters.productName.trim()),
       250,
     )
     return () => window.clearTimeout(id)
-  }, [productSearchInput])
+  }, [filters.productName])
 
   useEffect(() => {
     const id = window.setTimeout(
-      () => setDebouncedCustomerQ(customerSearchInput.trim()),
+      () => setDebouncedCustomerQ(filters.customerName.trim()),
       250,
     )
     return () => window.clearTimeout(id)
-  }, [customerSearchInput])
+  }, [filters.customerName])
 
   useEffect(() => {
     if (!me || !canAccessShopData) return
@@ -95,6 +149,7 @@ export function SalesListPage() {
             : '/api/products/?page_size=8&exclude_discontinued=1'
         const data = await apiJson<Paginated<ProductRow> | ProductRow[]>(
           endpoint,
+          SHOP_SCOPED,
         )
         const list = Array.isArray(data) ? data : data.results
         if (!cancelled) setProductHits(list)
@@ -107,137 +162,114 @@ export function SalesListPage() {
     }
   }, [me, canAccessShopData, debouncedProductQ])
 
-  useEffect(() => {
-    if (!me || !canAccessShopData) return
-    if (debouncedCustomerQ.length < 1) {
-      setCustomerHits([])
-      return
-    }
-    let cancelled = false
-    void (async () => {
+  const fetchCustomerSuggestions = useCallback(
+    async (q: string) => {
+      if (!me || !canAccessShopData) return
+      const trimmed = q.trim()
       try {
+        const endpoint =
+          trimmed.length > 0
+            ? `/api/customers/?search=${encodeURIComponent(trimmed)}&page_size=20`
+            : '/api/customers/?page_size=20'
         const data = await apiJson<Paginated<CustomerRow> | CustomerRow[]>(
-          `/api/customers/?search=${encodeURIComponent(debouncedCustomerQ)}`,
+          endpoint,
+          SHOP_SCOPED,
         )
         const list = Array.isArray(data) ? data : data.results
-        if (!cancelled) setCustomerHits(list)
+        setCustomerHits(list)
       } catch {
-        if (!cancelled) setCustomerHits([])
+        setCustomerHits([])
       }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [me, canAccessShopData, debouncedCustomerQ])
-
-
-  const loadSales = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const params = new URLSearchParams()
-      if (appliedProductSearch.trim()) {
-        params.set('product_name', appliedProductSearch.trim())
-      }
-      if (appliedCustomerSearch.trim()) {
-        params.set('customer_name', appliedCustomerSearch.trim())
-      }
-      if (appliedReceiptNumber.trim()) {
-        params.set('receipt_number', appliedReceiptNumber.trim())
-      }
-      if (appliedDateFrom.trim()) params.set('date_from', appliedDateFrom.trim())
-      if (appliedDateTo.trim()) params.set('date_to', appliedDateTo.trim())
-      if (appliedPaymentStatus !== 'all') params.set('payment_status', appliedPaymentStatus)
-      const qs = params.toString()
-      const url = qs ? `/api/sales/?${qs}` : '/api/sales/'
-      const data = await apiJson<SaleRow[] | Paginated<SaleRow>>(url)
-      const list = Array.isArray(data) ? data : data.results
-      setSaleItems(list)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('sales.loadFailed'))
-      setSaleItems([])
-    } finally {
-      setLoading(false)
-    }
-  }, [
-    appliedProductSearch,
-    appliedCustomerSearch,
-    appliedReceiptNumber,
-    appliedDateFrom,
-    appliedDateTo,
-    appliedPaymentStatus,
-    setSaleItems,
-    t,
-  ])
-
-  const filteredSales = useMemo(() => {
-    if (appliedPaymentStatus === 'all') return saleItems
-    return saleItems.filter((sale) => {
-      const grossTotal = sale.lines.reduce(
-        (sum, line) => sum + line.quantity * Number(line.unit_price_usd),
-        0,
-      )
-      const netTotal = Math.max(0, grossTotal - Number(sale.invoice_discount_usd))
-      const rate = Number(sale.exchange_rate_usd_to_iqd)
-      const paidInUsd = Number(sale.amount_paid_usd)
-      const paidInIqdAsUsd = rate > 0 ? Number(sale.amount_paid_iqd) / rate : 0
-      const totalPaid = paidInUsd + paidInIqdAsUsd
-      const remaining = netTotal - totalPaid
-      const hasDebt = remaining > 0.0001
-      return appliedPaymentStatus === 'debt' ? hasDebt : !hasDebt
-    })
-  }, [appliedPaymentStatus, saleItems])
-
-  /** Per-row so Virtuoso always re-renders when `me`/perms change (context alone can stay stale). */
-  const salesVirtuosoRows = useMemo(
-    () =>
-      filteredSales.map((sale) => ({
-        sale,
-        canEditInPos: Boolean(me && hasPerm(me, 'change_sale', 'add_sale')),
-      })),
-    [filteredSales, me],
+    },
+    [me, canAccessShopData],
   )
 
   useEffect(() => {
     if (!me || !canAccessShopData) return
-    void apiJson<ReceiptSettingsRow>('/api/receipt-settings/')
+    void fetchCustomerSuggestions(debouncedCustomerQ)
+  }, [me, canAccessShopData, debouncedCustomerQ, fetchCustomerSuggestions])
+
+  const loadSales = useCallback(
+    async (nextFilters?: SalesListFilters) => {
+      if (!canAccessShopData) return
+      const active = nextFilters ?? filtersRef.current
+      setLoading(true)
+      setError(null)
+      try {
+        const url = buildSalesQuery(active)
+        const data = await apiJson<SaleRow[] | Paginated<SaleRow>>(url, SHOP_SCOPED)
+        const list = Array.isArray(data) ? data : data.results
+        setSaleItems(salesForActiveShop(list))
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t('sales.loadFailed'))
+        setSaleItems([])
+      } finally {
+        setLoading(false)
+      }
+    },
+    [canAccessShopData, salesForActiveShop, setSaleItems, t],
+  )
+
+  /** Per-row so Virtuoso always re-renders when `me`/perms change (context alone can stay stale). */
+  const salesVirtuosoRows = useMemo(
+    () =>
+      saleItems.map((sale) => ({
+        sale,
+        canEditInPos: Boolean(me && hasPerm(me, 'change_sale', 'add_sale')),
+      })),
+    [saleItems, me],
+  )
+
+  useEffect(() => {
+    if (!me || !canAccessShopData) return
+    void apiJson<ReceiptSettingsRow>('/api/receipt-settings/', SHOP_SCOPED)
       .then((v) => setReceiptSettings(withReceiptPrefs(v)))
       .catch(() => setReceiptSettings(null))
   }, [me, canAccessShopData])
 
   useEffect(() => {
-    if (!me || !canAccessShopData) return
-    void loadSales()
-  }, [me, canAccessShopData, loadSales])
+    if (!me || activeShopId == null) return
+    void loadSales(EMPTY_FILTERS)
+  }, [me, activeShopId, loadSales])
+
+  useEffect(() => {
+    const onShopScopeChange = () => {
+      resetSales()
+      if (me && activeShopId != null) void loadSales(EMPTY_FILTERS)
+    }
+    window.addEventListener('mm-dashboard-refresh', onShopScopeChange)
+    return () => window.removeEventListener('mm-dashboard-refresh', onShopScopeChange)
+  }, [me, activeShopId, loadSales, resetSales])
 
   function applySalesFilters() {
-    setAppliedProductSearch(productSearchInput.trim())
-    setAppliedCustomerSearch(customerSearchInput.trim())
-    setAppliedReceiptNumber(receiptNumberInput.trim())
-    setAppliedDateFrom(dateFromInput.trim())
-    setAppliedDateTo(dateToInput.trim())
-    setAppliedPaymentStatus(paymentStatusInput)
+    const next: SalesListFilters = {
+      productName: filters.productName.trim(),
+      customerName: filters.customerName.trim(),
+      customerId: filters.customerId,
+      receiptNumber: filters.receiptNumber.trim(),
+      dateFrom: filters.dateFrom.trim(),
+      dateTo: filters.dateTo.trim(),
+      paymentStatus: filters.paymentStatus,
+    }
+    setFilters(next)
+    void loadSales(next)
   }
 
   function clearSalesFilters() {
-    setProductSearchInput('')
-    setCustomerSearchInput('')
-    setReceiptNumberInput('')
-    setDateFromInput('')
-    setDateToInput('')
-    setAppliedProductSearch('')
-    setAppliedCustomerSearch('')
-    setAppliedReceiptNumber('')
-    setAppliedDateFrom('')
-    setAppliedDateTo('')
-    setPaymentStatusInput('all')
-    setAppliedPaymentStatus('all')
+    setFilters(EMPTY_FILTERS)
     setDebouncedProductQ('')
     setDebouncedCustomerQ('')
     setProductHits([])
     setCustomerHits([])
     setProductSearchOpen(false)
     setCustomerSearchOpen(false)
+    void loadSales(EMPTY_FILTERS)
+  }
+
+  function patchFilters(patch: Partial<SalesListFilters>, reload = false) {
+    const next = { ...filtersRef.current, ...patch }
+    setFilters(next)
+    if (reload) void loadSales(next)
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -345,9 +377,9 @@ export function SalesListPage() {
                 </label>
                 <input
                   type="search"
-                  value={productSearchInput}
+                  value={filters.productName}
                   onChange={(e) => {
-                    setProductSearchInput(e.target.value)
+                    patchFilters({ productName: e.target.value })
                     setProductSearchOpen(true)
                   }}
                   onFocus={() => setProductSearchOpen(true)}
@@ -362,9 +394,15 @@ export function SalesListPage() {
                         <button
                           type="button"
                           className="w-full px-3 py-2 text-start text-sm hover:bg-slate-50 dark:hover:bg-slate-700/80"
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => {
-                            setProductSearchInput(p.name)
+                            const next: SalesListFilters = {
+                              ...filters,
+                              productName: p.name,
+                            }
+                            setFilters(next)
                             setProductSearchOpen(false)
+                            void loadSales(next)
                           }}
                         >
                           {p.name}
@@ -380,28 +418,39 @@ export function SalesListPage() {
                 </label>
                 <input
                   type="search"
-                  value={customerSearchInput}
+                  value={filters.customerName}
                   onChange={(e) => {
-                    setCustomerSearchInput(e.target.value)
+                    patchFilters({
+                      customerName: e.target.value,
+                      customerId: null,
+                    })
                     setCustomerSearchOpen(true)
                   }}
-                  onFocus={() => setCustomerSearchOpen(true)}
+                  onFocus={() => {
+                    setCustomerSearchOpen(true)
+                    void fetchCustomerSuggestions(filters.customerName)
+                  }}
                   onBlur={() => window.setTimeout(() => setCustomerSearchOpen(false), 120)}
                   placeholder={t('sales.filterCustomerNamePlaceholder')}
                   className="w-full rounded-xl border border-slate-200 bg-white py-2.5 ps-3 pe-3 text-start text-sm shadow-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                 />
-                {customerSearchOpen &&
-                customerSearchInput.trim().length > 0 &&
-                customerHits.length > 0 ? (
+                {customerSearchOpen && customerHits.length > 0 ? (
                   <ul className="absolute inset-x-0 top-full z-20 mt-1 max-h-40 overflow-auto rounded-lg border border-slate-200 bg-white shadow dark:border-slate-600 dark:bg-slate-800">
                     {customerHits.map((c) => (
                       <li key={c.id}>
                         <button
                           type="button"
                           className="w-full px-3 py-2 text-start text-sm hover:bg-slate-50 dark:hover:bg-slate-700/80"
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => {
-                            setCustomerSearchInput(c.name)
+                            const next: SalesListFilters = {
+                              ...filters,
+                              customerName: c.name,
+                              customerId: c.id,
+                            }
+                            setFilters(next)
                             setCustomerSearchOpen(false)
+                            void loadSales(next)
                           }}
                         >
                           {c.name}
@@ -421,8 +470,12 @@ export function SalesListPage() {
                 <input
                   type="search"
                   inputMode="numeric"
-                  value={receiptNumberInput}
-                  onChange={(e) => setReceiptNumberInput(e.target.value)}
+                  value={filters.receiptNumber}
+                  onChange={(e) =>
+                    patchFilters({
+                      receiptNumber: digitsOnlyAscii(e.target.value, 12),
+                    })
+                  }
                   placeholder={t('sales.filterReceiptNumberPlaceholder')}
                   className="w-full rounded-xl border border-slate-200 bg-white py-2.5 ps-3 pe-3 text-start text-sm shadow-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                 />
@@ -431,8 +484,8 @@ export function SalesListPage() {
                 {t('sales.dateFrom')}
                 <input
                   type="date"
-                  value={dateFromInput}
-                  onChange={(e) => setDateFromInput(e.target.value)}
+                  value={filters.dateFrom}
+                  onChange={(e) => patchFilters({ dateFrom: e.target.value })}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                 />
               </label>
@@ -440,19 +493,18 @@ export function SalesListPage() {
                 {t('sales.dateTo')}
                 <input
                   type="date"
-                  value={dateToInput}
-                  onChange={(e) => setDateToInput(e.target.value)}
+                  value={filters.dateTo}
+                  onChange={(e) => patchFilters({ dateTo: e.target.value })}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                 />
               </label>
               <label className="flex w-full min-w-[160px] flex-col gap-1 text-start text-xs font-medium text-slate-600 sm:w-auto">
                 {t('sales.filterPaymentStatus')}
                 <select
-                  value={paymentStatusInput}
+                  value={filters.paymentStatus}
                   onChange={(e) => {
-                    const next = e.target.value as PaymentStatusFilter
-                    setPaymentStatusInput(next)
-                    setAppliedPaymentStatus(next)
+                    const paymentStatus = e.target.value as PaymentStatusFilter
+                    patchFilters({ paymentStatus }, true)
                   }}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
                 >
@@ -464,14 +516,16 @@ export function SalesListPage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="submit"
-                  className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700"
+                  disabled={loading}
+                  className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
                 >
-                  {t('sales.applyFilters')}
+                  {loading ? t('common.loading') : t('sales.applyFilters')}
                 </button>
                 <button
                   type="button"
+                  disabled={loading}
                   onClick={clearSalesFilters}
-                  className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
                   {t('sales.clearFilters')}
                 </button>
@@ -482,7 +536,7 @@ export function SalesListPage() {
 
         {loading ? (
           <p className="text-center text-sm text-slate-500">{t('common.loading')}</p>
-        ) : needsShop ? null : filteredSales.length === 0 ? (
+        ) : needsShop ? null : saleItems.length === 0 ? (
           <p className="py-12 text-center text-sm text-slate-500">{t('sales.empty')}</p>
         ) : (
           <SalesVirtualList

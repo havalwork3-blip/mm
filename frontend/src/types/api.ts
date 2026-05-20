@@ -4,6 +4,8 @@ export type ShopRow = {
   slug: string
   settings: Record<string, unknown>
   is_active: boolean
+  online_storefront_enabled: boolean
+  storefront_host: string
 }
 
 /** GET /api/public/qr-landing/ — global public page (single QR for all shops). */
@@ -271,6 +273,33 @@ export type Paginated<T> = {
   next: string | null
   previous: string | null
   results: T[]
+}
+
+export type StorefrontOrderStatus =
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'CANCELLED'
+
+export type MerchantStorefrontOrderItemRow = {
+  id: number
+  product: number
+  product_name: string
+  quantity: number
+  unit_price: string
+}
+
+export type MerchantStorefrontOrderRow = {
+  id: number
+  shop: number
+  customer_name: string
+  customer_phone: string
+  customer_address: string
+  total_amount: string
+  status: StorefrontOrderStatus
+  items: MerchantStorefrontOrderItemRow[]
+  created_at: string
+  updated_at: string
 }
 
 export type CustomerRow = {

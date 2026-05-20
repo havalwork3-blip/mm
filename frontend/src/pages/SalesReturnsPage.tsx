@@ -44,7 +44,9 @@ export function SalesReturnsPage() {
       if (dateTo.trim()) params.set('date_to', dateTo.trim())
       const qs = params.toString()
       const url = qs ? `/api/sales/?${qs}` : '/api/sales/'
-      const data = await apiJson<Paginated<SaleListRow> | SaleListRow[]>(url)
+      const data = await apiJson<Paginated<SaleListRow> | SaleListRow[]>(url, {
+        shopScoped: true,
+      })
       setRows(Array.isArray(data) ? data : data.results)
     } catch (e) {
       setRows([])
@@ -74,7 +76,9 @@ export function SalesReturnsPage() {
     }
     setReturnQuantities(initial)
     try {
-      const details = await apiJson<SaleListRow>(`/api/sales/${sale.id}/`)
+      const details = await apiJson<SaleListRow>(`/api/sales/${sale.id}/`, {
+        shopScoped: true,
+      })
       setSelectedSale(details)
       const refill: Record<number, string> = {}
       for (const ln of details.lines) {

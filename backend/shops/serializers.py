@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from shops.storefront_hosts import normalize_storefront_host, validate_storefront_host
+
 from .models import (
     Currency,
     QrLandingCustomLink,
@@ -18,10 +20,72 @@ class ShopSerializer(serializers.ModelSerializer):
             "slug",
             "settings",
             "is_active",
+            "online_storefront_enabled",
+            "storefront_host",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+    def _request_user_is_superuser(self) -> bool:
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        return bool(user and user.is_authenticated and user.is_superuser)
+
+    def validate(self, attrs: dict) -> dict:
+        storefront_keys = ("online_storefront_enabled", "storefront_host")
+        if any(k in attrs for k in storefront_keys) and not self._request_user_is_superuser():
+            raise serializers.ValidationError(
+                {
+                    "non_field_errors": [
+                        "Only superusers may configure the online storefront for a shop.",
+                    ],
+                },
+            )
+
+        enabled = attrs.get(
+            "online_storefront_enabled",
+            getattr(self.instance, "online_storefront_enabled", False),
+        )
+        raw_host = attrs.get("storefront_host", getattr(self.instance, "storefront_host", ""))
+        if "storefront_host" in attrs:
+            try:
+                attrs["storefront_host"] = validate_storefront_host(str(raw_host or ""))
+            except ValueError as exc:
+                raise serializers.ValidationError({"storefront_host": str(exc)}) from exc
+        else:
+            attrs.setdefault("storefront_host", normalize_storefront_host(str(raw_host or "")))
+
+        host = str(attrs.get("storefront_host", "") or "")
+        if enabled and not host:
+            raise serializers.ValidationError(
+                {"storefront_host": "Required when online shopping is enabled."},
+            )
+        if not enabled and "online_storefront_enabled" in attrs:
+            attrs["storefront_host"] = ""
+
+        if host:
+            dup = Shop.objects.filter(storefront_host=host)
+            if self.instance is not None:
+                dup = dup.exclude(pk=self.instance.pk)
+            if dup.exists():
+                raise serializers.ValidationError(
+                    {"storefront_host": "This hostname is already used by another shop."},
+                )
+
+        return attrs
+
+    def create(self, validated_data: dict) -> Shop:
+        if not self._request_user_is_superuser():
+            validated_data.pop("online_storefront_enabled", None)
+            validated_data.pop("storefront_host", None)
+        return super().create(validated_data)
+
+    def update(self, instance: Shop, validated_data: dict) -> Shop:
+        if not self._request_user_is_superuser():
+            validated_data.pop("online_storefront_enabled", None)
+            validated_data.pop("storefront_host", None)
+        return super().update(instance, validated_data)
 
 
 class CurrencySerializer(serializers.ModelSerializer):

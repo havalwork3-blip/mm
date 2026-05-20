@@ -11,6 +11,8 @@ from rest_framework.fields import empty
 from shops.models import Currency
 from shops.scoping import require_shop_id
 
+from shops.models import Shop
+
 from .models import (
     Category,
     Company,
@@ -29,6 +31,9 @@ from .models import (
     SaleReturnLine,
     Shareholder,
     ShopDayOpeningCash,
+    StorefrontOrder,
+    StorefrontOrderItem,
+    StorefrontOrderStatus,
 )
 
 
@@ -65,6 +70,203 @@ def _inventory_loss_note(
         f"[AUTO_INVENTORY_LOSS] کەمکردنەوەی دەستی کۆگا: {qty} دانە × {buy_s} USD "
         f"(کۆی گشتی {loss_s} USD)"
     )
+
+
+class PublicProductSerializer(serializers.ModelSerializer):
+    """Public storefront catalog — no buy price or stock."""
+
+    sell_price = serializers.DecimalField(
+        source="sale_price_retail",
+        max_digits=18,
+        decimal_places=4,
+        read_only=True,
+    )
+    image_url = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Product
+        fields = ["id", "name", "sell_price", "barcode", "image", "image_url"]
+        read_only_fields = fields
+
+    def get_image_url(self, obj: Product) -> str | None:
+        if not obj.image:
+            return None
+        request = self.context.get("request")
+        url = obj.image.url
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+
+
+class StorefrontOrderItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+
+    class Meta:
+        model = StorefrontOrderItem
+        fields = ["id", "product", "product_name", "quantity", "unit_price"]
+        read_only_fields = ["id", "product_name", "unit_price"]
+
+
+class StorefrontOrderSerializer(serializers.ModelSerializer):
+    items = StorefrontOrderItemSerializer(many=True)
+
+    class Meta:
+        model = StorefrontOrder
+        fields = [
+            "id",
+            "shop",
+            "customer_name",
+            "customer_phone",
+            "customer_address",
+            "total_amount",
+            "status",
+            "items",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "total_amount", "status", "created_at", "updated_at"]
+
+    def validate_shop(self, shop: Shop) -> Shop:
+        if not shop.is_active:
+            raise serializers.ValidationError("This shop is not accepting online orders.")
+        if not shop.online_storefront_enabled:
+            raise serializers.ValidationError("Online ordering is not enabled for this shop.")
+        return shop
+
+    def validate(self, attrs: dict) -> dict:
+        items = attrs.get("items")
+        if not items:
+            raise serializers.ValidationError({"items": "At least one line item is required."})
+        return attrs
+
+    def create(self, validated_data: dict) -> StorefrontOrder:
+        items_data: list = validated_data.pop("items")
+        shop = validated_data["shop"]
+        shop_id = int(shop.pk)
+
+        with transaction.atomic():
+            total = Decimal("0")
+            line_blocks: list[dict] = []
+            for row in items_data:
+                product = row["product"]
+                qty = int(row["quantity"])
+                if product.shop_id != shop_id:
+                    raise serializers.ValidationError(
+                        {"items": "Each product must belong to the selected shop."},
+                    )
+                if product.is_discontinued:
+                    raise serializers.ValidationError(
+                        {"items": f"{product.name} is no longer available."},
+                    )
+                if product.is_unregistered_placeholder:
+                    raise serializers.ValidationError(
+                        {"items": f"{product.name} is not available for online ordering."},
+                    )
+                if qty > int(product.current_stock_quantity or 0):
+                    raise serializers.ValidationError(
+                        {
+                            "items": (
+                                f"Insufficient stock for {product.name} "
+                                f"(requested {qty}, available {product.current_stock_quantity})."
+                            ),
+                        },
+                    )
+                unit_price = Decimal(product.sale_price_retail).quantize(Decimal("0.0001"))
+                line_total = (unit_price * Decimal(qty)).quantize(Decimal("0.0001"))
+                total += line_total
+                line_blocks.append(
+                    {
+                        "product": product,
+                        "quantity": qty,
+                        "unit_price": unit_price,
+                    },
+                )
+
+            order = StorefrontOrder.objects.create(
+                **validated_data,
+                total_amount=total.quantize(Decimal("0.0001")),
+                status=StorefrontOrderStatus.PENDING,
+            )
+            for block in line_blocks:
+                StorefrontOrderItem.objects.create(order=order, **block)
+                Product.objects.filter(pk=block["product"].pk).update(
+                    current_stock_quantity=F("current_stock_quantity") - block["quantity"],
+                )
+
+        return order
+
+
+class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
+    items = StorefrontOrderItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = StorefrontOrder
+        fields = [
+            "id",
+            "shop",
+            "customer_name",
+            "customer_phone",
+            "customer_address",
+            "total_amount",
+            "status",
+            "items",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "shop",
+            "customer_name",
+            "customer_phone",
+            "customer_address",
+            "total_amount",
+            "items",
+            "created_at",
+            "updated_at",
+        ]
+
+    def validate_status(self, value: str) -> str:
+        valid = {c.value for c in StorefrontOrderStatus}
+        if value not in valid:
+            raise serializers.ValidationError(f"Status must be one of: {', '.join(sorted(valid))}.")
+        return value
+
+    def update(self, instance: StorefrontOrder, validated_data: dict) -> StorefrontOrder:
+        new_status = validated_data.get("status", instance.status)
+        old_status = instance.status
+        if new_status == old_status:
+            return super().update(instance, validated_data)
+
+        with transaction.atomic():
+            order = StorefrontOrder.objects.select_for_update().get(pk=instance.pk)
+            if (
+                old_status != StorefrontOrderStatus.CANCELLED
+                and new_status == StorefrontOrderStatus.CANCELLED
+            ):
+                for item in order.items.select_related("product"):
+                    Product.objects.filter(pk=item.product_id).update(
+                        current_stock_quantity=F("current_stock_quantity") + item.quantity,
+                    )
+            elif (
+                old_status == StorefrontOrderStatus.CANCELLED
+                and new_status != StorefrontOrderStatus.CANCELLED
+            ):
+                for item in order.items.select_related("product"):
+                    prod = item.product
+                    if int(item.quantity) > int(prod.current_stock_quantity or 0):
+                        raise serializers.ValidationError(
+                            {
+                                "status": (
+                                    f"Cannot restore order: insufficient stock for {prod.name}."
+                                ),
+                            },
+                        )
+                    Product.objects.filter(pk=item.product_id).update(
+                        current_stock_quantity=F("current_stock_quantity") - item.quantity,
+                    )
+            order.status = new_status
+            order.save(update_fields=["status", "updated_at"])
+        return order
 
 
 class CategorySerializer(serializers.ModelSerializer):

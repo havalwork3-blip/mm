@@ -8,6 +8,17 @@ class Shop(models.Model):
     slug = models.SlugField(max_length=255, unique=True, db_index=True)
     settings = models.JSONField(default=dict, blank=True)
     is_active = models.BooleanField(default=True)
+    online_storefront_enabled = models.BooleanField(
+        default=False,
+        help_text="Public online catalog + checkout for this shop.",
+    )
+    storefront_host = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="Customer-facing host, e.g. rada.mmiraq.com (unique when set).",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

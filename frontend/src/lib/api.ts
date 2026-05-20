@@ -6,9 +6,12 @@ import {
 } from './offlineQueue'
 import { sanitizeApiErrorText } from './sanitizeApiError'
 
+/** Local multi-shop Django from `npm run dev` (see scripts/run-django-backend.mjs). */
+export const LOCAL_DJANGO_PORT = '8001'
+
 /**
  * Site origin for API calls (no `/api` suffix). Every `apiJson` path already starts with `/api/…`.
- * Order: `VITE_API_URL` → same host as the page on port 8000 (dev LAN) → same-origin (prod).
+ * Order: `VITE_API_URL` → same host on dev port (LAN) → localhost:8001 → same-origin (prod).
  */
 function normalizeApiBase(raw: string): string {
   let base = raw.trim().replace(/\/+$/, '')
@@ -19,7 +22,24 @@ function normalizeApiBase(raw: string): string {
   return base
 }
 
+/** Join site origin (no /api suffix) + path that starts with `/api/`. */
+export function joinApiOrigin(origin: string, apiPath: string): string {
+  const base = normalizeApiBase(origin)
+  const path = apiPath.startsWith('/') ? apiPath : `/${apiPath}`
+  if (!path.startsWith('/api/') && path !== '/api') {
+    throw new Error(`API path must start with /api/: ${path}`)
+  }
+  return `${base}${path}`
+}
+
 export function getApiBase(): string {
+  if (typeof window !== 'undefined') {
+    const { hostname, origin } = window.location
+    // Local Vite dev: always same-origin so /api proxies to Django (ignores VITE_API_URL).
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return origin
+    }
+  }
   const env = import.meta.env.VITE_API_URL?.trim()
   if (env) return normalizeApiBase(env)
   if (typeof window !== 'undefined') {
@@ -27,10 +47,10 @@ export function getApiBase(): string {
     if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
       // Production build on a real hostname: same-origin (e.g. Nginx → Gunicorn on /api/).
       if (import.meta.env.PROD) return window.location.origin
-      return `${protocol}//${hostname}:8000`
+      return `${protocol}//${hostname}:${LOCAL_DJANGO_PORT}`
     }
   }
-  return 'http://127.0.0.1:8000'
+  return `http://127.0.0.1:${LOCAL_DJANGO_PORT}`
 }
 
 function isLocalApiBase(base: string): boolean {
@@ -179,12 +199,24 @@ function authHeaders(): HeadersInit {
   return { Authorization: `Basic ${token}` }
 }
 
+/** Superuser tenant scope: memory override, or `pos_shop_id` when `shopScoped` (even in Global View). */
+function scopedShopIdForRequest(shopScoped: boolean): string | null {
+  const mem = superuserShopId?.trim() || null
+  if (mem) return mem
+  if (!shopScoped) return null
+  try {
+    return localStorage.getItem('pos_shop_id')?.trim() || null
+  } catch {
+    return null
+  }
+}
+
 /**
  * Build an absolute API URL. Adds `shop_id` when a superuser shop override is set
  * and Global View is off (scoped requests).
  * Pass `omitShopScope` for admin lists that must see all shops regardless of override.
- * Pass `shopScoped: true` to always attach `shop_id` when an override exists (e.g. receipt
- * settings) even in Global View — those endpoints require `require_shop_id` on the server.
+ * Pass `shopScoped: true` to always attach `shop_id` when `pos_shop_id` is set (e.g. sales,
+ * POS, receipt settings) even in Global View — those endpoints require `require_shop_id` on the server.
  */
 export function buildApiUrl(
   path: string,
@@ -192,13 +224,12 @@ export function buildApiUrl(
   shopScoped = false,
 ): string {
   let p = path.startsWith('/') ? path : `/${path}`
+  const sid = scopedShopIdForRequest(shopScoped)
   const attachShopId =
-    Boolean(superuserShopId) &&
-    !omitShopScope &&
-    (shopScoped || !getGlobalView())
-  if (attachShopId) {
+    Boolean(sid) && !omitShopScope && (shopScoped || !getGlobalView())
+  if (attachShopId && sid) {
     const join = p.includes('?') ? '&' : '?'
-    p = `${p}${join}shop_id=${encodeURIComponent(superuserShopId!)}`
+    p = `${p}${join}shop_id=${encodeURIComponent(sid)}`
   }
   return `${getApiBase()}${p}`
 }
@@ -236,13 +267,12 @@ async function apiFetchWithBase(
 ) {
   const { omitShopScope, shopScoped, ...rest } = init
   let p = path.startsWith('/') ? path : `/${path}`
+  const sid = scopedShopIdForRequest(Boolean(shopScoped))
   const attachShopId =
-    Boolean(superuserShopId) &&
-    !omitShopScope &&
-    (Boolean(shopScoped) || !getGlobalView())
-  if (attachShopId) {
+    Boolean(sid) && !omitShopScope && (Boolean(shopScoped) || !getGlobalView())
+  if (attachShopId && sid) {
     const join = p.includes('?') ? '&' : '?'
-    p = `${p}${join}shop_id=${encodeURIComponent(superuserShopId!)}`
+    p = `${p}${join}shop_id=${encodeURIComponent(sid)}`
   }
   const url = `${base.replace(/\/$/, '')}${p}`
   const headers = new Headers(rest.headers)
@@ -307,7 +337,7 @@ export async function apiJson<T>(path: string, init: ApiFetchOptions = {}): Prom
     }
     if (e instanceof TypeError && import.meta.env.DEV && !isLocalApiBase(base)) {
       try {
-        res = await apiFetchWithBase('http://127.0.0.1:8000', path, init)
+        res = await apiFetchWithBase(`http://127.0.0.1:${LOCAL_DJANGO_PORT}`, path, init)
       } catch {
         // Keep original error message plus guidance below.
       }
@@ -316,8 +346,8 @@ export async function apiJson<T>(path: string, init: ApiFetchOptions = {}): Prom
       const hint =
         e instanceof TypeError
           ? isLocalApiBase(base)
-            ? ` (cannot reach ${base}; start the Django backend, e.g. run-backend.ps1 on 0.0.0.0:8000)`
-            : ` (cannot reach ${base}; same Wi-Fi as this device, Django on 0.0.0.0:8000, DJANGO_ALLOWED_HOSTS / DJANGO_DEV_FRONTEND_ORIGINS; open the app via http://YOUR_PC_IP:5173 with VITE_DEV_LAN=1)`
+            ? ` (cannot reach ${base}; start the Django backend: npm run dev — default port ${LOCAL_DJANGO_PORT})`
+            : ` (cannot reach ${base}; same Wi-Fi as this device, Django on 0.0.0.0:${LOCAL_DJANGO_PORT}, DJANGO_ALLOWED_HOSTS / DJANGO_DEV_FRONTEND_ORIGINS; open the app via http://YOUR_PC_IP:5173 with VITE_DEV_LAN=1)`
           : ''
       throw new ApiError(
         `${e instanceof Error ? e.message : String(e)}${hint}`,
@@ -404,10 +434,24 @@ export function initOfflineAutoSync() {
   }
 }
 
+/**
+ * Base origin for unauthenticated public APIs (storefront, QR landing).
+ * On localhost, always use the Vite dev server origin so `/api` is proxied to Django —
+ * even when `VITE_API_URL` points at a remote host (e.g. dashboard.mmiraq.com).
+ */
+export function getPublicApiBase(): string {
+  if (typeof window !== 'undefined') {
+    const { hostname } = window.location
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return window.location.origin
+    }
+  }
+  return getApiBase()
+}
+
 /** Unauthenticated JSON GET for public endpoints (no Basic auth, no shop scope). */
 export async function publicApiJson<T>(path: string): Promise<T> {
-  const p = path.startsWith('/') ? path : `/${path}`
-  const url = `${getApiBase()}${p}`
+  const url = joinApiOrigin(getPublicApiBase(), path)
   const res = await fetch(url, {
     headers: { Accept: 'application/json' },
     cache: 'no-store',

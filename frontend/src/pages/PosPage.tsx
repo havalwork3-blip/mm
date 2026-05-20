@@ -1083,7 +1083,7 @@ export function PosPage() {
       openNewCustomerModal(customerQuery)
       return
     }
-    if (me?.is_superuser && getGlobalView()) {
+    if (me?.is_superuser) {
       const sid = localStorage.getItem('pos_shop_id')?.trim()
       if (!sid) {
         setError(t('pos.globalCheckoutNeedsShop'))
@@ -1111,7 +1111,7 @@ export function PosPage() {
           unit_price_usd: l.unitPriceUsd,
         })),
       }
-      if (me?.is_superuser && getGlobalView()) {
+      if (me?.is_superuser) {
         const sid = localStorage.getItem('pos_shop_id')?.trim()
         if (sid) body.shop = Number(sid)
       }
@@ -1120,6 +1120,7 @@ export function PosPage() {
         {
           method: isEdit ? 'PUT' : 'POST',
           body: JSON.stringify(body),
+          shopScoped: true,
         },
       )
       setReceiptSummary({
@@ -1962,6 +1963,11 @@ export function PosPage() {
               {t('pos.payment')}
             </h2>
 
+            <form
+              autoComplete="off"
+              onSubmit={(e) => e.preventDefault()}
+              className="contents"
+            >
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="min-w-0">
                 <div className="flex items-center justify-between gap-2">
@@ -1997,8 +2003,13 @@ export function PosPage() {
                 </div>
                 <input
                   id="usd-in"
+                  name="hawre-pos-paid-usd"
                   ref={paymentUsdInputRef}
                   value={amountPaidUsd}
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore
+                  data-form-type="other"
                   onChange={(e) => onAmountPaidUsdChange(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Tab') {
@@ -2051,8 +2062,13 @@ export function PosPage() {
                 </div>
                 <input
                   id="iqd-in"
+                  name="hawre-pos-paid-iqd"
                   ref={paymentIqdInputRef}
                   value={amountPaidIqd}
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore
+                  data-form-type="other"
                   onChange={(e) => onAmountPaidIqdChange(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Tab') {
@@ -2094,8 +2110,13 @@ export function PosPage() {
                 </label>
                 <input
                   id="disc-usd"
+                  name="hawre-pos-discount-usd"
                   ref={discountUsdInputRef}
                   value={discountUsd}
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore
+                  data-form-type="other"
                   onChange={(e) => setDiscountUsd(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Tab') {
@@ -2123,8 +2144,13 @@ export function PosPage() {
                 </label>
                 <input
                   id="disc"
+                  name="hawre-pos-discount-iqd"
                   ref={discountInputRef}
                   value={discountIqd}
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore
+                  data-form-type="other"
                   onChange={(e) => setDiscountIqd(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Tab') {
@@ -2152,8 +2178,13 @@ export function PosPage() {
                 </label>
                 <textarea
                   id="note"
+                  name="hawre-pos-sale-note"
                   ref={noteTextareaRef}
                   value={saleNote}
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore
+                  data-form-type="other"
                   onChange={(e) => setSaleNote(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Tab') {
@@ -2176,6 +2207,7 @@ export function PosPage() {
                 />
               </div>
             </div>
+            </form>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">

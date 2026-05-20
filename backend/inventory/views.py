@@ -7,10 +7,10 @@ from django.db.models import Prefetch, Q
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import filters, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import User
@@ -24,8 +24,12 @@ from .dashboard_tools import (
     company_outstanding_usd,
     customer_outstanding_balance_usd,
     employee_debt_by_user,
+    sale_unpaid_balance_usd,
     suppliers_purchase_archive,
 )
+from shops.models import Shop
+from shops.storefront_hosts import normalize_storefront_host
+
 from .models import (
     Category,
     Company,
@@ -41,6 +45,7 @@ from .models import (
     SaleLine,
     SaleReturnLine,
     Shareholder,
+    StorefrontOrder,
 )
 from .permissions import (
     IsShopOwnerOrCanPaySupplierDebt,
@@ -56,12 +61,15 @@ from .serializers import (
     CustomerSerializer,
     EmployeeDebtSerializer,
     ExpenseSerializer,
+    MerchantStorefrontOrderSerializer,
     ProductSerializer,
+    PublicProductSerializer,
     PurchaseSerializer,
     PurchaseReturnCreateSerializer,
     SaleSerializer,
     SaleReturnCreateSerializer,
     ShareholderSerializer,
+    StorefrontOrderSerializer,
     latest_usd_to_iqd_for_shop,
 )
 
@@ -667,6 +675,20 @@ class SaleViewSet(ShopScopedViewSet):
                 qs = qs.filter(receipt_number=val)
             except (TypeError, ValueError):
                 return qs.none()
+        payment_status = (self.request.query_params.get("payment_status") or "").strip().lower()
+        if payment_status in ("debt", "paid"):
+            debt_ids: list[int] = []
+            paid_ids: list[int] = []
+            for sale in qs.prefetch_related("lines__return_lines"):
+                has_debt = sale_unpaid_balance_usd(sale) > Decimal("0.0001")
+                if has_debt:
+                    debt_ids.append(sale.id)
+                else:
+                    paid_ids.append(sale.id)
+            if payment_status == "debt":
+                qs = qs.filter(id__in=debt_ids)
+            else:
+                qs = qs.filter(id__in=paid_ids)
         if search:
             qs = qs.filter(
                 Q(customer__name__icontains=search)
@@ -735,6 +757,113 @@ class ShareholderViewSet(OwnerScopedViewSet):
         "PATCH": ("change_shareholder",),
         "DELETE": ("delete_shareholder",),
     }
+
+
+def _storefront_shop_from_request(request):
+    """Resolve shop by ?host= or ?shop_id= (must have online storefront enabled)."""
+    raw_host = (request.query_params.get("host") or "").strip()
+    if raw_host:
+        host = normalize_storefront_host(raw_host)
+        if host:
+            shop = Shop.objects.filter(
+                storefront_host=host,
+                is_active=True,
+                online_storefront_enabled=True,
+            ).first()
+            if shop is not None:
+                return shop
+
+    raw_shop = (request.query_params.get("shop_id") or "").strip()
+    if not raw_shop:
+        return None
+    try:
+        shop_id = int(raw_shop)
+    except (TypeError, ValueError):
+        return None
+    return Shop.objects.filter(
+        pk=shop_id,
+        is_active=True,
+        online_storefront_enabled=True,
+    ).first()
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_storefront_resolve(request):
+    """GET /api/public/storefront/resolve/?host=rada.mmiraq.com — map host to shop."""
+    shop = _storefront_shop_from_request(request)
+    if shop is None and not (request.query_params.get("host") or request.query_params.get("shop_id")):
+        host = normalize_storefront_host(request.get_host().split(":")[0])
+        if host:
+            shop = Shop.objects.filter(
+                storefront_host=host,
+                is_active=True,
+                online_storefront_enabled=True,
+            ).first()
+    if shop is None:
+        return Response(
+            {"detail": "Online storefront not found for this address."},
+            status=404,
+        )
+    return Response(
+        {
+            "shop_id": shop.id,
+            "name": shop.name,
+            "storefront_host": shop.storefront_host or "",
+        },
+    )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_storefront_products(request):
+    """GET /api/public/storefront/products/?shop_id= or ?host= — public product catalog."""
+    shop = _storefront_shop_from_request(request)
+    if shop is None:
+        if not (request.query_params.get("shop_id") or request.query_params.get("host")):
+            raise ValidationError(
+                {"shop_id": "shop_id or host query parameter is required."},
+            )
+        raise ValidationError(
+            {"detail": "Shop not found, inactive, or online storefront is disabled."},
+        )
+
+    qs = (
+        Product.objects.filter(
+            shop_id=shop.pk,
+            is_discontinued=False,
+            is_unregistered_placeholder=False,
+        )
+        .order_by("name")
+    )
+    ser = PublicProductSerializer(qs, many=True, context={"request": request})
+    return Response(ser.data)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def public_storefront_submit_order(request):
+    """POST /api/public/storefront/submit_order/ — create an online order."""
+    ser = StorefrontOrderSerializer(data=request.data, context={"request": request})
+    ser.is_valid(raise_exception=True)
+    order = ser.save()
+    out = StorefrontOrderSerializer(order, context={"request": request})
+    return Response(out.data, status=201)
+
+
+class MerchantStorefrontOrderViewSet(ShopScopedViewSet):
+    """Merchant dashboard: list, view, and update status of online orders."""
+
+    queryset = (
+        StorefrontOrder.objects.select_related("shop")
+        .prefetch_related("items__product")
+        .all()
+    )
+    serializer_class = MerchantStorefrontOrderSerializer
+    http_method_names = ["get", "head", "options", "patch"]
+
+    def get_queryset(self):
+        return super().get_queryset().order_by("-created_at", "-id")
 
 
 class EmployeeDebtViewSet(OwnerScopedViewSet):

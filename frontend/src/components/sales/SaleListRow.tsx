@@ -7,6 +7,7 @@ import {
   computeReceiptSummaryFromSale,
   printReceiptHtml,
 } from '../../lib/receiptHtml'
+import { formatSaleReceiptNumber } from '../../lib/shopReceiptNumbers'
 import type { ReceiptSettingsRow, SaleListRow as SaleRow } from '../../types/api'
 import { formatMoney } from '../../utils/inventoryFormat'
 
@@ -57,6 +58,7 @@ export const SaleListRow = memo(function SaleListRowCard({
   const customerAddress = sale.customer_address?.trim() || ''
   const hasReturns = Boolean(sale.has_returns)
   const returnedTotalUsd = parseFloat(String(sale.returned_total_usd ?? '0')) || 0
+  const receiptNo = formatSaleReceiptNumber(sale.receipt_number)
 
   const handlePrint = useCallback(() => {
     if (!receiptSettings) return
@@ -77,7 +79,7 @@ export const SaleListRow = memo(function SaleListRowCard({
       <div className="space-y-3 border-b border-slate-100 pb-3 dark:border-slate-600">
         <div className="min-w-0">
           <p className="font-mono text-sm font-semibold text-slate-900 dark:text-slate-100">
-            #{sale.id}
+            #{receiptNo || '—'}
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {new Date(sale.occurred_at).toLocaleString()}

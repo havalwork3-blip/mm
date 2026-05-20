@@ -255,7 +255,6 @@ class ShopViewSet(viewsets.ModelViewSet):
             return qs.filter(pk=sid)
         return qs.none()
 
-
 class CurrencyViewSet(viewsets.ModelViewSet):
     serializer_class = CurrencySerializer
     permission_classes = [IsAuthenticated, IsShopOwnerOrDjangoModelPermissionOrReceiptEditorCurrency]

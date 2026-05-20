@@ -62,13 +62,14 @@ export default defineConfig({
     headers: {
       'Cache-Control': 'no-store',
     },
+    // Must match scripts/run-django-backend.mjs (default 8001; 8000 is often another Django app).
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: process.env.VITE_DEV_API_PROXY || 'http://127.0.0.1:8001',
         changeOrigin: true,
       },
       '/media': {
-        target: 'http://127.0.0.1:8000',
+        target: process.env.VITE_DEV_API_PROXY || 'http://127.0.0.1:8001',
         changeOrigin: true,
       },
     },

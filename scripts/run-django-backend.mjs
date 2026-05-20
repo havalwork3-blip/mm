@@ -1,5 +1,7 @@
 /**
- * Run Django on 0.0.0.0:8000 without shell "cd … && …" (breaks when repo path contains & on Windows).
+ * Run this repo's Django (config.urls / multi-shop-api).
+ * Default port 8001 — port 8000 is often taken by another local project (e.g. hawre_backend).
+ * Override: DJANGO_DEV_PORT=8000 node scripts/run-django-backend.mjs
  */
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
@@ -37,7 +39,8 @@ if (!fs.existsSync(managePy)) {
 const env = { ...process.env }
 if (!env.DJANGO_USE_SQLITE) env.DJANGO_USE_SQLITE = 'true'
 
-const child = spawn(python, [managePy, 'runserver', '0.0.0.0:8000'], {
+const port = process.env.DJANGO_DEV_PORT || '8001'
+const child = spawn(python, [managePy, 'runserver', `0.0.0.0:${port}`], {
   cwd: backendDir,
   env,
   stdio: 'inherit',
