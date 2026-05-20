@@ -32,6 +32,16 @@ _allowed_hosts_raw = os.environ.get("ALLOWED_HOSTS") or os.environ.get(
 )
 ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_raw.split(",") if h.strip()]
 
+# Tenant storefront subdomains (e.g. mmch.mmiraq.com) — leading dot matches all subdomains.
+_extra_allowed_hosts = os.environ.get(
+    "DJANGO_EXTRA_ALLOWED_HOSTS",
+    ".mmiraq.com,dashboard.mmiraq.com",
+)
+for _host in _extra_allowed_hosts.split(","):
+    _host = _host.strip()
+    if _host and _host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_host)
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -161,6 +171,31 @@ elif DEBUG:
 else:
     CORS_ALLOWED_ORIGINS = []
 
+# Public storefront on tenant subdomains (https://mmch.mmiraq.com → API on dashboard).
+CORS_ALLOW_ALL_ORIGINS = os.environ.get("CORS_ALLOW_ALL_ORIGINS", "").lower() in (
+    "1",
+    "true",
+    "yes",
+)
+
+_DEFAULT_MMIRAq_CORS_REGEXES = [
+    r"^https://[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.mmiraq\.com$",
+    r"^https://mmiraq\.com$",
+    r"^https://www\.mmiraq\.com$",
+    r"^https://dashboard\.mmiraq\.com$",
+]
+_cors_regex_env = os.environ.get("CORS_ALLOWED_ORIGIN_REGEXES", "").strip()
+if CORS_ALLOW_ALL_ORIGINS:
+    CORS_ALLOWED_ORIGIN_REGEXES: list[str] = []
+elif _cors_regex_env:
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r.strip() for r in _cors_regex_env.split(",") if r.strip()
+    ]
+elif not _cors_env and not DEBUG:
+    CORS_ALLOWED_ORIGIN_REGEXES = _DEFAULT_MMIRAq_CORS_REGEXES
+else:
+    CORS_ALLOWED_ORIGIN_REGEXES = []
+
 _csrf_env = os.environ.get("CSRF_TRUSTED_ORIGINS", "").strip()
 if _csrf_env:
     CSRF_TRUSTED_ORIGINS = _split_origins(_csrf_env)
@@ -170,9 +205,13 @@ elif DEBUG:
         *_split_origins(_extra_frontend),
     ]
 else:
-    CSRF_TRUSTED_ORIGINS = []
+    CSRF_TRUSTED_ORIGINS = [
+        "https://*.mmiraq.com",
+        "https://dashboard.mmiraq.com",
+    ]
 
-CORS_ALLOW_CREDENTIALS = True
+# Browsers reject credentials + Access-Control-Allow-Origin: * together.
+CORS_ALLOW_CREDENTIALS = not CORS_ALLOW_ALL_ORIGINS
 
 if os.environ.get("DJANGO_BEHIND_PROXY", "").lower() in ("1", "true", "yes"):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -205,12 +244,17 @@ if not DEBUG:
             raise ImproperlyConfigured(
                 "DATABASE_URL must resolve to a PostgreSQL backend for this project."
             )
-    if not os.environ.get("CORS_ALLOWED_ORIGINS", "").strip():
+    _has_cors = (
+        bool(os.environ.get("CORS_ALLOWED_ORIGINS", "").strip())
+        or CORS_ALLOW_ALL_ORIGINS
+        or bool(CORS_ALLOWED_ORIGIN_REGEXES)
+    )
+    if not _has_cors:
         raise ImproperlyConfigured(
-            "Production requires CORS_ALLOWED_ORIGINS (comma-separated full origins, "
-            "e.g. https://app.example.com)."
+            "Production requires CORS: set CORS_ALLOWED_ORIGINS, CORS_ALLOW_ALL_ORIGINS=1, "
+            "or rely on default CORS_ALLOWED_ORIGIN_REGEXES for *.mmiraq.com."
         )
-    if not os.environ.get("CSRF_TRUSTED_ORIGINS", "").strip():
+    if not os.environ.get("CSRF_TRUSTED_ORIGINS", "").strip() and not CSRF_TRUSTED_ORIGINS:
         raise ImproperlyConfigured(
             "Production requires CSRF_TRUSTED_ORIGINS (comma-separated origins matching "
             "your frontend, e.g. https://app.example.com)."

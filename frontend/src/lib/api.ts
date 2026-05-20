@@ -9,6 +9,14 @@ import { sanitizeApiErrorText } from './sanitizeApiError'
 /** Local multi-shop Django from `npm run dev` (see scripts/run-django-backend.mjs). */
 export const LOCAL_DJANGO_PORT = '8001'
 
+/** Central API origin for mmiraq.com tenant storefronts (catalog/checkout). */
+export const MMIRAq_DASHBOARD_API_ORIGIN = 'https://dashboard.mmiraq.com'
+
+function isMmiraqTenantHostname(hostname: string): boolean {
+  const h = hostname.toLowerCase()
+  return h === 'mmiraq.com' || h.endsWith('.mmiraq.com')
+}
+
 /**
  * Site origin for API calls (no `/api` suffix). Every `apiJson` path already starts with `/api/…`.
  * Order: `VITE_API_URL` → same host on dev port (LAN) → localhost:8001 → same-origin (prod).
@@ -436,14 +444,19 @@ export function initOfflineAutoSync() {
 
 /**
  * Base origin for unauthenticated public APIs (storefront, QR landing).
- * On localhost, always use the Vite dev server origin so `/api` is proxied to Django —
- * even when `VITE_API_URL` points at a remote host (e.g. dashboard.mmiraq.com).
+ * - localhost: Vite proxy → Django
+ * - *.mmiraq.com storefront hosts: always dashboard API (cross-subdomain CORS)
+ * - otherwise: same as getApiBase()
  */
 export function getPublicApiBase(): string {
   if (typeof window !== 'undefined') {
-    const { hostname } = window.location
+    const { hostname, origin } = window.location
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return window.location.origin
+      return origin
+    }
+    if (isMmiraqTenantHostname(hostname)) {
+      const env = import.meta.env.VITE_API_URL?.trim()
+      return normalizeApiBase(env || MMIRAq_DASHBOARD_API_ORIGIN)
     }
   }
   return getApiBase()
