@@ -9,6 +9,11 @@ type Ctx = {
   selectedCategoryId: number | null
   selectedProduct: PublicStorefrontProduct | null
   productCategoryName: string
+  search: string
+  searchOpen: boolean
+  setSearch: (value: string) => void
+  openSearch: () => void
+  closeSearch: () => void
   selectCategory: (id: number) => void
   showAllProducts: () => void
   backToCategories: () => void
@@ -29,6 +34,8 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
   const [selectedProduct, setSelectedProduct] = useState<PublicStorefrontProduct | null>(null)
   const [productCategoryName, setProductCategoryName] = useState('')
   const [returnView, setReturnView] = useState<'categories' | 'products'>('products')
+  const [search, setSearch] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
 
   const selectCategory = useCallback((id: number) => {
     setSelectedCategoryId(id)
@@ -45,9 +52,19 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
   const backToCategories = useCallback(() => {
     setSelectedCategoryId(null)
     setSelectedProduct(null)
+    setSearch('')
+    setSearchOpen(false)
     setView('categories')
     document.documentElement.style.overflow = ''
     scrollMainTop()
+  }, [])
+
+  const openSearch = useCallback(() => {
+    setSearchOpen(true)
+  }, [])
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false)
   }, [])
 
   const openProduct = useCallback(
@@ -79,6 +96,11 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
       selectedCategoryId,
       selectedProduct,
       productCategoryName,
+      search,
+      searchOpen,
+      setSearch,
+      openSearch,
+      closeSearch,
       selectCategory,
       showAllProducts,
       backToCategories,
@@ -91,6 +113,8 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
       selectedCategoryId,
       selectedProduct,
       productCategoryName,
+      search,
+      searchOpen,
       selectCategory,
       showAllProducts,
       backToCategories,

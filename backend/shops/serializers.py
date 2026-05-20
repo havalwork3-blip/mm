@@ -172,6 +172,7 @@ class ShopSettingsSerializer(serializers.ModelSerializer):
 
 class StorefrontSettingsSerializer(serializers.ModelSerializer):
     shop = serializers.PrimaryKeyRelatedField(read_only=True)
+    logo_url = serializers.SerializerMethodField(read_only=True)
     storefront_host = serializers.SerializerMethodField(read_only=True)
     storefront_url = serializers.SerializerMethodField(read_only=True)
 
@@ -183,13 +184,31 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
             "catalog_title",
             "catalog_subtitle",
             "welcome_message",
+            "logo",
+            "logo_url",
             "accent_color",
             "banner_rotate_seconds",
             "storefront_host",
             "storefront_url",
             "updated_at",
         ]
-        read_only_fields = ["id", "shop", "storefront_host", "storefront_url", "updated_at"]
+        read_only_fields = [
+            "id",
+            "shop",
+            "logo_url",
+            "storefront_host",
+            "storefront_url",
+            "updated_at",
+        ]
+
+    def get_logo_url(self, obj: StorefrontSettings) -> str | None:
+        if not obj.logo:
+            return None
+        request = self.context.get("request")
+        url = obj.logo.url
+        if request:
+            return request.build_absolute_uri(url)
+        return url
 
     def get_storefront_host(self, obj: StorefrontSettings) -> str:
         return (obj.shop.storefront_host or "").strip()

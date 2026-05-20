@@ -1,4 +1,4 @@
-import { Globe, Home, LayoutGrid, ShoppingBag, Sparkles } from 'lucide-react'
+import { Globe, Home, LayoutGrid, Search, ShoppingBag } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 
@@ -9,15 +9,28 @@ import { useStorefrontShop } from './StorefrontShopContext'
 import { cartItemCount, useCartStore } from '../../store/cartStore'
 import { CartDrawer } from './CartDrawer'
 import { CheckoutModal } from './CheckoutModal'
+import { StorefrontSearchOverlay } from './StorefrontSearchOverlay'
 import { storefrontStrings } from './storefrontStrings'
 import { accentAlpha, resolveAccent, SF_MAIN, SF_SHELL, storefrontCssVars } from './storefrontTheme'
+import { resolveMediaUrl } from '../../lib/api'
 
 export function StorefrontLayout() {
   const { lang, setLang } = useLocale()
   const s = storefrontStrings(lang)
   const { shopName, appearance, loading: shopLoading, error: shopError } = useStorefrontShop()
-  const { view, backToCategories, showAllProducts } = useStorefrontCatalog()
+  const {
+    view,
+    backToCategories,
+    showAllProducts,
+    search,
+    searchOpen,
+    setSearch,
+    openSearch,
+    closeSearch,
+    setSearchActive,
+  } = useStorefrontCatalog()
   const accent = resolveAccent(appearance.accent_color)
+  const logoSrc = resolveMediaUrl(appearance.logo_url ?? null)
   const lines = useCartStore((st) => st.lines)
   const count = cartItemCount(lines)
 
@@ -62,15 +75,20 @@ export function StorefrontLayout() {
             >
               <span
                 className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-base font-bold text-white shadow-md sm:h-12 sm:w-12"
-                style={{
-                  background: `linear-gradient(135deg, ${accent}, ${accent}cc)`,
-                  boxShadow: `0 6px 20px ${accentAlpha(accent, 0.35)}`,
-                }}
+                style={
+                  logoSrc
+                    ? { boxShadow: `0 6px 20px ${accentAlpha(accent, 0.25)}` }
+                    : {
+                        background: `linear-gradient(135deg, ${accent}, ${accent}cc)`,
+                        boxShadow: `0 6px 20px ${accentAlpha(accent, 0.35)}`,
+                      }
+                }
               >
-                {shopName.charAt(0) || 'M'}
-                <span className="absolute -bottom-0.5 -end-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow">
-                  <Sparkles className="h-2.5 w-2.5" style={{ color: accent }} aria-hidden />
-                </span>
+                {logoSrc ? (
+                  <img src={logoSrc} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  shopName.charAt(0) || 'M'
+                )}
               </span>
               <div className="min-w-0">
                 <p className="truncate text-[15px] font-extrabold tracking-tight text-slate-900 sm:text-base">
@@ -82,7 +100,16 @@ export function StorefrontLayout() {
               </div>
             </button>
 
-            <div className="relative shrink-0">
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={openSearch}
+                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50"
+                aria-label={s.searchPlaceholder}
+              >
+                <Search className="h-[18px] w-[18px]" aria-hidden />
+              </button>
+            <div className="relative">
               <button
                 type="button"
                 onClick={() => setLangOpen((v) => !v)}
@@ -115,6 +142,7 @@ export function StorefrontLayout() {
                   </div>
                 </>
               ) : null}
+            </div>
             </div>
 
             <button
@@ -222,6 +250,19 @@ export function StorefrontLayout() {
         }}
       />
       <CheckoutModal open={checkoutOpen} accent={accent} onClose={() => setCheckoutOpen(false)} />
+
+      <StorefrontSearchOverlay
+        open={searchOpen}
+        value={search}
+        onChange={(v) => {
+          setSearch(v)
+          setSearchActive(v.trim().length > 0)
+        }}
+        onClose={closeSearch}
+        placeholder={s.searchPlaceholder}
+        accent={accent}
+        closeLabel={s.close}
+      />
     </div>
   )
 }

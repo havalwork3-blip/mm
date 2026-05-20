@@ -834,7 +834,7 @@ def public_storefront_resolve(request):
             "shop_id": shop.id,
             "name": shop.name,
             "storefront_host": shop.storefront_host or "",
-            "storefront": storefront_settings_public_dict(settings, shop),
+            "storefront": storefront_settings_public_dict(settings, shop, request),
         },
     )
 
@@ -903,7 +903,7 @@ def public_storefront_catalog(request):
     )
     return Response(
         {
-            "storefront": storefront_settings_public_dict(settings, shop),
+            "storefront": storefront_settings_public_dict(settings, shop, request),
             "banners": storefront_banners_public_list(shop, request),
             "categories": categories,
         },

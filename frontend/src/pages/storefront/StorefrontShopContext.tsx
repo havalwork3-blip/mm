@@ -16,6 +16,7 @@ const DEFAULT_APPEARANCE: PublicStorefrontAppearance = {
   catalog_title: '',
   catalog_subtitle: '',
   welcome_message: '',
+  logo_url: null,
   accent_color: '#fbbf24',
   banner_rotate_seconds: 5,
 }

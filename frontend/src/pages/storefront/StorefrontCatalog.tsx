@@ -1,12 +1,4 @@
-import {
-  Loader2,
-  PackageOpen,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  Truck,
-  Zap,
-} from 'lucide-react'
+import { Loader2, PackageOpen, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
@@ -33,12 +25,13 @@ import { accentAlpha, resolveAccent, SF_INSET_X, SF_PRODUCT_GRID } from './store
 export function StorefrontCatalog() {
   const { lang } = useLocale()
   const s = storefrontStrings(lang)
-  const { shopId, shopName, appearance } = useStorefrontShop()
+  const { shopId, appearance } = useStorefrontShop()
   const {
     view,
     selectedCategoryId,
     selectedProduct,
     productCategoryName,
+    search,
     selectCategory,
     showAllProducts,
     backToCategories,
@@ -55,7 +48,6 @@ export function StorefrontCatalog() {
   const [rotateSeconds, setRotateSeconds] = useState(5)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
 
   const accent = resolveAccent(appearance.accent_color)
   const promoText = appearance.welcome_message || appearance.catalog_subtitle || s.promoDefault
@@ -85,7 +77,6 @@ export function StorefrontCatalog() {
 
   useEffect(() => {
     if (view !== 'categories') return
-    setSearch('')
     setSearchActive(false)
   }, [view, setSearchActive])
 
@@ -139,11 +130,6 @@ export function StorefrontCatalog() {
     cannotOrder: s.cannotOrder,
   }
 
-  function handleSearchChange(value: string) {
-    setSearch(value)
-    setSearchActive(value.trim().length > 0)
-  }
-
   function handleOpenProduct(product: PublicStorefrontProduct, categoryName: string) {
     openProduct(product, categoryName)
   }
@@ -162,65 +148,15 @@ export function StorefrontCatalog() {
 
   return (
     <div className="sf-catalog w-full pb-4 sm:pb-6">
-      {view !== 'product' ? (
-        <div className={`${SF_INSET_X} space-y-3 pt-4 sm:pt-5`}>
-          <p className="text-center text-sm font-medium text-slate-500">
-            {s.hello}{' '}
-            <span className="font-bold" style={{ color: accent }}>
-              {shopName}
-            </span>
-          </p>
-          <div className="sf-search-wrap relative">
-            <Search
-              className="pointer-events-none absolute start-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2"
-              style={{ color: accent }}
-              aria-hidden
-            />
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder={s.searchPlaceholder}
-              className="w-full rounded-2xl border-0 bg-white py-4 pe-4 ps-12 text-[15px] text-slate-800 outline-none ring-1 ring-slate-200/50 placeholder:text-slate-400 focus:ring-2 sm:rounded-3xl"
-              style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.4) }}
-            />
-          </div>
-        </div>
-      ) : null}
-
       {showBrowseChrome ? (
-        <>
-          <StorefrontHeroCarousel
-            banners={banners}
-            accent={accent}
-            rotateSeconds={rotateSeconds}
-            fallbackTitle={promoText}
-            fallbackSubtitle={shopName}
-            onCategoryClick={selectCategory}
-          />
-          <div className={`${SF_INSET_X} mt-4 grid grid-cols-3 gap-2 sm:gap-3`}>
-            {[
-              { icon: Truck, label: s.deliveryFast },
-              { icon: Zap, label: s.orderEasy },
-              { icon: ShieldCheck, label: s.support },
-            ].map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="sf-trust-pill flex flex-col items-center gap-1.5 rounded-2xl bg-white px-2 py-3 text-center ring-1 ring-slate-100/80"
-              >
-                <span
-                  className="flex h-9 w-9 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: accentAlpha(accent, 0.12) }}
-                >
-                  <Icon className="h-4 w-4" style={{ color: accent }} aria-hidden />
-                </span>
-                <span className="text-[10px] font-bold leading-tight text-slate-600 sm:text-[11px]">
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </>
+        <StorefrontHeroCarousel
+          banners={banners}
+          accent={accent}
+          rotateSeconds={rotateSeconds}
+          fallbackTitle={promoText}
+          fallbackSubtitle={appearance.catalog_subtitle || ''}
+          onCategoryClick={selectCategory}
+        />
       ) : null}
 
       {loading ? (

@@ -120,6 +120,7 @@ class StorefrontSettings(ShopScopedModel):
     catalog_title = models.CharField(max_length=255, blank=True, default="")
     catalog_subtitle = models.CharField(max_length=500, blank=True, default="")
     welcome_message = models.CharField(max_length=1000, blank=True, default="")
+    logo = models.ImageField(upload_to="storefront-logos/%Y/%m/", blank=True, null=True)
     accent_color = models.CharField(max_length=32, default="#fbbf24")
     banner_rotate_seconds = models.PositiveSmallIntegerField(default=5)
     updated_at = models.DateTimeField(auto_now=True)

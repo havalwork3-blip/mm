@@ -21,7 +21,9 @@ import { resolveActiveShopId } from '../../lib/activeShop'
 import {
   fetchMerchantStorefrontSettings,
   patchMerchantStorefrontSettings,
+  uploadMerchantStorefrontLogo,
 } from '../../lib/merchantStorefrontSettingsApi'
+import { resolveMediaUrl } from '../../lib/api'
 import { StorefrontPreview } from '../storefront/StorefrontPreview'
 import { storefrontStrings } from '../storefront/storefrontStrings'
 import { MerchantStorefrontBannersSection } from './MerchantStorefrontBannersSection'
@@ -78,6 +80,8 @@ export function MerchantOnlineShopPage() {
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [logoUploading, setLogoUploading] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -90,6 +94,7 @@ export function MerchantOnlineShopPage() {
       setAccentColor(row.accent_color || '#FF5A00')
       setBannerRotateSeconds(row.banner_rotate_seconds ?? 5)
       setStorefrontUrl(row.storefront_url || '')
+      setLogoUrl(row.logo_url ?? null)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
@@ -233,6 +238,60 @@ export function MerchantOnlineShopPage() {
 
             <form onSubmit={(e) => void save(e)} className="space-y-5">
             <SectionCard title={t('onlineShop.brandingSection')} icon={Globe}>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                  {t('onlineShop.storeLogo')}
+                </label>
+                <div className="flex flex-wrap items-center gap-4">
+                  <span
+                    className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-lg font-bold text-white shadow-md"
+                    style={{
+                      background: logoUrl
+                        ? undefined
+                        : `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
+                    }}
+                  >
+                    {logoUrl ? (
+                      <img
+                        src={resolveMediaUrl(logoUrl) ?? logoUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      (catalogTitle || shopDisplayName).charAt(0) || 'M'
+                    )}
+                  </span>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      disabled={logoUploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        e.target.value = ''
+                        if (!file) return
+                        setLogoUploading(true)
+                        setError(null)
+                        void uploadMerchantStorefrontLogo(file)
+                          .then((row) => {
+                            setLogoUrl(row.logo_url ?? null)
+                            setSaved(true)
+                          })
+                          .catch((err) => {
+                            setError(err instanceof Error ? err.message : t('common.error'))
+                          })
+                          .finally(() => setLogoUploading(false))
+                      }}
+                    />
+                    {logoUploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : null}
+                    {t('onlineShop.uploadLogo')}
+                  </label>
+                </div>
+                <p className="mt-1 text-[11px] text-slate-400">{t('onlineShop.storeLogoHint')}</p>
+              </div>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
                   {t('onlineShop.catalogTitle')}
@@ -409,8 +468,8 @@ export function MerchantOnlineShopPage() {
                 catalogSubtitle={catalogSubtitle}
                 welcomeMessage={welcomeMessage}
                 accentColor={accentColor}
+                logoUrl={logoUrl}
                 labels={{
-                  hello: sf.hello,
                   search: sf.searchPlaceholder,
                   shopNow: sf.shopNow,
                   home: sf.home,

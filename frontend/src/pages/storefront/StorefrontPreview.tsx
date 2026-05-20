@@ -1,5 +1,6 @@
 import { PackageOpen, Search, ShoppingBag } from 'lucide-react'
 
+import { resolveMediaUrl } from '../../lib/api'
 import { accentAlpha, resolveAccent } from './storefrontTheme'
 
 type Props = {
@@ -8,8 +9,8 @@ type Props = {
   catalogSubtitle: string
   welcomeMessage: string
   accentColor: string
+  logoUrl?: string | null
   labels?: {
-    hello: string
     search: string
     shopNow: string
     home: string
@@ -23,11 +24,13 @@ export function StorefrontPreview({
   catalogSubtitle,
   welcomeMessage,
   accentColor,
+  logoUrl,
   labels,
 }: Props) {
   const accent = resolveAccent(accentColor)
   const title = catalogTitle.trim() || shopName || 'Shop'
   const promo = welcomeMessage.trim() || catalogSubtitle.trim() || labels?.shopNow || 'Shop now'
+  const logoSrc = resolveMediaUrl(logoUrl ?? null)
 
   return (
     <div className="mx-auto w-[280px]">
@@ -36,28 +39,36 @@ export function StorefrontPreview({
           <div className="flex items-center justify-between bg-white px-3 py-2.5">
             <div className="flex min-w-0 items-center gap-2">
               <span
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                style={{ backgroundColor: accent }}
+                className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl text-xs font-bold text-white"
+                style={
+                  logoSrc
+                    ? undefined
+                    : { backgroundColor: accent }
+                }
               >
-                {title.charAt(0) || 'M'}
+                {logoSrc ? (
+                  <img src={logoSrc} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  title.charAt(0) || 'M'
+                )}
               </span>
               <div className="min-w-0">
-                <p className="text-[9px] text-slate-400">{labels?.hello ?? 'Hello'}</p>
                 <p className="truncate text-[11px] font-bold text-slate-900">{title}</p>
+                {catalogSubtitle.trim() ? (
+                  <p className="truncate text-[9px] text-slate-400">{catalogSubtitle}</p>
+                ) : null}
               </div>
             </div>
-            <span
-              className="flex h-7 w-7 items-center justify-center rounded-full text-white"
-              style={{ backgroundColor: accentAlpha(accent, 0.15), color: accent }}
-            >
-              <ShoppingBag className="h-3.5 w-3.5" aria-hidden />
-            </span>
-          </div>
-
-          <div className="px-3 pb-2">
-            <div className="flex items-center gap-2 rounded-xl bg-white px-2.5 py-2 shadow-sm ring-1 ring-slate-100">
-              <Search className="h-3 w-3 text-slate-400" aria-hidden />
-              <span className="text-[10px] text-slate-400">{labels?.search ?? 'Search…'}</span>
+            <div className="flex gap-1">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                <Search className="h-3 w-3" aria-hidden />
+              </span>
+              <span
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-white"
+                style={{ backgroundColor: accent }}
+              >
+                <ShoppingBag className="h-3.5 w-3.5" aria-hidden />
+              </span>
             </div>
           </div>
 
@@ -69,9 +80,6 @@ export function StorefrontPreview({
           >
             <p className="text-[11px] font-bold leading-tight">{title}</p>
             <p className="mt-0.5 line-clamp-2 text-[9px] text-white/90">{promo}</p>
-            <span className="mt-2 inline-block rounded-full bg-white px-2 py-0.5 text-[8px] font-bold" style={{ color: accent }}>
-              {labels?.shopNow ?? 'Shop now'}
-            </span>
           </div>
 
           <div className="px-3 pb-2">

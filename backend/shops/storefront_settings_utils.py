@@ -17,10 +17,23 @@ def get_or_create_storefront_settings(shop: Shop) -> StorefrontSettings:
     return obj
 
 
+def _storefront_logo_url(settings: StorefrontSettings, request: HttpRequest | None) -> str | None:
+    if not settings.logo:
+        return None
+    try:
+        url = settings.logo.url
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+    except Exception:
+        return None
+
+
 def storefront_settings_public_dict(
     settings: StorefrontSettings,
     shop: Shop,
-) -> dict[str, str | int]:
+    request: HttpRequest | None = None,
+) -> dict[str, str | int | None]:
     title = (settings.catalog_title or "").strip()
     rotate = settings.banner_rotate_seconds
     if rotate < 2:
@@ -31,6 +44,7 @@ def storefront_settings_public_dict(
         "catalog_title": title or shop.name,
         "catalog_subtitle": (settings.catalog_subtitle or "").strip(),
         "welcome_message": (settings.welcome_message or "").strip(),
+        "logo_url": _storefront_logo_url(settings, request),
         "accent_color": (settings.accent_color or "").strip() or "#fbbf24",
         "banner_rotate_seconds": rotate,
     }

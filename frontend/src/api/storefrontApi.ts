@@ -10,6 +10,7 @@ export type PublicStorefrontAppearance = {
   catalog_title: string
   catalog_subtitle: string
   welcome_message: string
+  logo_url: string | null
   accent_color: string
   banner_rotate_seconds: number
 }
