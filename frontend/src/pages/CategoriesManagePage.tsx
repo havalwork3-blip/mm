@@ -142,7 +142,7 @@ export function CategoriesManagePage() {
   if (!canView) return <p className="text-amber-800">{t('dash.noPermissionsHint')}</p>
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-[100%] space-y-6 px-4 sm:px-6 md:max-w-4xl md:px-8 lg:max-w-5xl xl:max-w-6xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link

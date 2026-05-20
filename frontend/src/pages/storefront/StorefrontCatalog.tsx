@@ -22,7 +22,7 @@ import { useLocale } from '../../context/LocaleContext'
 import { useCartStore } from '../../store/cartStore'
 import { useStorefrontShop } from './StorefrontShopContext'
 import { formatUsd, storefrontStrings } from './storefrontStrings'
-import { accentAlpha, resolveAccent } from './storefrontTheme'
+import { accentAlpha, resolveAccent, SF_CATEGORY_GRID, SF_INSET_X, SF_PRODUCT_GRID } from './storefrontTheme'
 
 const CATEGORY_GRADIENTS = [
   'linear-gradient(145deg, #ff5a00 0%, #ff8c42 100%)',
@@ -97,11 +97,11 @@ function ProductCard({
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col gap-1 p-2.5">
-        <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-slate-800">
+      <div className="flex flex-1 flex-col gap-1 p-2.5 sm:p-3">
+        <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-slate-800 sm:text-sm md:text-base">
           {product.name}
         </h3>
-        <p className="text-sm font-bold" style={{ color: accent }}>
+        <p className="text-sm font-bold sm:text-base" style={{ color: accent }}>
           {formatPrice(price, labels.usd)}
         </p>
       </div>
@@ -200,9 +200,86 @@ export function StorefrontCatalog() {
     popular: s.popular,
   }
 
+  function renderCategoryPill(
+    cat: PublicStorefrontCategory,
+    index: number,
+    variant: 'scroll' | 'grid',
+  ) {
+    const img = resolveMediaUrl(
+      cat.image_url ?? cat.products.find((p) => p.image_url)?.image_url ?? null,
+    )
+    const selected = selectedCategoryId === cat.id
+    const count = cat.products.length
+
+    if (variant === 'grid') {
+      return (
+        <button
+          key={cat.id}
+          type="button"
+          onClick={() => setSelectedCategoryId(selected ? null : cat.id)}
+          className={[
+            'flex flex-col overflow-hidden rounded-2xl bg-white text-start shadow-sm ring-1 transition hover:shadow-md',
+            selected ? 'ring-2' : 'ring-slate-200/80',
+          ].join(' ')}
+          style={selected ? ({ ['--tw-ring-color' as string]: accent } as React.CSSProperties) : undefined}
+        >
+          <div className="relative aspect-[4/3] w-full bg-slate-100">
+            {img ? (
+              <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" />
+            ) : (
+              <div
+                className="flex h-full w-full items-center justify-center text-3xl font-bold text-white"
+                style={{ background: CATEGORY_GRADIENTS[index % CATEGORY_GRADIENTS.length] }}
+              >
+                {cat.name.charAt(0)}
+              </div>
+            )}
+          </div>
+          <div className="p-3">
+            <p className="truncate text-sm font-bold text-slate-800">{cat.name}</p>
+            <p className="text-xs text-slate-400">
+              {s.productCount.replace('{n}', String(count))}
+            </p>
+          </div>
+        </button>
+      )
+    }
+
+    return (
+      <button
+        key={cat.id}
+        type="button"
+        onClick={() =>
+          setSelectedCategoryId((prev) => (prev === cat.id ? null : cat.id))
+        }
+        className={[
+          'flex shrink-0 items-center gap-2 rounded-full py-1.5 pe-3 ps-1 transition sm:py-2 sm:pe-4',
+          selected ? 'text-white shadow-sm' : 'bg-white text-slate-700 ring-1 ring-slate-200',
+        ].join(' ')}
+        style={selected ? { backgroundColor: accent } : undefined}
+      >
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-white sm:h-10 sm:w-10"
+          style={{
+            background: img ? undefined : CATEGORY_GRADIENTS[index % CATEGORY_GRADIENTS.length],
+          }}
+        >
+          {img ? (
+            <img src={img} alt="" className="h-full w-full object-cover" />
+          ) : (
+            cat.name.charAt(0)
+          )}
+        </span>
+        <span className="max-w-[5.5rem] truncate text-xs font-semibold sm:max-w-[8rem] sm:text-sm">
+          {cat.name}
+        </span>
+      </button>
+    )
+  }
+
   return (
-    <div className="pb-4">
-      <div className="px-4 pt-3">
+    <div className="w-full pb-4 sm:pb-6">
+      <div className={`${SF_INSET_X} pt-3 sm:pt-4`}>
         <div className="relative">
           <Search
             className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
@@ -213,7 +290,7 @@ export function StorefrontCatalog() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={s.searchPlaceholder}
-            className="w-full rounded-2xl border-0 bg-white py-3 pe-4 ps-10 text-sm text-slate-800 shadow-sm outline-none ring-1 ring-slate-200/80 placeholder:text-slate-400 focus:ring-2"
+            className="w-full rounded-2xl border-0 bg-white py-3 pe-4 ps-10 text-sm text-slate-800 shadow-sm outline-none ring-1 ring-slate-200/80 placeholder:text-slate-400 focus:ring-2 sm:py-3.5 sm:text-base"
             style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.45) }}
           />
         </div>
@@ -230,7 +307,7 @@ export function StorefrontCatalog() {
             onCategoryClick={handleBannerCategory}
           />
 
-          <div className="mx-4 mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <div className={`${SF_INSET_X} mt-3 flex gap-2 overflow-x-auto pb-1 sf-scrollbar-none sm:mt-4 sm:gap-3`}>
             {[
               { icon: Truck, label: s.deliveryFast },
               { icon: Zap, label: s.orderEasy },
@@ -238,7 +315,7 @@ export function StorefrontCatalog() {
             ].map(({ icon: Icon, label }) => (
               <span
                 key={label}
-                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 shadow-sm ring-1 ring-slate-200/70"
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 shadow-sm ring-1 ring-slate-200/70 sm:px-4 sm:py-2 sm:text-xs"
               >
                 <Icon className="h-3.5 w-3.5" style={{ color: accent }} aria-hidden />
                 {label}
@@ -254,7 +331,7 @@ export function StorefrontCatalog() {
           <p className="text-sm">{s.loading}</p>
         </div>
       ) : error ? (
-        <div className="mx-4 mt-6 flex flex-col items-center gap-3 rounded-2xl border border-red-100 bg-red-50 px-6 py-10 text-center">
+        <div className={`${SF_INSET_X} mt-6 flex flex-col items-center gap-3 rounded-2xl border border-red-100 bg-red-50 px-6 py-10 text-center`}>
           <p className="text-sm text-red-600">{error}</p>
           <button
             type="button"
@@ -274,9 +351,9 @@ export function StorefrontCatalog() {
       ) : (
         <>
           {categories.length > 1 && !search.trim() ? (
-            <section className="mt-5 px-4" ref={categoriesRef}>
-              <h2 className="mb-2.5 text-sm font-bold text-slate-800">{s.categories}</h2>
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <section className={`mt-5 ${SF_INSET_X} sm:mt-6`} ref={categoriesRef}>
+              <h2 className="mb-2.5 text-sm font-bold text-slate-800 sm:text-base">{s.categories}</h2>
+              <div className="flex gap-2 overflow-x-auto pb-1 sf-scrollbar-none md:hidden">
                 <button
                   type="button"
                   onClick={() => setSelectedCategoryId(null)}
@@ -290,47 +367,30 @@ export function StorefrontCatalog() {
                 >
                   {s.allCategories}
                 </button>
-                {categories.map((cat, index) => {
-                  const img = resolveMediaUrl(
-                    cat.image_url ?? cat.products.find((p) => p.image_url)?.image_url ?? null,
-                  )
-                  const selected = selectedCategoryId === cat.id
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setSelectedCategoryId(cat.id)}
-                      className={[
-                        'flex shrink-0 items-center gap-2 rounded-full py-1.5 pe-3 ps-1 transition',
-                        selected
-                          ? 'text-white shadow-sm'
-                          : 'bg-white text-slate-700 ring-1 ring-slate-200',
-                      ].join(' ')}
-                      style={selected ? { backgroundColor: accent } : undefined}
-                    >
-                      <span
-                        className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-white"
-                        style={{
-                          background: img ? undefined : CATEGORY_GRADIENTS[index % CATEGORY_GRADIENTS.length],
-                        }}
-                      >
-                        {img ? (
-                          <img src={img} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          cat.name.charAt(0)
-                        )}
-                      </span>
-                      <span className="max-w-[5.5rem] truncate text-xs font-semibold">{cat.name}</span>
-                    </button>
-                  )
-                })}
+                {categories.map((cat, index) => renderCategoryPill(cat, index, 'scroll'))}
+              </div>
+              <div className={`${SF_CATEGORY_GRID} mt-2`}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategoryId(null)}
+                  className={[
+                    'flex flex-col items-center justify-center rounded-2xl p-4 text-center text-sm font-bold transition',
+                    selectedCategoryId == null
+                      ? 'text-white shadow-md'
+                      : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:shadow',
+                  ].join(' ')}
+                  style={selectedCategoryId == null ? { backgroundColor: accent } : undefined}
+                >
+                  {s.allCategories}
+                </button>
+                {categories.map((cat, index) => renderCategoryPill(cat, index, 'grid'))}
               </div>
             </section>
           ) : null}
 
-          <section id="sf-products" className="mt-5 px-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-800">{s.allProducts}</h2>
+          <section id="sf-products" className={`mt-5 ${SF_INSET_X} sm:mt-8`}>
+            <div className="mb-3 flex items-center justify-between sm:mb-4">
+              <h2 className="text-sm font-bold text-slate-800 sm:text-base md:text-lg">{s.allProducts}</h2>
               <span className="text-xs text-slate-400">
                 {s.productCount.replace('{n}', String(flatProducts.length))}
               </span>
@@ -339,7 +399,7 @@ export function StorefrontCatalog() {
             {flatProducts.length === 0 ? (
               <p className="py-10 text-center text-sm text-slate-500">{s.noProducts}</p>
             ) : (
-              <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-2">
+              <ul className={SF_PRODUCT_GRID}>
                 {flatProducts.map(({ product }) => (
                   <ProductCard
                     key={product.id}

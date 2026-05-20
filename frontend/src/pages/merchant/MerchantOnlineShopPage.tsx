@@ -170,7 +170,7 @@ export function MerchantOnlineShopPage() {
   const devPreviewUrl = previewShopId ? `/store/?shop_id=${previewShopId}` : '/store/'
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-10">
+    <div className="mx-auto w-full max-w-[100%] space-y-6 px-4 pb-10 sm:px-6 md:max-w-6xl md:px-8 xl:max-w-7xl">
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#FF5A00] via-[#ff7a2e] to-[#ffb347] p-6 text-white shadow-lg sm:p-8">
         <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

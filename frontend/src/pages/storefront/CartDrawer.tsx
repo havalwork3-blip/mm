@@ -50,7 +50,7 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
 
       <aside
         className={[
-          'relative flex h-full w-full max-w-md flex-col bg-white shadow-2xl',
+          'relative flex h-full w-full max-w-full flex-col bg-white shadow-2xl sm:max-w-md md:max-w-lg lg:max-w-xl',
           isRtl ? 'ms-auto' : 'me-auto',
         ].join(' ')}
       >

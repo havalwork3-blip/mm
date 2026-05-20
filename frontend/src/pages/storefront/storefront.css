@@ -1,0 +1,28 @@
+/* Online storefront — safe areas + full viewport height on mobile browsers */
+
+html.sf-mode,
+html.sf-mode body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+html.sf-mode body {
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
+.sf-root {
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  width: 100%;
+}
+
+.sf-scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.sf-scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

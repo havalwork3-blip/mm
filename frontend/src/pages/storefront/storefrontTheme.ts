@@ -32,3 +32,23 @@ export function accentRgb(accent: string): string {
 export function accentAlpha(accent: string, alpha: number): string {
   return `rgba(${accentRgb(accent)}, ${alpha})`
 }
+
+/** Max width scales with viewport; content areas add SF_INSET_X for padding. */
+export const SF_MAIN = 'mx-auto w-full max-w-[100%] lg:max-w-6xl xl:max-w-7xl'
+
+export const SF_SHELL = [
+  SF_MAIN,
+  'px-[max(1rem,env(safe-area-inset-left))]',
+  'pe-[max(1rem,env(safe-area-inset-right))]',
+  'sm:px-6',
+  'md:px-8',
+].join(' ')
+
+export const SF_INSET_X =
+  'px-[max(1rem,env(safe-area-inset-left))] pe-[max(1rem,env(safe-area-inset-right))] sm:px-6 md:px-8'
+
+export const SF_PRODUCT_GRID =
+  'grid grid-cols-2 gap-2.5 min-[400px]:grid-cols-3 min-[400px]:gap-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+
+export const SF_CATEGORY_GRID =
+  'hidden gap-3 md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'

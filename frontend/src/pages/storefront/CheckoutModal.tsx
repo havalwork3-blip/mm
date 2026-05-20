@@ -107,7 +107,7 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
         aria-label={s.close}
       />
 
-      <div className="relative flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
+      <div className="relative flex max-h-[92dvh] w-full max-w-[100%] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-lg sm:rounded-3xl md:max-w-xl lg:max-w-2xl">
         <div
           className="flex shrink-0 items-center justify-between px-5 py-4 text-white"
           style={{ backgroundColor: accent }}

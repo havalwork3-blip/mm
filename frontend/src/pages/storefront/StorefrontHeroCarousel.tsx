@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import type { PublicStorefrontBanner } from '../../api/storefrontApi'
 import { resolveMediaUrl } from '../../lib/api'
-import { accentAlpha } from './storefrontTheme'
+import { accentAlpha, SF_INSET_X } from './storefrontTheme'
 
 type Props = {
   banners: PublicStorefrontBanner[]
@@ -50,15 +50,15 @@ export function StorefrontHeroCarousel({
   if (count === 0) {
     return (
       <div
-        className="mx-4 mt-4 overflow-hidden rounded-2xl p-4 text-white"
+        className={`${SF_INSET_X} mt-4 overflow-hidden rounded-2xl p-4 text-white sm:mt-5 sm:rounded-3xl sm:p-6`}
         style={{
           background: `linear-gradient(120deg, ${accent} 0%, ${accent}dd 50%, #ff9340 100%)`,
           boxShadow: `0 10px 28px ${accentAlpha(accent, 0.28)}`,
         }}
       >
-        <p className="text-base font-bold leading-snug">{fallbackTitle}</p>
+        <p className="text-base font-bold leading-snug sm:text-lg md:text-xl">{fallbackTitle}</p>
         {fallbackSubtitle ? (
-          <p className="mt-1 text-xs text-white/85">{fallbackSubtitle}</p>
+          <p className="mt-1 text-xs text-white/85 sm:text-sm">{fallbackSubtitle}</p>
         ) : null}
       </div>
     )
@@ -80,7 +80,7 @@ export function StorefrontHeroCarousel({
   const clickable = slide.link_type === 'url' || slide.link_type === 'category'
 
   return (
-    <div className="relative mx-4 mt-4">
+    <div className={`relative ${SF_INSET_X} mt-4 sm:mt-5`}>
       <div
         role={clickable ? 'button' : undefined}
         tabIndex={clickable ? 0 : undefined}
@@ -96,7 +96,7 @@ export function StorefrontHeroCarousel({
             : undefined
         }
         className={[
-          'relative aspect-[2.2/1] w-full overflow-hidden rounded-2xl bg-slate-200 shadow-lg',
+          'relative aspect-[2/1] w-full max-h-[min(50vh,280px)] overflow-hidden rounded-2xl bg-slate-200 shadow-lg sm:aspect-[2.4/1] sm:max-h-[min(45vh,360px)] sm:rounded-3xl md:aspect-[2.8/1] md:max-h-[400px] lg:max-h-[420px]',
           clickable ? 'cursor-pointer' : '',
         ].join(' ')}
         style={{ boxShadow: `0 10px 28px ${accentAlpha(accent, 0.2)}` }}
