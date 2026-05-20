@@ -80,7 +80,7 @@ class SaleReturnAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "shop")
+    list_display = ("name_ku", "name_ar", "name_en", "shop")
     list_filter = ("shop",)
 
 

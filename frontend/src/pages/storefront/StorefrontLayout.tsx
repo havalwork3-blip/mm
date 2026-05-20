@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom'
 
 import { useLocale } from '../../context/LocaleContext'
 import { isStorefrontMode } from '../../lib/storefrontConfig'
+import { useStorefrontCatalog } from './storefrontCatalogContext'
 import { useStorefrontShop } from './StorefrontShopContext'
 import { cartItemCount, useCartStore } from '../../store/cartStore'
 import { CartDrawer } from './CartDrawer'
@@ -15,6 +16,7 @@ export function StorefrontLayout() {
   const { lang, setLang } = useLocale()
   const s = storefrontStrings(lang)
   const { shopName, appearance, loading: shopLoading, error: shopError } = useStorefrontShop()
+  const { backToCategories, showAllProducts } = useStorefrontCatalog()
   const accent = resolveAccent(appearance.accent_color)
   const lines = useCartStore((st) => st.lines)
   const count = cartItemCount(lines)
@@ -35,11 +37,11 @@ export function StorefrontLayout() {
   }, [])
 
   function scrollTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    backToCategories()
   }
 
   function scrollToProducts() {
-    document.getElementById('sf-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    showAllProducts()
   }
 
   return (

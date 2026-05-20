@@ -29,6 +29,7 @@ router.register(
 )
 
 urlpatterns = [
+    path("translate/", views.translate_category_names, name="translate-category-names"),
     # Public storefront (mounted at /api/ in config.urls — do NOT prefix with api/ here).
     path(
         "public/storefront/resolve/",

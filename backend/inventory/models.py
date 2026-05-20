@@ -11,10 +11,13 @@ from shops.models import ShopScopedModel
 
 class Category(ShopScopedModel):
     name = models.CharField(max_length=255)
+    name_ku = models.CharField(max_length=255, blank=True, default="")
+    name_ar = models.CharField(max_length=255, blank=True, default="")
+    name_en = models.CharField(max_length=255, blank=True, default="")
     image = models.ImageField(upload_to="categories/%Y/%m/", blank=True, null=True)
 
     class Meta:
-        ordering = ["name"]
+        ordering = ["name_ku", "name"]
         constraints = [
             models.UniqueConstraint(
                 fields=["shop", "name"],
@@ -22,8 +25,27 @@ class Category(ShopScopedModel):
             ),
         ]
 
+    def save(self, *args, **kwargs):
+        primary = (self.name_ku or self.name or "").strip()
+        if primary:
+            self.name_ku = primary
+            self.name = primary
+        super().save(*args, **kwargs)
+
+    def display_name(self, lang: str = "ku") -> str:
+        lang = (lang or "ku").lower()[:2]
+        if lang == "ar":
+            ar = (self.name_ar or "").strip()
+            if ar:
+                return ar
+        if lang == "en":
+            en = (self.name_en or "").strip()
+            if en:
+                return en
+        return (self.name_ku or self.name or "").strip()
+
     def __str__(self) -> str:
-        return self.name
+        return self.display_name("ku") or self.name
 
 
 class Product(ShopScopedModel):

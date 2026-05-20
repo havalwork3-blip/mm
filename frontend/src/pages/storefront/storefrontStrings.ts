@@ -50,6 +50,15 @@ const STRINGS = {
     increase: 'زیادکردن',
     remove: 'لابردن',
     quantity: 'ژمارە',
+    pickCategory: 'پۆلێک هەڵبژێرە',
+    pickCategoryHint: 'پۆلێک بکە بۆ بینینی بەرهەمەکان',
+    viewAllProducts: 'هەموو بەرهەمەکان ببینە',
+    backToCategories: 'گەڕانەوە بۆ پۆلەکان',
+    filterByCategory: 'فلتەر بە پۆل',
+    noProductsInCategory: 'لەم پۆلەدا بەرهەم نییە',
+    searchResults: 'ئەنجام بۆ «{q}»',
+    addedToCart: 'زیادکرا!',
+    tapToAdd: 'کلیک بکە بۆ زیادکردن',
   },
   ar: {
     hello: 'مرحباً',
@@ -100,6 +109,15 @@ const STRINGS = {
     increase: 'زيادة',
     remove: 'إزالة',
     quantity: 'الكمية',
+    pickCategory: 'اختر قسماً',
+    pickCategoryHint: 'اضغط على قسم لعرض منتجاته',
+    viewAllProducts: 'عرض كل المنتجات',
+    backToCategories: 'العودة إلى الأقسام',
+    filterByCategory: 'تصفية حسب القسم',
+    noProductsInCategory: 'لا توجد منتجات في هذا القسم',
+    searchResults: 'نتائج «{q}»',
+    addedToCart: 'تمت الإضافة!',
+    tapToAdd: 'اضغط للإضافة',
   },
   en: {
     hello: 'Hello',
@@ -150,6 +168,15 @@ const STRINGS = {
     increase: 'Increase',
     remove: 'Remove',
     quantity: 'Qty',
+    pickCategory: 'Pick a category',
+    pickCategoryHint: 'Tap a category to browse its products',
+    viewAllProducts: 'View all products',
+    backToCategories: 'Back to categories',
+    filterByCategory: 'Filter by category',
+    noProductsInCategory: 'No products in this category',
+    searchResults: 'Results for "{q}"',
+    addedToCart: 'Added!',
+    tapToAdd: 'Tap to add',
   },
 }
 
@@ -202,6 +229,15 @@ export type StorefrontStrings = {
   increase: string
   remove: string
   quantity: string
+  pickCategory: string
+  pickCategoryHint: string
+  viewAllProducts: string
+  backToCategories: string
+  filterByCategory: string
+  noProductsInCategory: string
+  searchResults: string
+  addedToCart: string
+  tapToAdd: string
 }
 
 export function storefrontStrings(lang: Lang): StorefrontStrings {

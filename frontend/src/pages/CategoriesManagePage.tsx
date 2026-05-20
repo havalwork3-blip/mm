@@ -1,17 +1,22 @@
-import { ArrowLeft, ImagePlus, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, ImagePlus, Languages, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import { translateFromKurdish } from '../api/translateApi'
 import { PageAuthLoading } from '../components/PageAuthLoading'
 import { useLocale } from '../context/LocaleContext'
 import { useSyncedSession } from '../hooks/useSyncedSession'
 import { apiFetch, apiJson, resolveMediaUrl } from '../lib/api'
+import { categoryDisplayName } from '../lib/categoryNames'
 import { hasPerm } from '../lib/permissions'
 
 type CategoryRow = {
   id: number
   shop: number
   name: string
+  name_ku: string
+  name_ar: string
+  name_en: string
   image: string | null
   image_url: string | null
 }
@@ -20,7 +25,7 @@ const inputClass =
   'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white'
 
 export function CategoriesManagePage() {
-  const { t } = useLocale()
+  const { t, lang } = useLocale()
   const { me, authPending, showLogin, canAccessShopData } = useSyncedSession()
 
   const [rows, setRows] = useState<CategoryRow[]>([])
@@ -28,10 +33,13 @@ export function CategoriesManagePage() {
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<CategoryRow | null>(null)
-  const [name, setName] = useState('')
+  const [nameKu, setNameKu] = useState('')
+  const [nameAr, setNameAr] = useState('')
+  const [nameEn, setNameEn] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [translating, setTranslating] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const canView = Boolean(me && hasPerm(me, 'view_category'))
@@ -67,7 +75,9 @@ export function CategoriesManagePage() {
   }, [previewUrl])
 
   function resetForm() {
-    setName('')
+    setNameKu('')
+    setNameAr('')
+    setNameEn('')
     setImageFile(null)
     if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl)
     setPreviewUrl(null)
@@ -82,7 +92,9 @@ export function CategoriesManagePage() {
 
   function openEdit(row: CategoryRow) {
     setEditing(row)
-    setName(row.name)
+    setNameKu(row.name_ku || row.name)
+    setNameAr(row.name_ar || '')
+    setNameEn(row.name_en || '')
     setImageFile(null)
     if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl)
     setPreviewUrl(resolveMediaUrl(row.image_url))
@@ -97,15 +109,33 @@ export function CategoriesManagePage() {
     setPreviewUrl(URL.createObjectURL(file))
   }
 
+  async function runTranslate() {
+    const src = nameKu.trim()
+    if (!src) return
+    setTranslating(true)
+    setError(null)
+    try {
+      const out = await translateFromKurdish(src)
+      setNameAr(out.ar.trim())
+      setNameEn(out.en.trim())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('categoriesPage.translateError'))
+    } finally {
+      setTranslating(false)
+    }
+  }
+
   async function save(e: React.FormEvent) {
     e.preventDefault()
-    const trimmed = name.trim()
-    if (!trimmed) return
+    const ku = nameKu.trim()
+    if (!ku) return
     setSaving(true)
     setError(null)
     try {
       const form = new FormData()
-      form.append('name', trimmed)
+      form.append('name_ku', ku)
+      form.append('name_ar', nameAr.trim())
+      form.append('name_en', nameEn.trim())
       if (imageFile) form.append('image', imageFile)
       const path = editing ? `/api/categories/${editing.id}/` : '/api/categories/'
       const res = await apiFetch(path, {
@@ -183,14 +213,16 @@ export function CategoriesManagePage() {
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/80 text-start text-xs font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/50">
                 <th className="px-4 py-3">{t('categoriesPage.colImage')}</th>
-                <th className="px-4 py-3">{t('customersPage.fieldName')}</th>
+                <th className="px-4 py-3">{t('categoriesPage.fieldNameKu')}</th>
+                <th className="hidden px-4 py-3 sm:table-cell">{t('categoriesPage.fieldNameAr')}</th>
+                <th className="hidden px-4 py-3 md:table-cell">{t('categoriesPage.fieldNameEn')}</th>
                 <th className="px-4 py-3 text-end">{t('crud.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-4 py-10 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
                     {t('categoriesPage.empty')}
                   </td>
                 </tr>
@@ -213,7 +245,18 @@ export function CategoriesManagePage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{row.name}</td>
+                      <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">
+                        {categoryDisplayName(row, lang)}
+                        <p className="mt-0.5 text-[11px] font-normal text-slate-400 sm:hidden">
+                          {[row.name_ar, row.name_en].filter(Boolean).join(' · ')}
+                        </p>
+                      </td>
+                      <td className="hidden px-4 py-3 text-slate-600 dark:text-slate-300 sm:table-cell">
+                        {row.name_ar || '—'}
+                      </td>
+                      <td className="hidden px-4 py-3 text-slate-600 dark:text-slate-300 md:table-cell">
+                        {row.name_en || '—'}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
                           {canChange ? (
@@ -251,20 +294,51 @@ export function CategoriesManagePage() {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
           <form
             onSubmit={(e) => void save(e)}
-            className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900"
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900"
           >
             <h2 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">
               {editing ? t('crud.editRecordTitle') : t('crud.createRecordTitle')}
             </h2>
 
-            <label className="mb-3 block text-xs font-medium text-slate-500">
-              {t('customersPage.fieldName')} *
-            </label>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <label className="text-xs font-medium text-slate-500">{t('categoriesPage.fieldNameKu')} *</label>
+              <button
+                type="button"
+                disabled={translating || !nameKu.trim()}
+                onClick={() => void runTranslate()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {translating ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <Languages className="h-3.5 w-3.5" aria-hidden />
+                )}
+                {translating ? t('categoriesPage.translating') : t('categoriesPage.translateBtn')}
+              </button>
+            </div>
             <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={`${inputClass} mb-4`}
+              value={nameKu}
+              onChange={(e) => setNameKu(e.target.value)}
+              className={`${inputClass} mb-1`}
               required
+              dir="rtl"
+            />
+            <p className="mb-4 text-[11px] text-slate-400">{t('categoriesPage.translateHint')}</p>
+
+            <label className="mb-2 block text-xs font-medium text-slate-500">{t('categoriesPage.fieldNameAr')}</label>
+            <input
+              value={nameAr}
+              onChange={(e) => setNameAr(e.target.value)}
+              className={`${inputClass} mb-4`}
+              dir="rtl"
+            />
+
+            <label className="mb-2 block text-xs font-medium text-slate-500">{t('categoriesPage.fieldNameEn')}</label>
+            <input
+              value={nameEn}
+              onChange={(e) => setNameEn(e.target.value)}
+              className={`${inputClass} mb-4`}
+              dir="ltr"
             />
 
             <label className="mb-2 block text-xs font-medium text-slate-500">
@@ -306,7 +380,7 @@ export function CategoriesManagePage() {
               </button>
               <button
                 type="submit"
-                disabled={saving || !name.trim()}
+                disabled={saving || !nameKu.trim()}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-sm font-bold text-white disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

@@ -35,6 +35,9 @@ export type PublicStorefrontResolve = {
 export type PublicStorefrontCategory = {
   id: number
   name: string
+  name_ku: string
+  name_ar: string
+  name_en: string
   image_url: string | null
   products: PublicStorefrontProduct[]
 }

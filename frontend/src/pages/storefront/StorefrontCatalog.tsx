@@ -1,118 +1,44 @@
 import {
+  ArrowRight,
   Loader2,
   PackageOpen,
-  Plus,
   RefreshCw,
   Search,
   ShieldCheck,
   Truck,
   Zap,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   fetchPublicCatalog,
   type PublicStorefrontBanner,
   type PublicStorefrontCategory,
-  type PublicStorefrontProduct,
 } from '../../api/storefrontApi'
+import { CategoriesBrowse } from './CategoriesBrowse'
+import { CategoryFilterBar } from './CategoryFilterBar'
 import { StorefrontHeroCarousel } from './StorefrontHeroCarousel'
-import { resolveMediaUrl } from '../../lib/api'
+import { StorefrontProductCard } from './StorefrontProductCard'
 import { useLocale } from '../../context/LocaleContext'
 import { useCartStore } from '../../store/cartStore'
 import { useStorefrontShop } from './StorefrontShopContext'
-import { formatUsd, storefrontStrings } from './storefrontStrings'
-import { accentAlpha, resolveAccent, SF_CATEGORY_GRID, SF_INSET_X, SF_PRODUCT_GRID } from './storefrontTheme'
-
-const CATEGORY_GRADIENTS = [
-  'linear-gradient(145deg, #ff5a00 0%, #ff8c42 100%)',
-  'linear-gradient(145deg, #10b981 0%, #34d399 100%)',
-  'linear-gradient(145deg, #3b82f6 0%, #60a5fa 100%)',
-  'linear-gradient(145deg, #8b5cf6 0%, #a78bfa 100%)',
-  'linear-gradient(145deg, #ec4899 0%, #f472b6 100%)',
-]
-
-function formatPrice(price: number, usdLabel: string): string {
-  if (!Number.isFinite(price) || price <= 0) return '—'
-  return `$${formatUsd(price)} ${usdLabel}`
-}
-
-function ProductCard({
-  product,
-  accent,
-  inCart,
-  onAdd,
-  labels,
-  popular,
-}: {
-  product: PublicStorefrontProduct
-  accent: string
-  inCart: number
-  onAdd: () => void
-  labels: { addToCart: string; inCart: string; usd: string; popular: string }
-  popular?: boolean
-}) {
-  const img = resolveMediaUrl(product.image_url)
-  const price = Number.parseFloat(product.sell_price)
-
-  return (
-    <li className="group relative flex flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200/60 transition hover:shadow-lg hover:ring-slate-300/80">
-      <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
-        {img ? (
-          <img
-            src={img}
-            alt={product.name}
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-slate-300">
-            <PackageOpen className="h-8 w-8" strokeWidth={1.25} aria-hidden />
-          </div>
-        )}
-        {popular ? (
-          <span
-            className="absolute start-2 top-2 rounded-md px-1.5 py-0.5 text-[9px] font-bold text-white shadow"
-            style={{ backgroundColor: accent }}
-          >
-            {labels.popular}
-          </span>
-        ) : null}
-        <button
-          type="button"
-          onClick={onAdd}
-          className="absolute end-2 bottom-2 flex h-9 w-9 items-center justify-center rounded-full text-white shadow-lg transition active:scale-90"
-          style={{
-            backgroundColor: inCart > 0 ? 'white' : accent,
-            color: inCart > 0 ? accent : 'white',
-            border: inCart > 0 ? `2px solid ${accent}` : undefined,
-          }}
-          aria-label={inCart > 0 ? labels.inCart : labels.addToCart}
-        >
-          {inCart > 0 ? (
-            <span className="text-xs font-bold">{inCart}</span>
-          ) : (
-            <Plus className="h-5 w-5" strokeWidth={2.5} aria-hidden />
-          )}
-        </button>
-      </div>
-
-      <div className="flex flex-1 flex-col gap-1 p-2.5 sm:p-3">
-        <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-slate-800 sm:text-sm md:text-base">
-          {product.name}
-        </h3>
-        <p className="text-sm font-bold sm:text-base" style={{ color: accent }}>
-          {formatPrice(price, labels.usd)}
-        </p>
-      </div>
-    </li>
-  )
-}
+import { useStorefrontCatalog } from './storefrontCatalogContext'
+import { storefrontStrings } from './storefrontStrings'
+import { categoryDisplayName } from '../../lib/categoryNames'
+import { accentAlpha, resolveAccent, SF_INSET_X, SF_PRODUCT_GRID } from './storefrontTheme'
 
 export function StorefrontCatalog() {
   const { lang } = useLocale()
   const s = storefrontStrings(lang)
   const { shopId, shopName, appearance } = useStorefrontShop()
+  const {
+    view,
+    selectedCategoryId,
+    selectCategory,
+    showAllProducts,
+    backToCategories,
+    setSearchActive,
+  } = useStorefrontCatalog()
   const addItem = useCartStore((st) => st.addItem)
   const cartLines = useCartStore((st) => st.lines)
 
@@ -122,19 +48,11 @@ export function StorefrontCatalog() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
-  const categoriesRef = useRef<HTMLDivElement>(null)
 
   const accent = resolveAccent(appearance.accent_color)
   const promoText = appearance.welcome_message || appearance.catalog_subtitle || s.promoDefault
 
-  function handleBannerCategory(categoryId: number) {
-    setSelectedCategoryId(categoryId)
-    setSearch('')
-    window.setTimeout(() => {
-      document.getElementById('sf-products')?.scrollIntoView({ behavior: 'smooth' })
-    }, 50)
-  }
+  const showProductsView = view === 'products' || search.trim().length > 0
 
   const load = useCallback(async () => {
     if (shopId == null) return
@@ -157,6 +75,12 @@ export function StorefrontCatalog() {
     void load()
   }, [load])
 
+  useEffect(() => {
+    if (view !== 'categories') return
+    setSearch('')
+    setSearchActive(false)
+  }, [view, setSearchActive])
+
   function qtyInCart(productId: number): number {
     return cartLines.find((l) => l.productId === productId)?.quantity ?? 0
   }
@@ -164,7 +88,7 @@ export function StorefrontCatalog() {
   const filteredCategories = useMemo(() => {
     const q = search.trim().toLowerCase()
     let list = categories
-    if (selectedCategoryId != null) {
+    if (showProductsView && selectedCategoryId != null) {
       list = list.filter((c) => c.id === selectedCategoryId)
     }
     if (!q) return list
@@ -174,107 +98,45 @@ export function StorefrontCatalog() {
         products: cat.products.filter((p) => p.name.toLowerCase().includes(q)),
       }))
       .filter((cat) => cat.products.length > 0)
-  }, [categories, search, selectedCategoryId])
+  }, [categories, search, selectedCategoryId, showProductsView])
 
   const flatProducts = useMemo(
-    () => filteredCategories.flatMap((c) => c.products.map((p) => ({ product: p, categoryId: c.id }))),
-    [filteredCategories],
+    () =>
+      filteredCategories.flatMap((c) =>
+        c.products.map((p) => ({ product: p, categoryName: categoryDisplayName(c, lang) })),
+      ),
+    [filteredCategories, lang],
   )
 
-  const popularIds = useMemo(() => {
-    const ids = new Set<number>()
-    for (const cat of categories) {
-      for (const p of cat.products.slice(0, 1)) {
-        ids.add(p.id)
-      }
-    }
-    return ids
-  }, [categories])
+  const selectedCategoryName =
+    selectedCategoryId != null
+      ? categoryDisplayName(categories.find((c) => c.id === selectedCategoryId) ?? {}, lang)
+      : ''
 
   const totalProducts = categories.reduce((n, c) => n + c.products.length, 0)
 
   const cardLabels = {
     addToCart: s.addToCart,
     inCart: s.inCart,
+    added: s.addedToCart,
     usd: s.usd,
-    popular: s.popular,
   }
 
-  function renderCategoryPill(
-    cat: PublicStorefrontCategory,
-    index: number,
-    variant: 'scroll' | 'grid',
-  ) {
-    const img = resolveMediaUrl(
-      cat.image_url ?? cat.products.find((p) => p.image_url)?.image_url ?? null,
-    )
-    const selected = selectedCategoryId === cat.id
-    const count = cat.products.length
+  function handleSearchChange(value: string) {
+    setSearch(value)
+    setSearchActive(value.trim().length > 0)
+  }
 
-    if (variant === 'grid') {
-      return (
-        <button
-          key={cat.id}
-          type="button"
-          onClick={() => setSelectedCategoryId(selected ? null : cat.id)}
-          className={[
-            'flex flex-col overflow-hidden rounded-2xl bg-white text-start shadow-sm ring-1 transition hover:shadow-md',
-            selected ? 'ring-2' : 'ring-slate-200/80',
-          ].join(' ')}
-          style={selected ? ({ ['--tw-ring-color' as string]: accent } as React.CSSProperties) : undefined}
-        >
-          <div className="relative aspect-[4/3] w-full bg-slate-100">
-            {img ? (
-              <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" />
-            ) : (
-              <div
-                className="flex h-full w-full items-center justify-center text-3xl font-bold text-white"
-                style={{ background: CATEGORY_GRADIENTS[index % CATEGORY_GRADIENTS.length] }}
-              >
-                {cat.name.charAt(0)}
-              </div>
-            )}
-          </div>
-          <div className="p-3">
-            <p className="truncate text-sm font-bold text-slate-800">{cat.name}</p>
-            <p className="text-xs text-slate-400">
-              {s.productCount.replace('{n}', String(count))}
-            </p>
-          </div>
-        </button>
-      )
+  function handleBannerCategory(categoryId: number) {
+    selectCategory(categoryId)
+  }
+
+  function handleFilterSelect(id: number | null) {
+    if (id == null) {
+      showAllProducts()
+    } else {
+      selectCategory(id)
     }
-
-    return (
-      <button
-        key={cat.id}
-        type="button"
-        onClick={() =>
-          setSelectedCategoryId((prev) => (prev === cat.id ? null : cat.id))
-        }
-        className={[
-          'flex shrink-0 items-center gap-2 rounded-full py-1.5 pe-3 ps-1 transition sm:py-2 sm:pe-4',
-          selected ? 'text-white shadow-sm' : 'bg-white text-slate-700 ring-1 ring-slate-200',
-        ].join(' ')}
-        style={selected ? { backgroundColor: accent } : undefined}
-      >
-        <span
-          className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-white sm:h-10 sm:w-10"
-          style={{
-            background: img ? undefined : CATEGORY_GRADIENTS[index % CATEGORY_GRADIENTS.length],
-          }}
-        >
-          {img ? (
-            <img src={img} alt="" className="h-full w-full object-cover" />
-          ) : (
-            cat.name.charAt(0)
-          )}
-        </span>
-        <span className="max-w-[5.5rem] truncate text-xs font-semibold sm:max-w-[8rem] sm:text-sm">
-          {cat.name}
-        </span>
-      </button>
-    )
   }
 
   return (
@@ -288,7 +150,7 @@ export function StorefrontCatalog() {
           <input
             type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={s.searchPlaceholder}
             className="w-full rounded-2xl border-0 bg-white py-3 pe-4 ps-10 text-sm text-slate-800 shadow-sm outline-none ring-1 ring-slate-200/80 placeholder:text-slate-400 focus:ring-2 sm:py-3.5 sm:text-base"
             style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.45) }}
@@ -348,67 +210,82 @@ export function StorefrontCatalog() {
           <PackageOpen className="h-11 w-11" strokeWidth={1.25} aria-hidden />
           <p className="text-sm">{s.noProducts}</p>
         </div>
+      ) : !showProductsView && categories.length > 0 ? (
+        <CategoriesBrowse
+          categories={categories}
+          accent={accent}
+          labels={{
+            pickCategory: s.pickCategory,
+            pickCategoryHint: s.pickCategoryHint,
+            viewAllProducts: s.viewAllProducts,
+            productCount: s.productCount,
+            categories: s.categories,
+          }}
+          onSelectCategory={selectCategory}
+          onViewAllProducts={showAllProducts}
+        />
       ) : (
         <>
-          {categories.length > 1 && !search.trim() ? (
-            <section className={`mt-5 ${SF_INSET_X} sm:mt-6`} ref={categoriesRef}>
-              <h2 className="mb-2.5 text-sm font-bold text-slate-800 sm:text-base">{s.categories}</h2>
-              <div className="flex gap-2 overflow-x-auto pb-1 sf-scrollbar-none md:hidden">
-                <button
-                  type="button"
-                  onClick={() => setSelectedCategoryId(null)}
-                  className={[
-                    'shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition',
-                    selectedCategoryId == null
-                      ? 'text-white shadow-sm'
-                      : 'bg-white text-slate-600 ring-1 ring-slate-200',
-                  ].join(' ')}
-                  style={selectedCategoryId == null ? { backgroundColor: accent } : undefined}
-                >
-                  {s.allCategories}
-                </button>
-                {categories.map((cat, index) => renderCategoryPill(cat, index, 'scroll'))}
-              </div>
-              <div className={`${SF_CATEGORY_GRID} mt-2`}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedCategoryId(null)}
-                  className={[
-                    'flex flex-col items-center justify-center rounded-2xl p-4 text-center text-sm font-bold transition',
-                    selectedCategoryId == null
-                      ? 'text-white shadow-md'
-                      : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:shadow',
-                  ].join(' ')}
-                  style={selectedCategoryId == null ? { backgroundColor: accent } : undefined}
-                >
-                  {s.allCategories}
-                </button>
-                {categories.map((cat, index) => renderCategoryPill(cat, index, 'grid'))}
-              </div>
-            </section>
+          <div className={`${SF_INSET_X} mt-3`}>
+            <button
+              type="button"
+              onClick={backToCategories}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 sm:text-sm"
+            >
+              <ArrowRight className="h-4 w-4 rotate-180 rtl:rotate-0" aria-hidden />
+              {s.backToCategories}
+            </button>
+          </div>
+
+          {categories.length > 0 ? (
+            <CategoryFilterBar
+              categories={categories}
+              selectedId={selectedCategoryId}
+              accent={accent}
+              labels={{
+                filter: s.filterByCategory,
+                allCategories: s.allCategories,
+                productCount: s.productCount,
+              }}
+              onSelect={handleFilterSelect}
+            />
           ) : null}
 
-          <section id="sf-products" className={`mt-5 ${SF_INSET_X} sm:mt-8`}>
-            <div className="mb-3 flex items-center justify-between sm:mb-4">
-              <h2 className="text-sm font-bold text-slate-800 sm:text-base md:text-lg">{s.allProducts}</h2>
-              <span className="text-xs text-slate-400">
+          <section id="sf-products" className={`mt-4 ${SF_INSET_X} sm:mt-6`}>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
+              <div>
+                <h2 className="text-sm font-bold text-slate-800 sm:text-base md:text-lg">
+                  {selectedCategoryId != null ? selectedCategoryName : s.allProducts}
+                </h2>
+                {search.trim() ? (
+                  <p className="text-xs text-slate-500">
+                    {s.searchResults.replace('{q}', search.trim())}
+                  </p>
+                ) : null}
+              </div>
+              <span
+                className="rounded-full px-3 py-1 text-xs font-semibold"
+                style={{
+                  backgroundColor: accentAlpha(accent, 0.12),
+                  color: accent,
+                }}
+              >
                 {s.productCount.replace('{n}', String(flatProducts.length))}
               </span>
             </div>
 
             {flatProducts.length === 0 ? (
-              <p className="py-10 text-center text-sm text-slate-500">{s.noProducts}</p>
+              <p className="py-10 text-center text-sm text-slate-500">{s.noProductsInCategory}</p>
             ) : (
               <ul className={SF_PRODUCT_GRID}>
                 {flatProducts.map(({ product }) => (
-                  <ProductCard
+                  <StorefrontProductCard
                     key={product.id}
                     product={product}
                     accent={accent}
                     inCart={qtyInCart(product.id)}
                     onAdd={() => addItem(product)}
                     labels={cardLabels}
-                    popular={popularIds.has(product.id) && categories.length > 1}
                   />
                 ))}
               </ul>

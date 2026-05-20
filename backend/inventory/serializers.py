@@ -286,11 +286,24 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     image = serializers.ImageField(required=False, allow_null=True)
     image_url = serializers.SerializerMethodField(read_only=True)
+    name = serializers.CharField(read_only=True)
 
     class Meta:
         model = Category
-        fields = ["id", "shop", "name", "image", "image_url"]
-        read_only_fields = ["id", "shop", "image_url"]
+        fields = ["id", "shop", "name", "name_ku", "name_ar", "name_en", "image", "image_url"]
+        read_only_fields = ["id", "shop", "name", "image_url"]
+
+    def validate_name_ku(self, value: str) -> str:
+        cleaned = (value or "").strip()
+        if not cleaned:
+            raise serializers.ValidationError("Kurdish name is required.")
+        return cleaned
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if self.instance is None and not attrs.get("name_ku"):
+            raise serializers.ValidationError({"name_ku": "Kurdish name is required."})
+        return attrs
 
     def get_image_url(self, obj: Category) -> str | None:
         if not obj.image:

@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import './storefront.css'
 import { isStorefrontMode } from '../../lib/storefrontConfig'
 import { StorefrontCatalog } from './StorefrontCatalog'
+import { StorefrontCatalogProvider } from './storefrontCatalogContext'
 import { StorefrontLayout } from './StorefrontLayout'
 import { StorefrontShopProvider } from './StorefrontShopContext'
 
@@ -14,7 +15,9 @@ export function StorefrontRoutes() {
       <Route
         element={
           <StorefrontShopProvider>
-            <StorefrontLayout />
+            <StorefrontCatalogProvider>
+              <StorefrontLayout />
+            </StorefrontCatalogProvider>
           </StorefrontShopProvider>
         }
       >

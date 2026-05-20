@@ -113,6 +113,22 @@ class CategoryViewSet(ShopScopedViewSet):
     serializer_class = CategorySerializer
 
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def translate_category_names(request):
+    """POST /api/translate/ — free MT from Kurdish to Arabic and English."""
+    text = str(request.data.get("text") or "").strip()
+    if not text:
+        raise ValidationError({"text": "Text is required."})
+    from .translate_utils import translate_ku_to_ar_en
+
+    try:
+        translated = translate_ku_to_ar_en(text)
+    except Exception as exc:
+        raise ValidationError({"detail": f"Translation failed: {exc}"}) from exc
+    return Response({"ar": translated["ar"], "en": translated["en"]})
+
+
 class ProductViewSet(ShopScopedViewSet):
     permission_classes = [IsAuthenticated, IsShopOwnerOrDjangoModelPermissionOrPosProductRead]
     queryset = Product.objects.select_related("category", "shop").all()
@@ -842,7 +858,7 @@ def public_storefront_catalog(request):
         shop_id=shop.pk,
         is_discontinued=False,
         is_unregistered_placeholder=False,
-    ).select_related("category").order_by("category__name", "name")
+    ).select_related("category").order_by("category__name_ku", "category__name", "name")
 
     def _category_image_url(cat: Category) -> str | None:
         if not cat.image:
@@ -853,30 +869,35 @@ def public_storefront_catalog(request):
         except Exception:
             return None
 
-    by_category: dict[int, dict] = {}
-    for cat in Category.objects.filter(shop_id=shop.pk).order_by("name"):
-        by_category[cat.id] = {
+    def _category_row(cat: Category) -> dict:
+        ku = (cat.name_ku or cat.name or "").strip()
+        return {
             "id": cat.id,
-            "name": cat.name,
+            "name": ku,
+            "name_ku": ku,
+            "name_ar": (cat.name_ar or "").strip(),
+            "name_en": (cat.name_en or "").strip(),
             "image_url": _category_image_url(cat),
             "products": [],
         }
+
+    by_category: dict[int, dict] = {}
+    for cat in Category.objects.filter(shop_id=shop.pk).order_by("name_ku", "name"):
+        by_category[cat.id] = _category_row(cat)
 
     for product in product_qs:
         cat = product.category
         block = by_category.get(cat.id)
         if block is None:
-            block = {
-                "id": cat.id,
-                "name": cat.name,
-                "image_url": _category_image_url(cat),
-                "products": [],
-            }
+            block = _category_row(cat)
             by_category[cat.id] = block
         ser = PublicProductSerializer(product, context={"request": request})
         block["products"].append(ser.data)
 
-    categories = sorted(by_category.values(), key=lambda row: row["name"].casefold())
+    categories = sorted(
+        by_category.values(),
+        key=lambda row: (row.get("name_ku") or row["name"]).casefold(),
+    )
     return Response(
         {
             "storefront": storefront_settings_public_dict(settings, shop),
