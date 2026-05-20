@@ -69,10 +69,8 @@ export function CategoryFilterBar({
         >
           {labels.allCategories}
         </button>
-        {categories.map((cat, index) => {
-          const img = resolveMediaUrl(
-            cat.image_url ?? cat.products.find((p) => p.image_url)?.image_url ?? null,
-          )
+        {categories.filter((cat) => cat.products.length > 0).map((cat, index) => {
+          const img = resolveMediaUrl(cat.image_url)
           const active = selectedId === cat.id
           const label = categoryDisplayName(cat, lang)
           return (

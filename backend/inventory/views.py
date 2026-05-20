@@ -854,13 +854,12 @@ def public_storefront_catalog(request):
         )
 
     settings = get_or_create_storefront_settings(shop)
+    # All inventory products for this shop (except POS placeholders): include zero/negative
+    # stock and discontinued — never hide; UI uses is_available / unavailable_reason.
     product_qs = (
-        Product.objects.filter(
-            shop_id=shop.pk,
-            is_unregistered_placeholder=False,
-        )
+        Product.objects.filter(shop_id=shop.pk, is_unregistered_placeholder=False)
         .select_related("category")
-        .order_by("is_discontinued", "-current_stock_quantity", "name")
+        .order_by("is_discontinued", "name")
     )
 
     def _category_image_url(cat: Category) -> str | None:
@@ -898,7 +897,7 @@ def public_storefront_catalog(request):
         block["products"].append(ser.data)
 
     categories = sorted(
-        by_category.values(),
+        [row for row in by_category.values() if row["products"]],
         key=lambda row: (row.get("name_ku") or row["name"]).casefold(),
     )
     return Response(
@@ -925,12 +924,9 @@ def public_storefront_products(request):
         )
 
     qs = (
-        Product.objects.filter(
-            shop_id=shop.pk,
-            is_unregistered_placeholder=False,
-        )
+        Product.objects.filter(shop_id=shop.pk, is_unregistered_placeholder=False)
         .select_related("category")
-        .order_by("is_discontinued", "-current_stock_quantity", "name")
+        .order_by("is_discontinued", "name")
     )
     ser = PublicProductSerializer(qs, many=True, context={"request": request})
     return Response(ser.data)

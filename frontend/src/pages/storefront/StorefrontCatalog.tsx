@@ -91,12 +91,10 @@ export function StorefrontCatalog() {
       list = list.filter((c) => c.id === selectedCategoryId)
     }
     if (!q) return list
-    return list
-      .map((cat) => ({
-        ...cat,
-        products: cat.products.filter((p) => p.name.toLowerCase().includes(q)),
-      }))
-      .filter((cat) => cat.products.length > 0)
+    return list.map((cat) => ({
+      ...cat,
+      products: cat.products.filter((p) => p.name.toLowerCase().includes(q)),
+    }))
   }, [categories, search, selectedCategoryId, showProductsView])
 
   const flatProducts = useMemo(() => {
@@ -196,7 +194,7 @@ export function StorefrontCatalog() {
             aria-hidden={view !== 'categories' || showProductsView}
           >
             <CategoriesBrowse
-              categories={categories}
+              categories={categories.filter((c) => c.products.length > 0)}
               accent={accent}
               labels={{
                 pickCategoryHint: s.pickCategoryHint,

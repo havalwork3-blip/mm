@@ -2,6 +2,10 @@ import type { PublicStorefrontProduct, ProductUnavailableReason } from '../../ap
 
 export function isProductAvailable(product: PublicStorefrontProduct): boolean {
   if (typeof product.is_available === 'boolean') return product.is_available
+  const reason = product.unavailable_reason
+  if (reason === 'out_of_stock' || reason === 'discontinued' || reason === 'unavailable') {
+    return false
+  }
   return true
 }
 

@@ -113,7 +113,8 @@ class PublicProductSerializer(serializers.ModelSerializer):
             return "discontinued"
         if obj.is_unregistered_placeholder:
             return "unavailable"
-        if int(obj.current_stock_quantity or 0) <= 0:
+        stock = int(obj.current_stock_quantity or 0)
+        if stock <= 0:
             return "out_of_stock"
         return None
 

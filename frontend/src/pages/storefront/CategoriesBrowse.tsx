@@ -59,11 +59,11 @@ export function CategoriesBrowse({
       </div>
 
       <div className="grid grid-cols-2 gap-3.5 min-[420px]:grid-cols-3 sm:gap-4 md:gap-5">
-        {categories.map((cat, index) => {
+        {categories.filter((cat) => cat.products.length > 0).map((cat, index, arr) => {
           const img = resolveMediaUrl(cat.image_url)
           const count = cat.products.length
           const label = categoryDisplayName(cat, lang)
-          const featured = index === 0 && categories.length > 2
+          const featured = index === 0 && arr.length > 2
 
           return (
             <button
