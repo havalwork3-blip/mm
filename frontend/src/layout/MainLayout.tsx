@@ -25,6 +25,7 @@ import type { LucideIcon } from 'lucide-react'
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { LangSwitcher } from '../components/LangSwitcher'
+import { OnlineOrderNotificationLayer } from '../components/OnlineOrderNotificationLayer'
 import { useLocale } from '../context/LocaleContext'
 import { useSession } from '../context/SessionContext'
 import { useTheme } from '../context/ThemeContext'
@@ -763,6 +764,8 @@ export function MainLayout() {
           <Outlet />
         </main>
       </div>
+
+      <OnlineOrderNotificationLayer />
     </div>
   )
 }

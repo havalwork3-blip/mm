@@ -244,6 +244,7 @@ export type ShopSettingsRow = {
   low_stock_threshold: number
   base_currency: 'USD' | 'IQD'
   complete_sale_shortcut: string
+  online_order_sound_enabled: boolean
   updated_at: string
 }
 

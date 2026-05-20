@@ -72,7 +72,7 @@ export function StorefrontProductDetail({
 
   return (
     <div
-      className="sf-product-sheet fixed inset-0 z-[70] flex flex-col bg-[#fafbfc]"
+      className="sf-product-sheet fixed inset-0 z-[100] flex flex-col bg-[#fafbfc]"
       role="dialog"
       aria-modal="true"
       aria-label={product.name}
@@ -180,7 +180,7 @@ export function StorefrontProductDetail({
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-slate-200/80 bg-white/95 p-4 backdrop-blur-md pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="sf-product-footer relative z-20 shrink-0 border-t border-slate-200/80 bg-white/95 p-4 shadow-[0_-8px_32px_rgba(15,23,42,0.08)] backdrop-blur-md pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         {available ? (
           <button
             ref={orderBtnRef}

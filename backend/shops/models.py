@@ -205,6 +205,7 @@ class ShopSettings(ShopScopedModel):
         default=BaseCurrency.USD,
     )
     complete_sale_shortcut = models.CharField(max_length=32, default="F12")
+    online_order_sound_enabled = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

@@ -60,9 +60,7 @@ export function CategoriesBrowse({
 
       <div className="grid grid-cols-2 gap-3.5 min-[420px]:grid-cols-3 sm:gap-4 md:gap-5">
         {categories.map((cat, index) => {
-          const img = resolveMediaUrl(
-            cat.image_url ?? cat.products.find((p) => p.image_url)?.image_url ?? null,
-          )
+          const img = resolveMediaUrl(cat.image_url)
           const count = cat.products.length
           const label = categoryDisplayName(cat, lang)
           const featured = index === 0 && categories.length > 2
@@ -87,8 +85,8 @@ export function CategoriesBrowse({
                 {img ? (
                   <img
                     src={img}
-                    alt=""
-                    className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
+                    alt={label}
+                    className="h-full w-full object-cover object-center transition duration-700 group-hover:scale-105"
                     loading="lazy"
                   />
                 ) : (

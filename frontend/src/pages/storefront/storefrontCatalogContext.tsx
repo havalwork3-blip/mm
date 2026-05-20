@@ -69,6 +69,7 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
 
   const openProduct = useCallback(
     (product: PublicStorefrontProduct, categoryName = '') => {
+      setSearchOpen(false)
       setReturnView(view === 'categories' ? 'products' : 'products')
       setSelectedProduct(product)
       setProductCategoryName(categoryName)

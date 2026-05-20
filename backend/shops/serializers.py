@@ -165,6 +165,7 @@ class ShopSettingsSerializer(serializers.ModelSerializer):
             "low_stock_threshold",
             "base_currency",
             "complete_sale_shortcut",
+            "online_order_sound_enabled",
             "updated_at",
         ]
         read_only_fields = ["id", "shop", "updated_at"]

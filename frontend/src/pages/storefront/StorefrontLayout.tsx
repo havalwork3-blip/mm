@@ -188,7 +188,7 @@ export function StorefrontLayout() {
         )}
       </main>
 
-      {!shopLoading && !shopError ? (
+      {!shopLoading && !shopError && view !== 'product' ? (
         <nav
           className="sf-nav-pill fixed inset-x-4 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-40 mx-auto max-w-md sm:inset-x-auto sm:start-1/2 sm:-translate-x-1/2 sm:rtl:translate-x-1/2"
           aria-label="Navigation"

@@ -1,4 +1,4 @@
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Volume2 } from 'lucide-react'
 import QRCode from 'qrcode'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { SettingsAppearanceSection } from '../components/settings/SettingsAppearanceSection'
@@ -7,6 +7,7 @@ import { useSession } from '../context/SessionContext'
 import { useTheme } from '../context/ThemeContext'
 import { apiJson, getSuperuserShopId, setSuperuserShopId } from '../lib/api'
 import { setShowIqdOnPdf, withReceiptPrefs } from '../lib/receiptPrefs'
+import { playOnlineOrderSound } from '../lib/onlineOrderSound'
 import {
   THEME_PALETTE_DEFAULTS,
   paletteFromShopSettings,
@@ -71,7 +72,10 @@ export function SettingsPage() {
       } else {
         setRatePer100Input('')
       }
-      setShopSettings(ss)
+      setShopSettings({
+        ...ss,
+        online_order_sound_enabled: ss.online_order_sound_enabled ?? true,
+      })
       applyTheme({
         ...paletteFromShopSettings(ss),
         mode: ss.default_mode === 'system' ? 'light' : ss.default_mode,
@@ -98,6 +102,7 @@ export function SettingsPage() {
           base_currency: shopSettings.base_currency,
           default_mode: shopSettings.default_mode,
           ...shopThemePatchFromPalette(paletteFromShopSettings(shopSettings)),
+          online_order_sound_enabled: shopSettings.online_order_sound_enabled,
         }),
       })
       const form = new FormData()
@@ -302,7 +307,43 @@ export function SettingsPage() {
           }}
           onReset={resetThemeColors}
         />
-<section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 lg:col-span-6">
+        {me?.online_storefront_enabled ? (
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 lg:col-span-6">
+            <div className="flex items-center gap-2">
+              <Volume2 className="h-4 w-4 text-violet-600 dark:text-violet-400" aria-hidden />
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                {t('settings.onlineOrderSound')}
+              </h2>
+            </div>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {t('settings.onlineOrderSoundHint')}
+            </p>
+            <label className="mt-4 flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={shopSettings.online_order_sound_enabled !== false}
+                onChange={(e) =>
+                  setShopSettings((s) =>
+                    s ? { ...s, online_order_sound_enabled: e.target.checked } : s,
+                  )
+                }
+                className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+              />
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {t('settings.onlineOrderSound')}
+              </span>
+            </label>
+            <button
+              type="button"
+              onClick={() => playOnlineOrderSound()}
+              className="mt-3 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              {t('settings.testOrderSound')}
+            </button>
+          </section>
+        ) : null}
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800 lg:col-span-6">
           <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{t('settings.baseCurrency')}</h2>
           <select
             value={shopSettings.base_currency}

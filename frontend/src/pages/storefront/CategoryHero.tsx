@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { ImageIcon } from 'lucide-react'
+
 import type { PublicStorefrontCategory } from '../../api/storefrontApi'
 import { categoryDisplayName } from '../../lib/categoryNames'
 import { resolveMediaUrl } from '../../lib/api'
@@ -19,29 +22,42 @@ type Props = {
 export function CategoryHero({ category, accent, productCountLabel }: Props) {
   const { lang } = useLocale()
   const label = categoryDisplayName(category, lang)
-  const img = resolveMediaUrl(
-    category.image_url ?? category.products.find((p) => p.image_url)?.image_url ?? null,
-  )
+  const img = resolveMediaUrl(category.image_url)
   const count = category.products.length
   const grad = GRADIENTS[category.id % GRADIENTS.length]
+  const [imgFailed, setImgFailed] = useState(false)
+  const showImg = Boolean(img) && !imgFailed
 
   return (
     <div className={`${SF_INSET_X} sf-category-hero relative mb-5 mt-2 overflow-hidden rounded-3xl sm:mt-3`}>
       <div
-        className="sf-hero-frame relative aspect-[2.2/1] min-h-[150px] w-full sm:aspect-[2.6/1] sm:min-h-[170px]"
+        className="sf-hero-frame relative aspect-[2.4/1] min-h-[168px] w-full sm:aspect-[2.8/1] sm:min-h-[200px] md:min-h-[220px]"
         style={{ boxShadow: `0 16px 40px ${accentAlpha(accent, 0.2)}` }}
       >
-        {img ? (
-          <img src={img} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        {showImg ? (
+          <img
+            src={img!}
+            alt={label}
+            className="absolute inset-0 h-full w-full object-cover object-center"
+            onError={() => setImgFailed(true)}
+          />
         ) : (
-          <div className="absolute inset-0" style={{ background: grad }} />
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ background: grad }}
+          >
+            <span className="text-5xl font-black text-white/30 sm:text-6xl">{label.charAt(0)}</span>
+            {!img ? null : (
+              <ImageIcon className="absolute h-10 w-10 text-white/40" aria-hidden />
+            )}
+          </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/10" />
         <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
-          <h2 className="text-2xl font-extrabold tracking-tight text-white drop-shadow-sm sm:text-3xl">
+          <h2 className="text-2xl font-extrabold tracking-tight text-white drop-shadow-md sm:text-3xl">
             {label}
           </h2>
-          <p className="mt-1.5 text-sm font-medium text-white/85">
+          <p className="mt-1.5 text-sm font-medium text-white/90">
             {productCountLabel.replace('{n}', String(count))}
           </p>
         </div>
