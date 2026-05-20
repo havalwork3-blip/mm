@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react'
+
 /** Talabat-inspired light storefront theme (accent from shop settings). */
 
 export const DEFAULT_ACCENT = '#FF5A00'
@@ -29,6 +31,14 @@ export function accentRgb(accent: string): string {
   return rgb ? `${rgb.r}, ${rgb.g}, ${rgb.b}` : '255, 90, 0'
 }
 
+/** CSS custom properties for storefront root */
+export function storefrontCssVars(accent: string): CSSProperties {
+  return {
+    '--sf-accent': accent,
+    '--sf-accent-rgb': accentRgb(accent),
+  } as CSSProperties
+}
+
 export function accentAlpha(accent: string, alpha: number): string {
   return `rgba(${accentRgb(accent)}, ${alpha})`
 }
@@ -48,7 +58,7 @@ export const SF_INSET_X =
   'px-[max(1rem,env(safe-area-inset-left))] pe-[max(1rem,env(safe-area-inset-right))] sm:px-6 md:px-8'
 
 export const SF_PRODUCT_GRID =
-  'grid grid-cols-2 gap-2.5 min-[400px]:grid-cols-3 min-[400px]:gap-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+  'grid grid-cols-2 gap-3 min-[380px]:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-5 lg:grid-cols-5 xl:grid-cols-6'
 
 export const SF_CATEGORY_GRID =
   'hidden gap-3 md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'

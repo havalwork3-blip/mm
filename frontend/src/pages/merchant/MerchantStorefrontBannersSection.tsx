@@ -52,6 +52,7 @@ export function MerchantStorefrontBannersSection({
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
 
   const [title, setTitle] = useState('')
   const [subtitle, setSubtitle] = useState('')
@@ -127,6 +128,7 @@ export function MerchantStorefrontBannersSection({
     }
     setBusy(true)
     setError(null)
+    setSuccess(false)
     try {
       const upload = normalizeBannerImageFile(imageFile)
       const form = new FormData()
@@ -145,6 +147,8 @@ export function MerchantStorefrontBannersSection({
       await createMerchantStorefrontBanner(form)
       resetForm()
       await load()
+      setSuccess(true)
+      window.setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error'))
     } finally {
@@ -310,7 +314,11 @@ export function MerchantStorefrontBannersSection({
               <p className="text-sm text-slate-500">{t('onlineShop.noBanners')}</p>
             )}
 
-            <form onSubmit={(e) => void handleAdd(e)} className="space-y-3 rounded-xl border border-dashed border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
+            <form
+              onSubmit={(e) => void handleAdd(e)}
+              noValidate
+              className="space-y-3 rounded-xl border border-dashed border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20"
+            >
               <p className="text-xs font-bold text-violet-800 dark:text-violet-200">
                 <Plus className="me-1 inline h-3.5 w-3.5" aria-hidden />
                 {t('onlineShop.addBanner')}
@@ -418,6 +426,11 @@ export function MerchantStorefrontBannersSection({
           </>
         )}
 
+        {success ? (
+          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-200">
+            {t('onlineShop.bannerAdded')}
+          </p>
+        ) : null}
         {error ? (
           <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
         ) : null}

@@ -224,13 +224,14 @@ export function MerchantOnlineShopPage() {
           {t('common.loading')}
         </div>
       ) : (
-        <form onSubmit={(e) => void save(e)} className="grid gap-8 lg:grid-cols-[1fr_300px]">
+        <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
           <div className="space-y-5">
             <MerchantStorefrontBannersSection
               rotateSeconds={bannerRotateSeconds}
               onRotateSecondsChange={setBannerRotateSeconds}
             />
 
+            <form onSubmit={(e) => void save(e)} className="space-y-5">
             <SectionCard title={t('onlineShop.brandingSection')} icon={Globe}>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -394,6 +395,7 @@ export function MerchantOnlineShopPage() {
               )}
               {saving ? t('common.loading') : t('settings.save')}
             </button>
+            </form>
           </div>
 
           <aside className="lg:sticky lg:top-4 lg:self-start">
@@ -417,7 +419,7 @@ export function MerchantOnlineShopPage() {
               />
             </div>
           </aside>
-        </form>
+        </div>
       )}
     </div>
   )

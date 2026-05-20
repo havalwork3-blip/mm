@@ -163,10 +163,17 @@ export function StorefrontCatalog() {
   return (
     <div className="sf-catalog w-full pb-4 sm:pb-6">
       {view !== 'product' ? (
-        <div className={`${SF_INSET_X} pt-3 sm:pt-4`}>
-          <div className="relative">
+        <div className={`${SF_INSET_X} space-y-3 pt-4 sm:pt-5`}>
+          <p className="text-center text-sm font-medium text-slate-500">
+            {s.hello}{' '}
+            <span className="font-bold" style={{ color: accent }}>
+              {shopName}
+            </span>
+          </p>
+          <div className="sf-search-wrap relative">
             <Search
-              className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              className="pointer-events-none absolute start-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2"
+              style={{ color: accent }}
               aria-hidden
             />
             <input
@@ -174,8 +181,8 @@ export function StorefrontCatalog() {
               value={search}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder={s.searchPlaceholder}
-              className="w-full rounded-2xl border-0 bg-white py-3.5 pe-4 ps-11 text-sm text-slate-800 shadow-md outline-none ring-1 ring-slate-200/60 placeholder:text-slate-400 focus:ring-2 sm:text-base"
-              style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.45) }}
+              className="w-full rounded-2xl border-0 bg-white py-4 pe-4 ps-12 text-[15px] text-slate-800 outline-none ring-1 ring-slate-200/50 placeholder:text-slate-400 focus:ring-2 sm:rounded-3xl"
+              style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.4) }}
             />
           </div>
         </div>
@@ -191,19 +198,26 @@ export function StorefrontCatalog() {
             fallbackSubtitle={shopName}
             onCategoryClick={selectCategory}
           />
-          <div className={`${SF_INSET_X} mt-3 flex gap-2 overflow-x-auto pb-1 sf-scrollbar-none sm:mt-4`}>
+          <div className={`${SF_INSET_X} mt-4 grid grid-cols-3 gap-2 sm:gap-3`}>
             {[
               { icon: Truck, label: s.deliveryFast },
               { icon: Zap, label: s.orderEasy },
               { icon: ShieldCheck, label: s.support },
             ].map(({ icon: Icon, label }) => (
-              <span
+              <div
                 key={label}
-                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[11px] font-semibold text-slate-600 shadow-sm ring-1 ring-slate-100 sm:text-xs"
+                className="sf-trust-pill flex flex-col items-center gap-1.5 rounded-2xl bg-white px-2 py-3 text-center ring-1 ring-slate-100/80"
               >
-                <Icon className="h-3.5 w-3.5" style={{ color: accent }} aria-hidden />
-                {label}
-              </span>
+                <span
+                  className="flex h-9 w-9 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: accentAlpha(accent, 0.12) }}
+                >
+                  <Icon className="h-4 w-4" style={{ color: accent }} aria-hidden />
+                </span>
+                <span className="text-[10px] font-bold leading-tight text-slate-600 sm:text-[11px]">
+                  {label}
+                </span>
+              </div>
             ))}
           </div>
         </>
@@ -294,9 +308,9 @@ export function StorefrontCatalog() {
               />
             ) : null}
 
-            <section className={`${SF_INSET_X} pb-4 pt-2 sm:pt-4`}>
-              <div className="mb-4 flex items-center justify-between gap-2">
-                <h2 className="text-base font-bold text-slate-800 sm:text-lg">
+            <section className={`${SF_INSET_X} pb-6 pt-2 sm:pt-4`}>
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <h2 className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">
                   {selectedCategory
                     ? categoryDisplayName(selectedCategory, lang)
                     : search.trim()
@@ -331,7 +345,7 @@ export function StorefrontCatalog() {
               <button
                 type="button"
                 onClick={backToCategories}
-                className="mt-6 w-full rounded-2xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+                className="mt-6 w-full rounded-2xl bg-white py-3.5 text-sm font-bold text-slate-600 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50"
               >
                 {s.backToCategories}
               </button>

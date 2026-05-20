@@ -78,12 +78,12 @@ export function StorefrontProductDetail({
       aria-label={product.name}
     >
       <header
-        className="flex shrink-0 items-center gap-2 border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur-md pt-[max(0.75rem,env(safe-area-inset-top))]"
+        className="sf-glass-strong flex shrink-0 items-center gap-3 border-b border-white/60 px-4 py-3.5 pt-[max(0.75rem,env(safe-area-inset-top))]"
       >
         <button
           type="button"
           onClick={onBack}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200"
+          className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50"
           aria-label={labels.back}
         >
           <ArrowRight className="h-5 w-5 rotate-180 rtl:rotate-0" aria-hidden />
@@ -97,7 +97,7 @@ export function StorefrontProductDetail({
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className="relative aspect-square w-full max-h-[min(55vh,420px)] bg-gradient-to-b from-slate-100 to-white sm:mx-auto sm:max-w-lg sm:rounded-b-3xl">
+        <div className="relative aspect-square w-full max-h-[min(55vh,420px)] bg-gradient-to-br from-slate-50 via-white to-[#faf8f5] sm:mx-auto sm:max-w-lg">
           {img ? (
             <img
               src={img}
@@ -123,10 +123,10 @@ export function StorefrontProductDetail({
               {categoryName}
             </span>
           ) : null}
-          <h1 className="text-xl font-bold leading-snug text-slate-900 sm:text-2xl">{product.name}</h1>
+          <h1 className="text-2xl font-extrabold leading-snug tracking-tight text-slate-900">{product.name}</h1>
           <p
             className={[
-              'mt-2 text-2xl font-extrabold tracking-tight',
+              'mt-3 text-3xl font-extrabold tracking-tight',
               !available ? 'text-slate-400 line-through' : '',
             ].join(' ')}
             style={available ? { color: accent } : undefined}
@@ -187,8 +187,8 @@ export function StorefrontProductDetail({
             type="button"
             onClick={handleOrder}
             className={[
-              'sf-order-btn flex w-full items-center justify-center gap-2.5 rounded-2xl py-4 text-base font-bold text-white shadow-lg transition active:scale-[0.98] sm:mx-auto sm:max-w-lg',
-              ordered ? 'sf-order-btn-success' : '',
+              'sf-order-btn flex w-full items-center justify-center gap-2.5 rounded-3xl py-4.5 text-base font-extrabold text-white transition active:scale-[0.98] sm:mx-auto sm:max-w-lg',
+              ordered ? 'sf-order-btn-success' : 'sf-order-btn-ready',
             ].join(' ')}
             style={{
               background: ordered

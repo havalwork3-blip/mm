@@ -50,15 +50,15 @@ export function StorefrontHeroCarousel({
   if (count === 0) {
     return (
       <div
-        className={`${SF_INSET_X} mt-4 overflow-hidden rounded-2xl p-4 text-white sm:mt-5 sm:rounded-3xl sm:p-6`}
+        className={`sf-hero-frame ${SF_INSET_X} mt-4 overflow-hidden rounded-3xl p-6 text-white sm:mt-5 sm:p-8`}
         style={{
-          background: `linear-gradient(120deg, ${accent} 0%, ${accent}dd 50%, #ff9340 100%)`,
-          boxShadow: `0 10px 28px ${accentAlpha(accent, 0.28)}`,
+          background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 40%, #1a1a2e 100%)`,
+          boxShadow: `0 16px 48px ${accentAlpha(accent, 0.3)}`,
         }}
       >
-        <p className="text-base font-bold leading-snug sm:text-lg md:text-xl">{fallbackTitle}</p>
+        <p className="text-lg font-extrabold leading-snug sm:text-xl">{fallbackTitle}</p>
         {fallbackSubtitle ? (
-          <p className="mt-1 text-xs text-white/85 sm:text-sm">{fallbackSubtitle}</p>
+          <p className="mt-2 text-sm text-white/85">{fallbackSubtitle}</p>
         ) : null}
       </div>
     )
@@ -96,31 +96,31 @@ export function StorefrontHeroCarousel({
             : undefined
         }
         className={[
-          'relative aspect-[2/1] w-full max-h-[min(50vh,280px)] overflow-hidden rounded-2xl bg-slate-200 shadow-lg sm:aspect-[2.4/1] sm:max-h-[min(45vh,360px)] sm:rounded-3xl md:aspect-[2.8/1] md:max-h-[400px] lg:max-h-[420px]',
-          clickable ? 'cursor-pointer' : '',
+          'sf-hero-frame relative aspect-[2.1/1] w-full max-h-[min(48vh,300px)] overflow-hidden rounded-3xl bg-slate-200 sm:aspect-[2.5/1] sm:max-h-[min(42vh,380px)] md:max-h-[400px]',
+          clickable ? 'cursor-pointer transition active:scale-[0.99]' : '',
         ].join(' ')}
-        style={{ boxShadow: `0 10px 28px ${accentAlpha(accent, 0.2)}` }}
       >
         {img ? (
           <img src={img} alt={slide.title || ''} className="h-full w-full object-cover" />
         ) : (
           <div
-            className="flex h-full w-full items-center justify-center p-4 text-white"
-            style={{
-              background: `linear-gradient(120deg, ${accent}, ${accent}cc)`,
-            }}
+            className="flex h-full w-full items-center justify-center p-6 text-white"
+            style={{ background: `linear-gradient(135deg, ${accent}, ${accent}aa)` }}
           >
             <div className="text-center">
-              {slide.title ? <p className="text-lg font-bold">{slide.title}</p> : null}
+              {slide.title ? <p className="text-xl font-extrabold">{slide.title}</p> : null}
               {slide.subtitle ? <p className="mt-1 text-sm text-white/90">{slide.subtitle}</p> : null}
             </div>
           </div>
         )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/5" />
         {(slide.title || slide.subtitle) && img ? (
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-4 pb-3 pt-8">
-            {slide.title ? <p className="text-sm font-bold text-white">{slide.title}</p> : null}
+          <div className="absolute inset-x-0 bottom-0 px-5 pb-5 pt-12">
+            {slide.title ? (
+              <p className="text-base font-extrabold text-white drop-shadow-sm sm:text-lg">{slide.title}</p>
+            ) : null}
             {slide.subtitle ? (
-              <p className="text-xs text-white/90">{slide.subtitle}</p>
+              <p className="mt-0.5 text-xs text-white/90 sm:text-sm">{slide.subtitle}</p>
             ) : null}
           </div>
         ) : null}
@@ -131,29 +131,29 @@ export function StorefrontHeroCarousel({
           <button
             type="button"
             onClick={prev}
-            className="absolute start-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow"
+            className="absolute start-3 top-[42%] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-slate-700 shadow-lg transition hover:scale-105"
             aria-label="Previous"
           >
-            <ChevronLeft className="h-4 w-4" aria-hidden />
+            <ChevronLeft className="h-5 w-5" aria-hidden />
           </button>
           <button
             type="button"
             onClick={next}
-            className="absolute end-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow"
+            className="absolute end-3 top-[42%] flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-slate-700 shadow-lg transition hover:scale-105"
             aria-label="Next"
           >
-            <ChevronRight className="h-4 w-4" aria-hidden />
+            <ChevronRight className="h-5 w-5" aria-hidden />
           </button>
-          <div className="mt-2 flex justify-center gap-1.5">
+          <div className="mt-3 flex justify-center gap-2">
             {slides.map((b, i) => (
               <button
                 key={b.id}
                 type="button"
                 onClick={() => setIndex(i)}
-                className="h-1.5 rounded-full transition-all"
+                className="h-2 rounded-full transition-all duration-300"
                 style={{
-                  width: i === index ? 18 : 6,
-                  backgroundColor: i === index ? accent : accentAlpha(accent, 0.25),
+                  width: i === index ? 24 : 8,
+                  backgroundColor: i === index ? accent : accentAlpha(accent, 0.3),
                 }}
                 aria-label={`Slide ${i + 1}`}
               />

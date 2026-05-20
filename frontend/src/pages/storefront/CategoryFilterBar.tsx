@@ -36,28 +36,34 @@ export function CategoryFilterBar({
   const { lang } = useLocale()
 
   return (
-    <div
-      className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 -mx-[max(1rem,env(safe-area-inset-left))] border-b border-slate-200/80 bg-white/95 px-[max(1rem,env(safe-area-inset-left))] pe-[max(1rem,env(safe-area-inset-right))] py-3 shadow-sm backdrop-blur-md sm:top-[calc(4rem+env(safe-area-inset-top))]"
-    >
-      <div className="mb-2 flex items-center gap-2">
-        <SlidersHorizontal className="h-4 w-4 shrink-0" style={{ color: accent }} aria-hidden />
-        <span className="text-xs font-bold uppercase tracking-wide text-slate-600">
+    <div className="sf-glass sticky top-[calc(3.75rem+env(safe-area-inset-top))] z-20 -mx-[max(1rem,env(safe-area-inset-left))] border-b border-white/50 px-[max(1rem,env(safe-area-inset-left))] pe-[max(1rem,env(safe-area-inset-right))] py-3.5 shadow-sm sm:top-[calc(4.25rem+env(safe-area-inset-top))]">
+      <div className="mb-2.5 flex items-center gap-2 px-1">
+        <span
+          className="flex h-7 w-7 items-center justify-center rounded-lg"
+          style={{ backgroundColor: accentAlpha(accent, 0.12) }}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" style={{ color: accent }} aria-hidden />
+        </span>
+        <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
           {labels.filter}
         </span>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-0.5 sf-scrollbar-none">
+      <div className="flex gap-2 overflow-x-auto px-1 pb-0.5 sf-scrollbar-none">
         <button
           type="button"
           onClick={() => onSelect(null)}
           className={[
-            'shrink-0 rounded-full px-4 py-2 text-xs font-bold transition sm:text-sm',
+            'shrink-0 rounded-full px-5 py-2.5 text-xs font-extrabold transition sm:text-sm',
             selectedId == null
-              ? 'text-white shadow-md'
-              : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
+              ? 'text-white shadow-lg'
+              : 'bg-white text-slate-600 shadow-sm ring-1 ring-slate-200/80 hover:shadow-md',
           ].join(' ')}
           style={
             selectedId == null
-              ? { backgroundColor: accent, boxShadow: `0 4px 12px ${accentAlpha(accent, 0.35)}` }
+              ? {
+                  background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
+                  boxShadow: `0 6px 16px ${accentAlpha(accent, 0.35)}`,
+                }
               : undefined
           }
         >
@@ -75,17 +81,22 @@ export function CategoryFilterBar({
               type="button"
               onClick={() => onSelect(cat.id)}
               className={[
-                'flex shrink-0 items-center gap-2 rounded-full py-1.5 ps-1 pe-3 transition sm:pe-4',
-                active ? 'text-white shadow-md' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:shadow-sm',
+                'flex shrink-0 items-center gap-2 rounded-full py-2 ps-2 pe-4 transition sm:pe-5',
+                active
+                  ? 'text-white shadow-lg'
+                  : 'bg-white text-slate-700 shadow-sm ring-1 ring-slate-200/80 hover:shadow-md',
               ].join(' ')}
               style={
                 active
-                  ? { backgroundColor: accent, boxShadow: `0 4px 12px ${accentAlpha(accent, 0.35)}` }
+                  ? {
+                      background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
+                      boxShadow: `0 6px 16px ${accentAlpha(accent, 0.35)}`,
+                    }
                   : undefined
               }
             >
               <span
-                className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-white sm:h-9 sm:w-9"
+                className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-white ring-2 ring-white/30"
                 style={{ background: img ? undefined : GRADIENTS[index % GRADIENTS.length] }}
               >
                 {img ? (
@@ -95,10 +106,10 @@ export function CategoryFilterBar({
                 )}
               </span>
               <span className="flex flex-col items-start leading-tight">
-                <span className="max-w-[6rem] truncate text-xs font-bold sm:max-w-[8rem] sm:text-sm">
+                <span className="max-w-[7rem] truncate text-xs font-bold sm:max-w-[9rem] sm:text-sm">
                   {label}
                 </span>
-                <span className={`text-[10px] ${active ? 'text-white/85' : 'text-slate-400'}`}>
+                <span className={`text-[10px] font-medium ${active ? 'text-white/80' : 'text-slate-400'}`}>
                   {labels.productCount.replace('{n}', String(cat.products.length))}
                 </span>
               </span>

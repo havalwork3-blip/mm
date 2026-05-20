@@ -1,4 +1,4 @@
-import { Globe, Home, LayoutGrid, ShoppingBag } from 'lucide-react'
+import { Globe, Home, LayoutGrid, ShoppingBag, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 
@@ -10,13 +10,13 @@ import { cartItemCount, useCartStore } from '../../store/cartStore'
 import { CartDrawer } from './CartDrawer'
 import { CheckoutModal } from './CheckoutModal'
 import { storefrontStrings } from './storefrontStrings'
-import { resolveAccent, SF_MAIN, SF_SHELL } from './storefrontTheme'
+import { accentAlpha, resolveAccent, SF_MAIN, SF_SHELL, storefrontCssVars } from './storefrontTheme'
 
 export function StorefrontLayout() {
   const { lang, setLang } = useLocale()
   const s = storefrontStrings(lang)
   const { shopName, appearance, loading: shopLoading, error: shopError } = useStorefrontShop()
-  const { backToCategories, showAllProducts } = useStorefrontCatalog()
+  const { view, backToCategories, showAllProducts } = useStorefrontCatalog()
   const accent = resolveAccent(appearance.accent_color)
   const lines = useCartStore((st) => st.lines)
   const count = cartItemCount(lines)
@@ -26,10 +26,11 @@ export function StorefrontLayout() {
   const [langOpen, setLangOpen] = useState(false)
   const [cartPulse, setCartPulse] = useState(false)
 
+  const onHome = view === 'categories'
+  const onShop = view === 'products' || view === 'product'
+
   useEffect(() => {
-    if (isStorefrontMode()) {
-      setLang('ku')
-    }
+    if (isStorefrontMode()) setLang('ku')
   }, [setLang])
 
   useEffect(() => {
@@ -49,38 +50,33 @@ export function StorefrontLayout() {
     return () => window.clearTimeout(t)
   }, [cartPulse])
 
-  function scrollTop() {
-    backToCategories()
-  }
-
-  function scrollToProducts() {
-    showAllProducts()
-  }
-
   return (
-    <div
-      className="sf-root relative w-full overflow-x-hidden text-slate-900"
-      style={{ '--sf-accent': accent } as React.CSSProperties}
-    >
+    <div className="sf-root relative w-full overflow-x-hidden text-slate-900" style={storefrontCssVars(accent)}>
       {!shopLoading && !shopError ? (
-        <header className="sticky top-0 z-30 w-full border-b border-slate-200/70 bg-white/90 backdrop-blur-lg pt-[env(safe-area-inset-top)]">
-          <div className={`${SF_SHELL} flex items-center gap-2 py-2.5 sm:gap-3 sm:py-3`}>
+        <header className="sf-glass-strong sticky top-0 z-30 w-full border-b border-white/60 shadow-sm pt-[env(safe-area-inset-top)]">
+          <div className={`${SF_SHELL} flex items-center gap-2.5 py-3 sm:gap-3`}>
             <button
               type="button"
-              onClick={scrollTop}
-              className="flex min-w-0 flex-1 items-center gap-2.5 text-start sm:gap-3"
+              onClick={backToCategories}
+              className="flex min-w-0 flex-1 items-center gap-3 text-start transition active:scale-[0.98]"
             >
               <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-sm sm:h-12 sm:w-12 sm:text-base"
-                style={{ backgroundColor: accent }}
+                className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-base font-bold text-white shadow-md sm:h-12 sm:w-12"
+                style={{
+                  background: `linear-gradient(135deg, ${accent}, ${accent}cc)`,
+                  boxShadow: `0 6px 20px ${accentAlpha(accent, 0.35)}`,
+                }}
               >
                 {shopName.charAt(0) || 'M'}
+                <span className="absolute -bottom-0.5 -end-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow">
+                  <Sparkles className="h-2.5 w-2.5" style={{ color: accent }} aria-hidden />
+                </span>
               </span>
               <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-slate-900 sm:text-base md:text-lg">
+                <p className="truncate text-[15px] font-extrabold tracking-tight text-slate-900 sm:text-base">
                   {shopName}
                 </p>
-                <p className="truncate text-[11px] text-slate-500 sm:text-xs md:text-sm">
+                <p className="truncate text-[11px] font-medium text-slate-500 sm:text-xs">
                   {appearance.catalog_subtitle || s.shopTagline}
                 </p>
               </div>
@@ -90,21 +86,15 @@ export function StorefrontLayout() {
               <button
                 type="button"
                 onClick={() => setLangOpen((v) => !v)}
-                className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 ring-1 ring-slate-200/80 transition hover:bg-slate-50 sm:h-10 sm:w-10"
-                aria-label="Language"
+                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50"
                 aria-expanded={langOpen}
               >
-                <Globe className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
+                <Globe className="h-[18px] w-[18px]" aria-hidden />
               </button>
               {langOpen ? (
                 <>
-                  <button
-                    type="button"
-                    className="fixed inset-0 z-40"
-                    aria-label={s.close}
-                    onClick={() => setLangOpen(false)}
-                  />
-                  <div className="absolute end-0 top-full z-50 mt-1 min-w-[7.5rem] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                  <button type="button" className="fixed inset-0 z-40" aria-label={s.close} onClick={() => setLangOpen(false)} />
+                  <div className="absolute end-0 top-full z-50 mt-2 min-w-[8rem] overflow-hidden rounded-2xl border border-slate-100 bg-white py-1.5 shadow-xl">
                     {(['ku', 'ar', 'en'] as const).map((code) => (
                       <button
                         key={code}
@@ -114,7 +104,7 @@ export function StorefrontLayout() {
                           setLangOpen(false)
                         }}
                         className={[
-                          'block w-full px-3 py-2 text-start text-xs font-medium transition sm:text-sm',
+                          'mx-1.5 block w-[calc(100%-12px)] rounded-xl px-3 py-2 text-start text-xs font-semibold',
                           lang === code ? 'text-white' : 'text-slate-600 hover:bg-slate-50',
                         ].join(' ')}
                         style={lang === code ? { backgroundColor: accent } : undefined}
@@ -132,98 +122,95 @@ export function StorefrontLayout() {
               type="button"
               onClick={() => setCartOpen(true)}
               className={[
-                'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition active:scale-95 sm:h-10 sm:w-10 md:hidden',
+                'relative flex h-10 items-center gap-2 rounded-2xl px-3.5 text-sm font-bold text-white shadow-md transition active:scale-95 sm:px-4',
                 cartPulse ? 'sf-cart-pulse' : '',
               ].join(' ')}
-              style={{ backgroundColor: accent }}
-              aria-label={s.cart}
+              style={{
+                background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
+                boxShadow: `0 6px 20px ${accentAlpha(accent, 0.4)}`,
+              }}
             >
-              <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.25} aria-hidden />
+              <ShoppingBag className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
+              <span className="hidden sm:inline">{s.cart}</span>
               {count > 0 ? (
-                <span className="absolute -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-900 px-0.5 text-[9px] font-bold text-white end-0 sm:text-[10px]">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/25 px-1 text-[10px] font-extrabold">
                   {count > 99 ? '99+' : count}
                 </span>
-              ) : null}
-            </button>
-
-            <button
-              id="sf-cart-anchor-desktop"
-              type="button"
-              onClick={() => setCartOpen(true)}
-              className={[
-                'relative hidden h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 md:inline-flex',
-                cartPulse ? 'sf-cart-pulse' : '',
-              ].join(' ')}
-              style={{ backgroundColor: accent }}
-            >
-              <ShoppingBag className="h-4 w-4" aria-hidden />
-              {s.cart}
-              {count > 0 ? (
-                <span className="rounded-full bg-white/25 px-2 py-0.5 text-xs">{count}</span>
               ) : null}
             </button>
           </div>
         </header>
       ) : null}
 
-      <main
-        className={`relative z-10 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-[calc(3.5rem+env(safe-area-inset-bottom))] ${SF_MAIN}`}
-      >
+      <main className={`relative z-10 pb-[calc(5.5rem+env(safe-area-inset-bottom))] ${SF_MAIN}`}>
         {shopError ? (
-          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mx-4 mt-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
             {shopError}
           </div>
         ) : shopLoading ? (
-          <p className="py-20 text-center text-sm text-slate-500">{s.loading}</p>
+          <div className="flex flex-col items-center gap-3 py-24">
+            <div
+              className="h-10 w-10 animate-spin rounded-full border-[3px] border-slate-200"
+              style={{ borderTopColor: accent }}
+            />
+            <p className="text-sm font-medium text-slate-500">{s.loading}</p>
+          </div>
         ) : (
           <Outlet />
         )}
       </main>
 
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 w-full border-t border-slate-200/90 bg-white/95 backdrop-blur-md md:pb-[env(safe-area-inset-bottom)]"
-        aria-label="Navigation"
-      >
-        <div
-          className={`${SF_SHELL} flex items-center justify-around py-1.5 pb-[max(0.35rem,env(safe-area-inset-bottom))] sm:py-2 md:max-w-none`}
+      {!shopLoading && !shopError ? (
+        <nav
+          className="sf-nav-pill fixed inset-x-4 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-40 mx-auto max-w-md sm:inset-x-auto sm:start-1/2 sm:-translate-x-1/2 sm:rtl:translate-x-1/2"
+          aria-label="Navigation"
         >
-          <button
-            type="button"
-            onClick={scrollTop}
-            className="flex min-w-[4.5rem] flex-col items-center gap-0.5 px-3 py-1 text-[10px] font-semibold sm:min-w-[5.5rem] sm:text-xs"
-            style={{ color: accent }}
-          >
-            <Home className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.25} aria-hidden />
-            {s.home}
-          </button>
-          <button
-            type="button"
-            onClick={scrollToProducts}
-            className="flex min-w-[4.5rem] flex-col items-center gap-0.5 px-3 py-1 text-[10px] font-medium text-slate-500 sm:min-w-[5.5rem] sm:text-xs"
-          >
-            <LayoutGrid className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} aria-hidden />
-            {s.scrollToProducts}
-          </button>
-          <button
-            type="button"
-            onClick={() => setCartOpen(true)}
-            className="relative flex min-w-[4.5rem] flex-col items-center gap-0.5 px-3 py-1 text-[10px] font-medium text-slate-500 md:hidden sm:min-w-[5.5rem] sm:text-xs"
-          >
-            <span className="relative">
-              <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2} aria-hidden />
-              {count > 0 ? (
-                <span
-                  className="absolute -end-1.5 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[8px] font-bold text-white sm:h-4 sm:min-w-4 sm:text-[9px]"
-                  style={{ backgroundColor: accent }}
-                >
-                  {count > 9 ? '9+' : count}
-                </span>
-              ) : null}
-            </span>
-            {s.cart}
-          </button>
-        </div>
-      </nav>
+          <div className="sf-glass-strong flex items-center justify-around rounded-2xl border border-white/80 px-1 py-1.5 shadow-lg">
+            <button
+              type="button"
+              onClick={backToCategories}
+              className={[
+                'flex min-w-[4.2rem] flex-col items-center gap-0.5 rounded-xl px-3 py-2 text-[10px] font-bold transition sm:min-w-[5rem] sm:text-[11px]',
+                onHome ? 'sf-nav-item-active text-white' : 'text-slate-500',
+              ].join(' ')}
+              style={onHome ? { backgroundColor: accent } : undefined}
+            >
+              <Home className="h-5 w-5" strokeWidth={onHome ? 2.5 : 2} aria-hidden />
+              {s.home}
+            </button>
+            <button
+              type="button"
+              onClick={showAllProducts}
+              className={[
+                'flex min-w-[4.2rem] flex-col items-center gap-0.5 rounded-xl px-3 py-2 text-[10px] font-bold transition sm:min-w-[5rem] sm:text-[11px]',
+                onShop ? 'sf-nav-item-active text-white' : 'text-slate-500',
+              ].join(' ')}
+              style={onShop ? { backgroundColor: accent } : undefined}
+            >
+              <LayoutGrid className="h-5 w-5" strokeWidth={onShop ? 2.5 : 2} aria-hidden />
+              {s.scrollToProducts}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCartOpen(true)}
+              className="relative flex min-w-[4.2rem] flex-col items-center gap-0.5 rounded-xl px-3 py-2 text-[10px] font-bold text-slate-500 sm:min-w-[5rem] sm:text-[11px]"
+            >
+              <span className="relative">
+                <ShoppingBag className="h-5 w-5" strokeWidth={2} aria-hidden />
+                {count > 0 ? (
+                  <span
+                    className="absolute -end-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[8px] font-extrabold text-white"
+                    style={{ backgroundColor: accent }}
+                  >
+                    {count > 9 ? '9+' : count}
+                  </span>
+                ) : null}
+              </span>
+              {s.cart}
+            </button>
+          </div>
+        </nav>
+      ) : null}
 
       <CartDrawer
         open={cartOpen}

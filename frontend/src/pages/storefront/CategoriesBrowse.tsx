@@ -39,26 +39,26 @@ export function CategoriesBrowse({
   const { lang } = useLocale()
 
   return (
-    <section className={`${SF_INSET_X} sf-view-panel mt-4 sm:mt-6`}>
+    <section className={`${SF_INSET_X} sf-view-panel mt-2 sm:mt-4`}>
       <div
-        className="mb-5 overflow-hidden rounded-3xl p-5 text-white shadow-lg sm:p-6"
+        className="mb-6 overflow-hidden rounded-3xl p-5 text-white sm:p-7"
         style={{
-          background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 45%, #1e293b 100%)`,
-          boxShadow: `0 12px 40px ${accentAlpha(accent, 0.35)}`,
+          background: `linear-gradient(135deg, ${accent} 0%, ${accent}bb 50%, #1e293b 100%)`,
+          boxShadow: `0 16px 48px ${accentAlpha(accent, 0.28)}`,
         }}
       >
-        <div className="flex items-start gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+        <div className="flex items-start gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md">
             <Sparkles className="h-6 w-6" aria-hidden />
           </span>
           <div>
-            <h2 className="text-xl font-extrabold sm:text-2xl">{labels.shopCategories}</h2>
-            <p className="mt-1 text-sm text-white/90">{labels.pickCategoryHint}</p>
+            <h2 className="text-xl font-extrabold tracking-tight sm:text-2xl">{labels.shopCategories}</h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-white/90">{labels.pickCategoryHint}</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 min-[420px]:grid-cols-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3.5 min-[420px]:grid-cols-3 sm:gap-4 md:gap-5">
         {categories.map((cat, index) => {
           const img = resolveMediaUrl(
             cat.image_url ?? cat.products.find((p) => p.image_url)?.image_url ?? null,
@@ -73,15 +73,15 @@ export function CategoriesBrowse({
               type="button"
               onClick={() => onSelectCategory(cat.id)}
               className={[
-                'sf-cat-card group relative overflow-hidden rounded-3xl text-start shadow-md ring-1 ring-black/5 transition duration-300',
-                'hover:-translate-y-1 hover:shadow-2xl active:scale-[0.98]',
-                featured ? 'col-span-2 row-span-1 min-[420px]:col-span-2' : '',
+                'sf-cat-card sf-card-shine group relative overflow-hidden rounded-3xl text-start shadow-lg ring-1 ring-white/20 transition duration-300',
+                'hover:-translate-y-1.5 hover:shadow-2xl active:scale-[0.98]',
+                featured ? 'col-span-2 min-[420px]:col-span-2' : '',
               ].join(' ')}
             >
               <div
                 className={[
                   'relative w-full overflow-hidden',
-                  featured ? 'aspect-[2.1/1] min-h-[120px]' : 'aspect-[4/5] sm:aspect-[5/4]',
+                  featured ? 'aspect-[2.2/1] min-h-[130px]' : 'aspect-[4/5] sm:aspect-[5/4]',
                 ].join(' ')}
               >
                 {img ? (
@@ -99,17 +99,23 @@ export function CategoriesBrowse({
                     {label.charAt(0)}
                   </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-4">
-                  <p className={featured ? 'text-xl font-extrabold text-white' : 'text-base font-bold text-white sm:text-lg'}>
+                  <p
+                    className={
+                      featured
+                        ? 'text-xl font-extrabold text-white sm:text-2xl'
+                        : 'text-[15px] font-bold text-white sm:text-base'
+                    }
+                  >
                     {label}
                   </p>
-                  <p className="mt-0.5 text-xs font-medium text-white/85">
+                  <p className="mt-1 text-[11px] font-medium text-white/80">
                     {labels.productCount.replace('{n}', String(count))}
                   </p>
                 </div>
                 <span
-                  className="absolute end-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-md transition group-hover:bg-white/35"
+                  className="absolute end-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/25 text-white backdrop-blur-md transition group-hover:bg-white/40"
                   aria-hidden
                 >
                   <ChevronLeft className="h-4 w-4 rotate-180 rtl:rotate-0" />
@@ -123,14 +129,14 @@ export function CategoriesBrowse({
       <button
         type="button"
         onClick={onViewAllProducts}
-        className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold text-white shadow-lg transition hover:brightness-105 active:scale-[0.99] sm:text-base"
+        className="mt-7 flex w-full items-center justify-center gap-2.5 rounded-3xl py-4 text-[15px] font-extrabold text-white shadow-xl transition hover:brightness-105 active:scale-[0.99]"
         style={{
           background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
-          boxShadow: `0 8px 28px ${accentAlpha(accent, 0.4)}`,
+          boxShadow: `0 12px 36px ${accentAlpha(accent, 0.38)}`,
         }}
       >
         {labels.viewAllProducts}
-        <ArrowLeft className="h-4 w-4 rotate-180 rtl:rotate-0" aria-hidden />
+        <ArrowLeft className="h-5 w-5 rotate-180 rtl:rotate-0" aria-hidden />
       </button>
     </section>
   )
