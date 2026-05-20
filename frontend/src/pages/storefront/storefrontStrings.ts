@@ -13,6 +13,14 @@ const STRINGS = {
     catalogTitle: 'بەرهەمەکان',
     catalogSubtitle: 'هەڵبژاردە بکە و داواکاری بنێرە',
     promoDefault: 'گەیاندنی خێرا · داواکاری ئاسان',
+    allCategories: 'هەموو',
+    allProducts: 'هەموو بەرهەمەکان',
+    popular: 'بەناوبانگ',
+    deliveryFast: 'گەیاندنی خێرا',
+    orderEasy: 'داواکاری ئاسان',
+    support: 'پەیوەندی ئاسان',
+    contactUs: 'پەیوەندی',
+    scrollToProducts: 'بەرهەمەکان',
     categoriesCount: '{n} پۆل',
     productCount: '{n} بەرهەم',
     addToCart: 'زیادکردن بۆ سەبەتە',
@@ -55,6 +63,14 @@ const STRINGS = {
     catalogTitle: 'المنتجات',
     catalogSubtitle: 'اختر وأرسل طلبك',
     promoDefault: 'توصيل سريع · طلب سهل',
+    allCategories: 'الكل',
+    allProducts: 'كل المنتجات',
+    popular: 'شائع',
+    deliveryFast: 'توصيل سريع',
+    orderEasy: 'طلب سهل',
+    support: 'دعم سريع',
+    contactUs: 'تواصل',
+    scrollToProducts: 'المنتجات',
     categoriesCount: '{n} أقسام',
     productCount: '{n} منتج',
     addToCart: 'أضف إلى السلة',
@@ -97,6 +113,14 @@ const STRINGS = {
     catalogTitle: 'Products',
     catalogSubtitle: 'Browse and place your order',
     promoDefault: 'Fast delivery · Easy ordering',
+    allCategories: 'All',
+    allProducts: 'All products',
+    popular: 'Popular',
+    deliveryFast: 'Fast delivery',
+    orderEasy: 'Easy order',
+    support: 'Quick support',
+    contactUs: 'Contact',
+    scrollToProducts: 'Products',
     categoriesCount: '{n} categories',
     productCount: '{n} products',
     addToCart: 'Add to cart',
@@ -138,6 +162,14 @@ export type StorefrontStrings = {
   shopNow: string
   home: string
   promoDefault: string
+  allCategories: string
+  allProducts: string
+  popular: string
+  deliveryFast: string
+  orderEasy: string
+  support: string
+  contactUs: string
+  scrollToProducts: string
   shopTagline: string
   catalogTitle: string
   catalogSubtitle: string

@@ -1,13 +1,12 @@
 import {
-  ChevronLeft,
-  ChevronRight,
   Loader2,
   PackageOpen,
   Plus,
   RefreshCw,
   Search,
-  ShoppingCart,
-  Sparkles,
+  ShieldCheck,
+  Truck,
+  Zap,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -24,13 +23,17 @@ import { formatUsd, storefrontStrings } from './storefrontStrings'
 import { accentAlpha, resolveAccent } from './storefrontTheme'
 
 const CATEGORY_GRADIENTS = [
-  'linear-gradient(145deg, #ff6b35 0%, #ff8f5a 100%)',
-  'linear-gradient(145deg, #22c55e 0%, #4ade80 100%)',
+  'linear-gradient(145deg, #ff5a00 0%, #ff8c42 100%)',
+  'linear-gradient(145deg, #10b981 0%, #34d399 100%)',
   'linear-gradient(145deg, #3b82f6 0%, #60a5fa 100%)',
-  'linear-gradient(145deg, #a855f7 0%, #c084fc 100%)',
+  'linear-gradient(145deg, #8b5cf6 0%, #a78bfa 100%)',
   'linear-gradient(145deg, #ec4899 0%, #f472b6 100%)',
-  'linear-gradient(145deg, #14b8a6 0%, #2dd4bf 100%)',
 ]
+
+function formatPrice(price: number, usdLabel: string): string {
+  if (!Number.isFinite(price) || price <= 0) return '—'
+  return `$${formatUsd(price)} ${usdLabel}`
+}
 
 function ProductCard({
   product,
@@ -38,132 +41,74 @@ function ProductCard({
   inCart,
   onAdd,
   labels,
+  popular,
 }: {
   product: PublicStorefrontProduct
   accent: string
   inCart: number
   onAdd: () => void
-  labels: { addToCart: string; inCart: string; usd: string }
+  labels: { addToCart: string; inCart: string; usd: string; popular: string }
+  popular?: boolean
 }) {
   const img = resolveMediaUrl(product.image_url)
   const price = Number.parseFloat(product.sell_price)
 
   return (
-    <li className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] ring-1 ring-slate-100/80 transition hover:shadow-[0_8px_28px_rgba(0,0,0,0.08)]">
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
+    <li className="group relative flex flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200/60 transition hover:shadow-lg hover:ring-slate-300/80">
+      <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
         {img ? (
           <img
             src={img}
             alt={product.name}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-slate-300">
-            <PackageOpen className="h-10 w-10" strokeWidth={1.25} aria-hidden />
+          <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-slate-300">
+            <PackageOpen className="h-8 w-8" strokeWidth={1.25} aria-hidden />
           </div>
         )}
-        {inCart > 0 ? (
+        {popular ? (
           <span
-            className="absolute start-2 top-2 rounded-full px-2.5 py-0.5 text-xs font-bold text-white shadow-md"
+            className="absolute start-2 top-2 rounded-md px-1.5 py-0.5 text-[9px] font-bold text-white shadow"
             style={{ backgroundColor: accent }}
           >
-            ×{inCart}
+            {labels.popular}
           </span>
         ) : null}
-      </div>
-
-      <div className="flex flex-1 flex-col gap-2 p-3">
-        <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug text-slate-800">
-          {product.name}
-        </h3>
-        <p className="text-base font-bold" style={{ color: accent }}>
-          ${formatUsd(Number.isFinite(price) ? price : 0)}{' '}
-          <span className="text-xs font-normal text-slate-400">{labels.usd}</span>
-        </p>
         <button
           type="button"
           onClick={onAdd}
-          className={[
-            'mt-auto flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold transition active:scale-[0.98]',
-            inCart > 0 ? 'border-2 bg-white' : 'text-white shadow-md',
-          ].join(' ')}
-          style={
-            inCart > 0
-              ? { borderColor: accent, color: accent }
-              : { backgroundColor: accent, boxShadow: `0 6px 20px ${accentAlpha(accent, 0.35)}` }
-          }
+          className="absolute end-2 bottom-2 flex h-9 w-9 items-center justify-center rounded-full text-white shadow-lg transition active:scale-90"
+          style={{
+            backgroundColor: inCart > 0 ? 'white' : accent,
+            color: inCart > 0 ? accent : 'white',
+            border: inCart > 0 ? `2px solid ${accent}` : undefined,
+          }}
+          aria-label={inCart > 0 ? labels.inCart : labels.addToCart}
         >
           {inCart > 0 ? (
-            <>
-              <ShoppingCart className="h-4 w-4" aria-hidden />
-              {labels.inCart}
-            </>
+            <span className="text-xs font-bold">{inCart}</span>
           ) : (
-            <>
-              <Plus className="h-4 w-4" aria-hidden />
-              {labels.addToCart}
-            </>
+            <Plus className="h-5 w-5" strokeWidth={2.5} aria-hidden />
           )}
         </button>
+      </div>
+
+      <div className="flex flex-1 flex-col gap-1 p-2.5">
+        <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-slate-800">
+          {product.name}
+        </h3>
+        <p className="text-sm font-bold" style={{ color: accent }}>
+          {formatPrice(price, labels.usd)}
+        </p>
       </div>
     </li>
   )
 }
 
-function CategoryChip({
-  category,
-  index,
-  selected,
-  accent,
-  onSelect,
-}: {
-  category: PublicStorefrontCategory
-  index: number
-  selected: boolean
-  accent: string
-  onSelect: () => void
-}) {
-  const firstImg = category.products.find((p) => p.image_url)
-  const img = resolveMediaUrl(firstImg?.image_url ?? null)
-  const gradient = CATEGORY_GRADIENTS[index % CATEGORY_GRADIENTS.length]
-
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={[
-        'flex w-[88px] shrink-0 flex-col items-center gap-2 rounded-2xl p-2 transition',
-        selected ? 'ring-2 ring-offset-2' : 'opacity-90 hover:opacity-100',
-      ].join(' ')}
-      style={selected ? ({ ['--tw-ring-color' as string]: accent } as React.CSSProperties) : undefined}
-    >
-      <div
-        className="relative h-[72px] w-[72px] overflow-hidden rounded-2xl shadow-md"
-        style={{ background: img ? undefined : gradient }}
-      >
-        {img ? (
-          <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center text-2xl font-bold text-white/90">
-            {category.name.charAt(0)}
-          </span>
-        )}
-      </div>
-      <span
-        className={[
-          'line-clamp-2 w-full text-center text-[11px] font-semibold leading-tight',
-          selected ? 'text-slate-900' : 'text-slate-600',
-        ].join(' ')}
-      >
-        {category.name}
-      </span>
-    </button>
-  )
-}
-
 export function StorefrontCatalog() {
-  const { lang, isRtl } = useLocale()
+  const { lang } = useLocale()
   const s = storefrontStrings(lang)
   const { shopId, shopName, appearance } = useStorefrontShop()
   const addItem = useCartStore((st) => st.addItem)
@@ -174,7 +119,7 @@ export function StorefrontCatalog() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
-  const categoryScrollRef = useRef<HTMLDivElement>(null)
+  const categoriesRef = useRef<HTMLDivElement>(null)
 
   const accent = resolveAccent(appearance.accent_color)
   const promoText = appearance.welcome_message || appearance.catalog_subtitle || s.promoDefault
@@ -217,40 +162,36 @@ export function StorefrontCatalog() {
       .filter((cat) => cat.products.length > 0)
   }, [categories, search, selectedCategoryId])
 
-  const featuredProducts = useMemo(() => {
-    const all = categories.flatMap((c) => c.products)
-    return all.slice(0, 8)
+  const flatProducts = useMemo(
+    () => filteredCategories.flatMap((c) => c.products.map((p) => ({ product: p, categoryId: c.id }))),
+    [filteredCategories],
+  )
+
+  const popularIds = useMemo(() => {
+    const ids = new Set<number>()
+    for (const cat of categories) {
+      for (const p of cat.products.slice(0, 1)) {
+        ids.add(p.id)
+      }
+    }
+    return ids
   }, [categories])
 
   const totalProducts = categories.reduce((n, c) => n + c.products.length, 0)
 
-  function scrollCategories(dir: 'prev' | 'next') {
-    const el = categoryScrollRef.current
-    if (!el) return
-    const delta = dir === 'prev' ? -200 : 200
-    el.scrollBy({ left: isRtl ? -delta : delta, behavior: 'smooth' })
+  const cardLabels = {
+    addToCart: s.addToCart,
+    inCart: s.inCart,
+    usd: s.usd,
+    popular: s.popular,
   }
 
   return (
-    <div className="px-4 pt-4">
-      {/* Header — greeting + search */}
-      <header className="mb-4">
-        <div className="mb-3 flex items-center gap-3">
-          <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white shadow-md"
-            style={{ backgroundColor: accent }}
-          >
-            {shopName.charAt(0) || 'M'}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-slate-500">{s.hello}</p>
-            <p className="truncate text-base font-bold text-slate-900">{shopName}</p>
-          </div>
-        </div>
-
+    <div className="pb-4">
+      <div className="px-4 pt-3">
         <div className="relative">
           <Search
-            className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
             aria-hidden
           />
           <input
@@ -258,200 +199,146 @@ export function StorefrontCatalog() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={s.searchPlaceholder}
-            className="w-full rounded-2xl border-0 bg-white py-3.5 pe-4 ps-10 text-sm text-slate-800 shadow-[0_2px_12px_rgba(0,0,0,0.06)] outline-none ring-1 ring-slate-100 placeholder:text-slate-400 focus:ring-2"
-            style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.4) }}
+            className="w-full rounded-2xl border-0 bg-white py-3 pe-4 ps-10 text-sm text-slate-800 shadow-sm outline-none ring-1 ring-slate-200/80 placeholder:text-slate-400 focus:ring-2"
+            style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.45) }}
           />
         </div>
-      </header>
+      </div>
 
-      {/* Promo banner */}
       {!loading && totalProducts > 0 ? (
-        <div
-          className="mb-5 flex items-center gap-4 overflow-hidden rounded-3xl p-4 text-white shadow-lg"
-          style={{
-            background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 55%, #ff8f4a 100%)`,
-            boxShadow: `0 12px 32px ${accentAlpha(accent, 0.35)}`,
-          }}
-        >
-          <div className="min-w-0 flex-1">
-            <p className="text-lg font-bold leading-tight">{shopName}</p>
-            <p className="mt-1 text-sm text-white/90">{promoText}</p>
-            <span className="mt-3 inline-flex rounded-full bg-white px-4 py-1.5 text-xs font-bold shadow-sm" style={{ color: accent }}>
-              {s.shopNow}
-            </span>
+        <>
+          <div
+            className="mx-4 mt-4 overflow-hidden rounded-2xl p-4 text-white"
+            style={{
+              background: `linear-gradient(120deg, ${accent} 0%, ${accent}dd 50%, #ff9340 100%)`,
+              boxShadow: `0 10px 28px ${accentAlpha(accent, 0.28)}`,
+            }}
+          >
+            <p className="text-base font-bold leading-snug">{promoText}</p>
+            <p className="mt-1 text-xs text-white/85">{shopName}</p>
           </div>
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
-            <Sparkles className="h-10 w-10 text-white/90" strokeWidth={1.5} aria-hidden />
+
+          <div className="mx-4 mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {[
+              { icon: Truck, label: s.deliveryFast },
+              { icon: Zap, label: s.orderEasy },
+              { icon: ShieldCheck, label: s.support },
+            ].map(({ icon: Icon, label }) => (
+              <span
+                key={label}
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 shadow-sm ring-1 ring-slate-200/70"
+              >
+                <Icon className="h-3.5 w-3.5" style={{ color: accent }} aria-hidden />
+                {label}
+              </span>
+            ))}
           </div>
-        </div>
+        </>
       ) : null}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-24 text-slate-500">
-          <Loader2 className="h-10 w-10 animate-spin" style={{ color: accent }} aria-hidden />
+        <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-500">
+          <Loader2 className="h-9 w-9 animate-spin" style={{ color: accent }} aria-hidden />
           <p className="text-sm">{s.loading}</p>
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-red-100 bg-red-50 px-6 py-12 text-center">
+        <div className="mx-4 mt-6 flex flex-col items-center gap-3 rounded-2xl border border-red-100 bg-red-50 px-6 py-10 text-center">
           <p className="text-sm text-red-600">{error}</p>
           <button
             type="button"
             onClick={() => void load()}
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-xl px-4 py-2 text-sm font-semibold text-white"
             style={{ backgroundColor: accent }}
           >
-            <RefreshCw className="h-4 w-4" aria-hidden />
+            <RefreshCw className="me-1.5 inline h-4 w-4" aria-hidden />
             {s.retry}
           </button>
         </div>
       ) : totalProducts === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-24 text-slate-400">
-          <PackageOpen className="h-12 w-12" strokeWidth={1.25} aria-hidden />
+        <div className="flex flex-col items-center gap-2 py-20 text-slate-400">
+          <PackageOpen className="h-11 w-11" strokeWidth={1.25} aria-hidden />
           <p className="text-sm">{s.noProducts}</p>
         </div>
       ) : (
         <>
-          {/* Categories horizontal scroll */}
-          {categories.length > 0 && !search.trim() ? (
-            <section className="mb-6">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-base font-bold text-slate-900">{s.categories}</h2>
+          {categories.length > 1 && !search.trim() ? (
+            <section className="mt-5 px-4" ref={categoriesRef}>
+              <h2 className="mb-2.5 text-sm font-bold text-slate-800">{s.categories}</h2>
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
                 <button
                   type="button"
                   onClick={() => setSelectedCategoryId(null)}
-                  className="text-xs font-semibold"
-                  style={{ color: accent }}
+                  className={[
+                    'shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition',
+                    selectedCategoryId == null
+                      ? 'text-white shadow-sm'
+                      : 'bg-white text-slate-600 ring-1 ring-slate-200',
+                  ].join(' ')}
+                  style={selectedCategoryId == null ? { backgroundColor: accent } : undefined}
                 >
-                  {s.viewAll}
+                  {s.allCategories}
                 </button>
-              </div>
-              <div className="relative">
-                {categories.length > 3 ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => scrollCategories('prev')}
-                      className="absolute start-0 top-8 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md text-slate-600"
-                      aria-label="Previous"
-                    >
-                      <ChevronLeft className="h-4 w-4" aria-hidden />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => scrollCategories('next')}
-                      className="absolute end-0 top-8 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md text-slate-600"
-                      aria-label="Next"
-                    >
-                      <ChevronRight className="h-4 w-4" aria-hidden />
-                    </button>
-                  </>
-                ) : null}
-                <div
-                  ref={categoryScrollRef}
-                  className="flex gap-3 overflow-x-auto pb-1 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                >
-                  {categories.map((cat, index) => (
-                    <CategoryChip
-                      key={cat.id}
-                      category={cat}
-                      index={index}
-                      selected={selectedCategoryId === cat.id}
-                      accent={accent}
-                      onSelect={() =>
-                        setSelectedCategoryId((prev) => (prev === cat.id ? null : cat.id))
-                      }
-                    />
-                  ))}
-                </div>
-              </div>
-            </section>
-          ) : null}
-
-          {/* Offers / featured strip */}
-          {!search.trim() && selectedCategoryId == null && featuredProducts.length > 0 ? (
-            <section className="mb-6">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-base font-bold text-slate-900">{s.offers}</h2>
-                <span className="text-xs font-semibold" style={{ color: accent }}>
-                  {s.viewAll} →
-                </span>
-              </div>
-              <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {featuredProducts.map((product) => {
-                  const img = resolveMediaUrl(product.image_url)
-                  const price = Number.parseFloat(product.sell_price)
-                  const inCart = qtyInCart(product.id)
+                {categories.map((cat, index) => {
+                  const firstImg = cat.products.find((p) => p.image_url)
+                  const img = resolveMediaUrl(firstImg?.image_url ?? null)
+                  const selected = selectedCategoryId === cat.id
                   return (
-                    <div
-                      key={product.id}
-                      className="w-[140px] shrink-0 overflow-hidden rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] ring-1 ring-slate-100"
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setSelectedCategoryId(cat.id)}
+                      className={[
+                        'flex shrink-0 items-center gap-2 rounded-full py-1.5 pe-3 ps-1 transition',
+                        selected
+                          ? 'text-white shadow-sm'
+                          : 'bg-white text-slate-700 ring-1 ring-slate-200',
+                      ].join(' ')}
+                      style={selected ? { backgroundColor: accent } : undefined}
                     >
-                      <div className="relative h-24 bg-slate-100">
+                      <span
+                        className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-white"
+                        style={{
+                          background: img ? undefined : CATEGORY_GRADIENTS[index % CATEGORY_GRADIENTS.length],
+                        }}
+                      >
                         {img ? (
-                          <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" />
+                          <img src={img} alt="" className="h-full w-full object-cover" />
                         ) : (
-                          <div className="flex h-full items-center justify-center text-slate-300">
-                            <PackageOpen className="h-8 w-8" aria-hidden />
-                          </div>
+                          cat.name.charAt(0)
                         )}
-                      </div>
-                      <div className="p-2.5">
-                        <p className="line-clamp-1 text-xs font-semibold text-slate-800">{product.name}</p>
-                        <p className="mt-0.5 text-sm font-bold" style={{ color: accent }}>
-                          ${formatUsd(Number.isFinite(price) ? price : 0)}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => addItem(product)}
-                          className="mt-2 w-full rounded-lg py-1.5 text-[11px] font-bold text-white"
-                          style={{ backgroundColor: accent }}
-                        >
-                          {inCart > 0 ? `×${inCart}` : '+'}
-                        </button>
-                      </div>
-                    </div>
+                      </span>
+                      <span className="max-w-[5.5rem] truncate text-xs font-semibold">{cat.name}</span>
+                    </button>
                   )
                 })}
               </div>
             </section>
           ) : null}
 
-          {/* Product sections */}
-          <section>
-            <h2 className="mb-3 text-base font-bold text-slate-900">
-              {appearance.catalog_title || s.catalogTitle}
-            </h2>
-            {filteredCategories.length === 0 ? (
-              <p className="py-8 text-center text-sm text-slate-500">{s.noProducts}</p>
+          <section id="sf-products" className="mt-5 px-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-800">{s.allProducts}</h2>
+              <span className="text-xs text-slate-400">
+                {s.productCount.replace('{n}', String(flatProducts.length))}
+              </span>
+            </div>
+
+            {flatProducts.length === 0 ? (
+              <p className="py-10 text-center text-sm text-slate-500">{s.noProducts}</p>
             ) : (
-              <div className="space-y-8">
-                {filteredCategories.map((category) => (
-                  <div key={category.id}>
-                    <div className="mb-3 flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-slate-800">{category.name}</h3>
-                      <span className="text-xs text-slate-400">
-                        {s.productCount.replace('{n}', String(category.products.length))}
-                      </span>
-                    </div>
-                    <ul className="grid grid-cols-2 gap-3">
-                      {category.products.map((product) => (
-                        <ProductCard
-                          key={product.id}
-                          product={product}
-                          accent={accent}
-                          inCart={qtyInCart(product.id)}
-                          onAdd={() => addItem(product)}
-                          labels={{
-                            addToCart: s.addToCart,
-                            inCart: s.inCart,
-                            usd: s.usd,
-                          }}
-                        />
-                      ))}
-                    </ul>
-                  </div>
+              <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-2">
+                {flatProducts.map(({ product }) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    accent={accent}
+                    inCart={qtyInCart(product.id)}
+                    onAdd={() => addItem(product)}
+                    labels={cardLabels}
+                    popular={popularIds.has(product.id) && categories.length > 1}
+                  />
                 ))}
-              </div>
+              </ul>
             )}
           </section>
         </>

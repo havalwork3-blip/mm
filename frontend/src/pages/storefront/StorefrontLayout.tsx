@@ -1,4 +1,4 @@
-import { Home, ShoppingBag } from 'lucide-react'
+import { Globe, Home, LayoutGrid, ShoppingBag } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 
@@ -14,13 +14,14 @@ import { resolveAccent } from './storefrontTheme'
 export function StorefrontLayout() {
   const { lang, setLang } = useLocale()
   const s = storefrontStrings(lang)
-  const { appearance, loading: shopLoading, error: shopError } = useStorefrontShop()
+  const { shopName, appearance, loading: shopLoading, error: shopError } = useStorefrontShop()
   const accent = resolveAccent(appearance.accent_color)
   const lines = useCartStore((st) => st.lines)
   const count = cartItemCount(lines)
 
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [langOpen, setLangOpen] = useState(false)
 
   useEffect(() => {
     if (isStorefrontMode()) {
@@ -28,82 +29,147 @@ export function StorefrontLayout() {
     }
   }, [setLang])
 
-  function scrollHome() {
+  function scrollTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function scrollToProducts() {
+    document.getElementById('sf-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   return (
     <div
-      className="relative min-h-dvh overflow-x-hidden bg-[#f5f5f7] text-slate-900"
+      className="relative min-h-dvh overflow-x-hidden bg-[#f0f2f5] text-slate-900"
       style={{ '--sf-accent': accent } as React.CSSProperties}
     >
-      <main className="relative z-10 mx-auto max-w-lg pb-24">
+      {!shopLoading && !shopError ? (
+        <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/90 backdrop-blur-lg">
+          <div className="mx-auto flex max-w-lg items-center gap-2 px-4 py-2.5">
+            <button
+              type="button"
+              onClick={scrollTop}
+              className="flex min-w-0 flex-1 items-center gap-2.5 text-start"
+            >
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-sm"
+                style={{ backgroundColor: accent }}
+              >
+                {shopName.charAt(0) || 'M'}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-slate-900">{shopName}</p>
+                <p className="truncate text-[11px] text-slate-500">
+                  {appearance.catalog_subtitle || s.shopTagline}
+                </p>
+              </div>
+            </button>
+
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setLangOpen((v) => !v)}
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 ring-1 ring-slate-200/80 transition hover:bg-slate-50"
+                aria-label="Language"
+                aria-expanded={langOpen}
+              >
+                <Globe className="h-4 w-4" aria-hidden />
+              </button>
+              {langOpen ? (
+                <>
+                  <button
+                    type="button"
+                    className="fixed inset-0 z-40"
+                    aria-label={s.close}
+                    onClick={() => setLangOpen(false)}
+                  />
+                  <div className="absolute end-0 top-full z-50 mt-1 min-w-[7rem] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                    {(['ku', 'ar', 'en'] as const).map((code) => (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => {
+                          setLang(code)
+                          setLangOpen(false)
+                        }}
+                        className={[
+                          'block w-full px-3 py-2 text-start text-xs font-medium transition',
+                          lang === code ? 'text-white' : 'text-slate-600 hover:bg-slate-50',
+                        ].join(' ')}
+                        style={lang === code ? { backgroundColor: accent } : undefined}
+                      >
+                        {code === 'ku' ? 'کوردی' : code === 'ar' ? 'عربي' : 'English'}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCartOpen(true)}
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition active:scale-95"
+              style={{ backgroundColor: accent }}
+              aria-label={s.cart}
+            >
+              <ShoppingBag className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+              {count > 0 ? (
+                <span className="absolute -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-900 px-0.5 text-[9px] font-bold text-white end-0">
+                  {count > 99 ? '99+' : count}
+                </span>
+              ) : null}
+            </button>
+          </div>
+        </header>
+      ) : null}
+
+      <main className="relative z-10 mx-auto max-w-lg pb-[4.5rem]">
         {shopError ? (
           <div className="mx-4 mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {shopError}
           </div>
         ) : shopLoading ? (
-          <p className="py-16 text-center text-sm text-slate-500">{s.loading}</p>
+          <p className="py-20 text-center text-sm text-slate-500">{s.loading}</p>
         ) : (
           <Outlet />
         )}
       </main>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-lg border-t border-slate-200/80 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] backdrop-blur-md"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/90 bg-white/95 backdrop-blur-md"
         aria-label="Navigation"
       >
-        <div className="flex items-stretch justify-around gap-1">
+        <div className="mx-auto flex max-w-lg items-center justify-around px-2 py-1.5 pb-[max(0.35rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
-            onClick={scrollHome}
-            className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-semibold transition"
+            onClick={scrollTop}
+            className="flex flex-col items-center gap-0.5 px-3 py-1 text-[10px] font-semibold"
             style={{ color: accent }}
           >
-            <span
-              className="flex h-9 w-9 items-center justify-center rounded-full"
-              style={{ backgroundColor: `color-mix(in srgb, ${accent} 14%, white)` }}
-            >
-              <Home className="h-5 w-5" strokeWidth={2.25} aria-hidden />
-            </span>
+            <Home className="h-5 w-5" strokeWidth={2.25} aria-hidden />
             {s.home}
           </button>
-
-          <div
-            className="hidden rounded-full border border-slate-200 bg-slate-50 p-0.5 text-[10px] sm:flex"
-            role="group"
-            aria-label="Language"
+          <button
+            type="button"
+            onClick={scrollToProducts}
+            className="flex flex-col items-center gap-0.5 px-3 py-1 text-[10px] font-medium text-slate-500"
           >
-            {(['ku', 'ar', 'en'] as const).map((code) => (
-              <button
-                key={code}
-                type="button"
-                onClick={() => setLang(code)}
-                className={[
-                  'rounded-full px-2 py-1 font-medium transition-colors',
-                  lang === code ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-800',
-                ].join(' ')}
-                style={lang === code ? { backgroundColor: accent } : undefined}
-              >
-                {code === 'ku' ? 'کوردی' : code === 'ar' ? 'عربي' : 'EN'}
-              </button>
-            ))}
-          </div>
-
+            <LayoutGrid className="h-5 w-5" strokeWidth={2} aria-hidden />
+            {s.scrollToProducts}
+          </button>
           <button
             type="button"
             onClick={() => setCartOpen(true)}
-            className="relative flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium text-slate-500 transition hover:text-slate-800"
-            aria-label={s.cart}
+            className="relative flex flex-col items-center gap-0.5 px-3 py-1 text-[10px] font-medium text-slate-500"
           >
-            <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+            <span className="relative">
               <ShoppingBag className="h-5 w-5" strokeWidth={2} aria-hidden />
               {count > 0 ? (
                 <span
-                  className="absolute -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white end-0"
+                  className="absolute -end-1.5 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[8px] font-bold text-white"
                   style={{ backgroundColor: accent }}
                 >
-                  {count > 99 ? '99+' : count}
+                  {count > 9 ? '9+' : count}
                 </span>
               ) : null}
             </span>
