@@ -1,3 +1,4 @@
+from django.utils.text import slugify as django_slugify
 from rest_framework import serializers
 
 from shops.storefront_hosts import normalize_storefront_host, validate_storefront_host
@@ -31,6 +32,12 @@ class ShopSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         user = getattr(request, "user", None)
         return bool(user and user.is_authenticated and user.is_superuser)
+
+    def validate_slug(self, value: str) -> str:
+        normalized = django_slugify(str(value or "").strip())
+        if not normalized:
+            raise serializers.ValidationError("Slug is required.")
+        return normalized
 
     def validate(self, attrs: dict) -> dict:
         storefront_keys = ("online_storefront_enabled", "storefront_host")

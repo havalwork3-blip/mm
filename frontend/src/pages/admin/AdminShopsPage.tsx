@@ -26,6 +26,7 @@ export function AdminShopsPage() {
   const [storefrontHost, setStorefrontHost] = useState('')
   const [editing, setEditing] = useState<ShopRow | null>(null)
   const [editName, setEditName] = useState('')
+  const [editSlug, setEditSlug] = useState('')
   const [editOnlineEnabled, setEditOnlineEnabled] = useState(false)
   const [editStorefrontHost, setEditStorefrontHost] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
@@ -100,6 +101,12 @@ export function AdminShopsPage() {
       return
     }
 
+    const trimmedSlug = slugify(editSlug.trim() || trimmedName)
+    if (!trimmedSlug) {
+      setEditError(t('admin.slugRequired'))
+      return
+    }
+
     const host = editOnlineEnabled ? normalizeStorefrontHostInput(editStorefrontHost) : ''
     if (editOnlineEnabled && !host) {
       setEditError(t('admin.storefrontHostRequired'))
@@ -113,6 +120,7 @@ export function AdminShopsPage() {
         omitShopScope: true,
         body: JSON.stringify({
           name: trimmedName,
+          slug: trimmedSlug,
           online_storefront_enabled: editOnlineEnabled,
           storefront_host: host,
         }),
@@ -146,6 +154,7 @@ export function AdminShopsPage() {
   function openEdit(row: ShopRow) {
     setEditing(row)
     setEditName(row.name)
+    setEditSlug(row.slug)
     setEditOnlineEnabled(Boolean(row.online_storefront_enabled))
     setEditStorefrontHost(row.storefront_host || '')
     setEditError(null)
@@ -291,10 +300,23 @@ export function AdminShopsPage() {
             className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900"
           >
             <h3 className="font-semibold text-slate-900 dark:text-white">{t('admin.editShop')}</h3>
+            <label className="mt-3 block text-xs text-slate-500 dark:text-slate-400">
+              {t('settings.shopName')}
+            </label>
             <input
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="mt-3 w-full rounded-lg border px-3 py-2 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+              className="mt-1 w-full rounded-lg border px-3 py-2 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+            />
+            <label className="mt-3 block text-xs text-slate-500 dark:text-slate-400">
+              {t('settings.slug')}
+            </label>
+            <input
+              value={editSlug}
+              onChange={(e) => setEditSlug(e.target.value)}
+              dir="ltr"
+              placeholder={t('settings.slug')}
+              className="mt-1 w-full rounded-lg border px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white"
             />
             <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm">
               <input
