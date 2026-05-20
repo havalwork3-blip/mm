@@ -82,7 +82,7 @@ class PublicProductSerializer(serializers.ModelSerializer):
         read_only=True,
     )
     image_url = serializers.SerializerMethodField(read_only=True)
-    category_id = serializers.IntegerField(source="category_id", read_only=True)
+    category_id = serializers.IntegerField(read_only=True)
     category_name = serializers.CharField(source="category.name", read_only=True)
 
     class Meta:
@@ -102,11 +102,14 @@ class PublicProductSerializer(serializers.ModelSerializer):
     def get_image_url(self, obj: Product) -> str | None:
         if not obj.image:
             return None
-        request = self.context.get("request")
-        url = obj.image.url
-        if request:
-            return request.build_absolute_uri(url)
-        return url
+        try:
+            request = self.context.get("request")
+            url = obj.image.url
+            if request:
+                return request.build_absolute_uri(url)
+            return url
+        except Exception:
+            return None
 
 
 class StorefrontOrderItemSerializer(serializers.ModelSerializer):
