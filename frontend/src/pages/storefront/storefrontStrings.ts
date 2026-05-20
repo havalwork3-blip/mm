@@ -59,6 +59,15 @@ const STRINGS = {
     searchResults: 'ئەنجام بۆ «{q}»',
     addedToCart: 'زیادکرا!',
     tapToAdd: 'کلیک بکە بۆ زیادکردن',
+    viewProduct: 'وردەکاری',
+    orderNow: 'زیادکردن بۆ سەبەتە',
+    backToProducts: 'گەڕانەوە',
+    shopCategories: 'پۆلەکانی فرۆشگا',
+    outOfStock: 'کۆتایی هاتووە',
+    discontinued: 'نەماوە',
+    unavailable: 'بەردەست نییە',
+    unavailableHint: 'ئەم بەرهەمە ئێستا بەردەست نییە. دواتر سەیری بکەرەوە یان پەیوەندیمان پێوە بکە.',
+    cannotOrder: 'ناتوانیت داوا بکەیت',
   },
   ar: {
     hello: 'مرحباً',
@@ -118,6 +127,15 @@ const STRINGS = {
     searchResults: 'نتائج «{q}»',
     addedToCart: 'تمت الإضافة!',
     tapToAdd: 'اضغط للإضافة',
+    viewProduct: 'التفاصيل',
+    orderNow: 'أضف إلى السلة',
+    backToProducts: 'رجوع',
+    shopCategories: 'أقسام المتجر',
+    outOfStock: 'نفد المخزون',
+    discontinued: 'غير متوفر',
+    unavailable: 'غير متاح',
+    unavailableHint: 'هذا المنتج غير متاح حالياً. تحقق لاحقاً أو تواصل معنا.',
+    cannotOrder: 'لا يمكن الطلب',
   },
   en: {
     hello: 'Hello',
@@ -177,6 +195,15 @@ const STRINGS = {
     searchResults: 'Results for "{q}"',
     addedToCart: 'Added!',
     tapToAdd: 'Tap to add',
+    viewProduct: 'View',
+    orderNow: 'Add to cart',
+    backToProducts: 'Back',
+    shopCategories: 'Shop categories',
+    outOfStock: 'Out of stock',
+    discontinued: 'No longer available',
+    unavailable: 'Unavailable',
+    unavailableHint: 'This item is not available right now. Check back later or contact the shop.',
+    cannotOrder: 'Cannot order',
   },
 }
 
@@ -238,6 +265,15 @@ export type StorefrontStrings = {
   searchResults: string
   addedToCart: string
   tapToAdd: string
+  viewProduct: string
+  orderNow: string
+  backToProducts: string
+  shopCategories: string
+  outOfStock: string
+  discontinued: string
+  unavailable: string
+  unavailableHint: string
+  cannotOrder: string
 }
 
 export function storefrontStrings(lang: Lang): StorefrontStrings {

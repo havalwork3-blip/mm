@@ -73,7 +73,7 @@ def _inventory_loss_note(
 
 
 class PublicProductSerializer(serializers.ModelSerializer):
-    """Public storefront catalog — no buy price or stock."""
+    """Public storefront catalog — no buy price; exposes availability for UI."""
 
     sell_price = serializers.DecimalField(
         source="sale_price_retail",
@@ -84,6 +84,8 @@ class PublicProductSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField(read_only=True)
     category_id = serializers.IntegerField(read_only=True)
     category_name = serializers.CharField(source="category.name", read_only=True)
+    is_available = serializers.SerializerMethodField(read_only=True)
+    unavailable_reason = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Product
@@ -96,8 +98,24 @@ class PublicProductSerializer(serializers.ModelSerializer):
             "image_url",
             "category_id",
             "category_name",
+            "is_available",
+            "unavailable_reason",
         ]
         read_only_fields = fields
+
+    def get_is_available(self, obj: Product) -> bool:
+        if obj.is_discontinued or obj.is_unregistered_placeholder:
+            return False
+        return int(obj.current_stock_quantity or 0) > 0
+
+    def get_unavailable_reason(self, obj: Product) -> str | None:
+        if obj.is_discontinued:
+            return "discontinued"
+        if obj.is_unregistered_placeholder:
+            return "unavailable"
+        if int(obj.current_stock_quantity or 0) <= 0:
+            return "out_of_stock"
+        return None
 
     def get_image_url(self, obj: Product) -> str | None:
         if not obj.image:

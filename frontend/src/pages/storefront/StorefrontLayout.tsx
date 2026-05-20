@@ -24,6 +24,7 @@ export function StorefrontLayout() {
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [langOpen, setLangOpen] = useState(false)
+  const [cartPulse, setCartPulse] = useState(false)
 
   useEffect(() => {
     if (isStorefrontMode()) {
@@ -36,6 +37,18 @@ export function StorefrontLayout() {
     return () => document.documentElement.classList.remove('sf-mode')
   }, [])
 
+  useEffect(() => {
+    const onPulse = () => setCartPulse(true)
+    window.addEventListener('sf-cart-pulse', onPulse)
+    return () => window.removeEventListener('sf-cart-pulse', onPulse)
+  }, [])
+
+  useEffect(() => {
+    if (!cartPulse) return
+    const t = window.setTimeout(() => setCartPulse(false), 600)
+    return () => window.clearTimeout(t)
+  }, [cartPulse])
+
   function scrollTop() {
     backToCategories()
   }
@@ -46,7 +59,7 @@ export function StorefrontLayout() {
 
   return (
     <div
-      className="sf-root relative w-full overflow-x-hidden bg-[#f0f2f5] text-slate-900"
+      className="sf-root relative w-full overflow-x-hidden text-slate-900"
       style={{ '--sf-accent': accent } as React.CSSProperties}
     >
       {!shopLoading && !shopError ? (
@@ -115,9 +128,13 @@ export function StorefrontLayout() {
             </div>
 
             <button
+              id="sf-cart-anchor"
               type="button"
               onClick={() => setCartOpen(true)}
-              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition active:scale-95 sm:h-10 sm:w-10 md:hidden"
+              className={[
+                'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition active:scale-95 sm:h-10 sm:w-10 md:hidden',
+                cartPulse ? 'sf-cart-pulse' : '',
+              ].join(' ')}
               style={{ backgroundColor: accent }}
               aria-label={s.cart}
             >
@@ -130,9 +147,13 @@ export function StorefrontLayout() {
             </button>
 
             <button
+              id="sf-cart-anchor-desktop"
               type="button"
               onClick={() => setCartOpen(true)}
-              className="relative hidden h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 md:inline-flex"
+              className={[
+                'relative hidden h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 md:inline-flex',
+                cartPulse ? 'sf-cart-pulse' : '',
+              ].join(' ')}
               style={{ backgroundColor: accent }}
             >
               <ShoppingBag className="h-4 w-4" aria-hidden />

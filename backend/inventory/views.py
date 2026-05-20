@@ -854,11 +854,14 @@ def public_storefront_catalog(request):
         )
 
     settings = get_or_create_storefront_settings(shop)
-    product_qs = Product.objects.filter(
-        shop_id=shop.pk,
-        is_discontinued=False,
-        is_unregistered_placeholder=False,
-    ).select_related("category").order_by("category__name_ku", "category__name", "name")
+    product_qs = (
+        Product.objects.filter(
+            shop_id=shop.pk,
+            is_unregistered_placeholder=False,
+        )
+        .select_related("category")
+        .order_by("is_discontinued", "-current_stock_quantity", "name")
+    )
 
     def _category_image_url(cat: Category) -> str | None:
         if not cat.image:
@@ -924,11 +927,10 @@ def public_storefront_products(request):
     qs = (
         Product.objects.filter(
             shop_id=shop.pk,
-            is_discontinued=False,
             is_unregistered_placeholder=False,
         )
         .select_related("category")
-        .order_by("name")
+        .order_by("is_discontinued", "-current_stock_quantity", "name")
     )
     ser = PublicProductSerializer(qs, many=True, context={"request": request})
     return Response(ser.data)

@@ -74,6 +74,8 @@ export async function resolvePublicStorefront(): Promise<PublicStorefrontResolve
   )
 }
 
+export type ProductUnavailableReason = 'out_of_stock' | 'discontinued' | 'unavailable'
+
 export type PublicStorefrontProduct = {
   id: number
   name: string
@@ -83,6 +85,8 @@ export type PublicStorefrontProduct = {
   image_url: string | null
   category_id?: number
   category_name?: string
+  is_available: boolean
+  unavailable_reason: ProductUnavailableReason | null
 }
 
 export type StorefrontOrderPayload = {

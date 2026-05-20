@@ -1,43 +1,73 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 
-export type StorefrontView = 'categories' | 'products'
+import type { PublicStorefrontProduct } from '../../api/storefrontApi'
+
+export type StorefrontView = 'categories' | 'products' | 'product'
 
 type Ctx = {
   view: StorefrontView
   selectedCategoryId: number | null
+  selectedProduct: PublicStorefrontProduct | null
+  productCategoryName: string
   selectCategory: (id: number) => void
   showAllProducts: () => void
   backToCategories: () => void
+  openProduct: (product: PublicStorefrontProduct, categoryName?: string) => void
+  backFromProduct: () => void
   setSearchActive: (active: boolean) => void
 }
 
 const StorefrontCatalogContext = createContext<Ctx | null>(null)
 
+function scrollMainTop(smooth = true) {
+  window.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'instant' })
+}
+
 export function StorefrontCatalogProvider({ children }: { children: React.ReactNode }) {
   const [view, setView] = useState<StorefrontView>('categories')
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<PublicStorefrontProduct | null>(null)
+  const [productCategoryName, setProductCategoryName] = useState('')
+  const [returnView, setReturnView] = useState<'categories' | 'products'>('products')
 
   const selectCategory = useCallback((id: number) => {
     setSelectedCategoryId(id)
     setView('products')
-    window.setTimeout(() => {
-      document.getElementById('sf-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 80)
+    scrollMainTop()
   }, [])
 
   const showAllProducts = useCallback(() => {
     setSelectedCategoryId(null)
     setView('products')
-    window.setTimeout(() => {
-      document.getElementById('sf-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 80)
+    scrollMainTop()
   }, [])
 
   const backToCategories = useCallback(() => {
     setSelectedCategoryId(null)
+    setSelectedProduct(null)
     setView('categories')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    document.documentElement.style.overflow = ''
+    scrollMainTop()
   }, [])
+
+  const openProduct = useCallback(
+    (product: PublicStorefrontProduct, categoryName = '') => {
+      setReturnView(view === 'categories' ? 'products' : 'products')
+      setSelectedProduct(product)
+      setProductCategoryName(categoryName)
+      setView('product')
+      document.documentElement.style.overflow = 'hidden'
+      scrollMainTop(false)
+    },
+    [view],
+  )
+
+  const backFromProduct = useCallback(() => {
+    setSelectedProduct(null)
+    setView(returnView)
+    document.documentElement.style.overflow = ''
+    scrollMainTop(false)
+  }, [returnView])
 
   const setSearchActive = useCallback((active: boolean) => {
     if (active) setView('products')
@@ -47,12 +77,27 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
     () => ({
       view,
       selectedCategoryId,
+      selectedProduct,
+      productCategoryName,
       selectCategory,
       showAllProducts,
       backToCategories,
+      openProduct,
+      backFromProduct,
       setSearchActive,
     }),
-    [view, selectedCategoryId, selectCategory, showAllProducts, backToCategories, setSearchActive],
+    [
+      view,
+      selectedCategoryId,
+      selectedProduct,
+      productCategoryName,
+      selectCategory,
+      showAllProducts,
+      backToCategories,
+      openProduct,
+      backFromProduct,
+      setSearchActive,
+    ],
   )
 
   return (
