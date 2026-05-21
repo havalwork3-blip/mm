@@ -3,9 +3,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { PageAuthLoading } from '../../components/PageAuthLoading'
+import { UsdIqdDualInput } from '../../components/UsdIqdDualInput'
 import { useLocale } from '../../context/LocaleContext'
+import { useShopExchangeRate } from '../../hooks/useShopExchangeRate'
 import { useSyncedSession } from '../../hooks/useSyncedSession'
 import { resolveMediaUrl } from '../../lib/api'
+import { parseDec, usdToIqdString } from '../../lib/moneyInput'
 import {
   fetchOnlineProductPricing,
   patchOnlineProductPricing,
@@ -14,16 +17,22 @@ import {
 
 type RowDraft = {
   online_sale_price: string
+  online_sale_price_iqd: string
   online_discount_percent: string
   online_discount_min_quantity: string
 }
 
-function draftFromRow(row: OnlineProductPricingRow): RowDraft {
+function draftFromRow(row: OnlineProductPricingRow, rate: number | null): RowDraft {
+  const usd =
+    row.online_sale_price != null && String(row.online_sale_price).trim() !== ''
+      ? String(row.online_sale_price)
+      : ''
+  const usdNum = parseDec(usd)
+  const iqd =
+    usd && rate != null && rate > 0 && usdNum > 0 ? usdToIqdString(usdNum, rate) : ''
   return {
-    online_sale_price:
-      row.online_sale_price != null && String(row.online_sale_price).trim() !== ''
-        ? String(row.online_sale_price)
-        : '',
+    online_sale_price: usd,
+    online_sale_price_iqd: iqd,
     online_discount_percent: String(row.online_discount_percent ?? '0'),
     online_discount_min_quantity: String(row.online_discount_min_quantity ?? 1),
   }
@@ -43,6 +52,9 @@ export function MerchantOnlinePricingPage() {
 
   const [bulkPercent, setBulkPercent] = useState('')
   const [bulkMinQty, setBulkMinQty] = useState('1')
+  const [usdLinked, setUsdLinked] = useState(true)
+  const [iqdLinked, setIqdLinked] = useState(true)
+  const { rate } = useShopExchangeRate(canAccessShopData)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -51,7 +63,7 @@ export function MerchantOnlinePricingPage() {
       const data = await fetchOnlineProductPricing()
       setRows(data)
       const next: Record<number, RowDraft> = {}
-      for (const r of data) next[r.id] = draftFromRow(r)
+      for (const r of data) next[r.id] = draftFromRow(r, rate)
       setDrafts(next)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
@@ -59,7 +71,7 @@ export function MerchantOnlinePricingPage() {
     } finally {
       setLoading(false)
     }
-  }, [t])
+  }, [t, rate])
 
   useEffect(() => {
     if (canAccessShopData) void load()
@@ -103,7 +115,7 @@ export function MerchantOnlinePricingPage() {
       })
       setRows(updated)
       const next: Record<number, RowDraft> = {}
-      for (const r of updated) next[r.id] = draftFromRow(r)
+      for (const r of updated) next[r.id] = draftFromRow(r, rate)
       setDrafts(next)
       setSaved(true)
     } catch (e) {
@@ -113,12 +125,19 @@ export function MerchantOnlinePricingPage() {
     }
   }
 
+  function setPriceDraft(id: number, usd: string, iqd: string) {
+    setDrafts((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], online_sale_price: usd, online_sale_price_iqd: iqd },
+    }))
+  }
+
   async function saveAll() {
     setSaving(true)
     setError(null)
     try {
       const items = rows.map((r) => {
-        const d = drafts[r.id] ?? draftFromRow(r)
+        const d = drafts[r.id] ?? draftFromRow(r, rate)
         return {
           id: r.id,
           online_sale_price: d.online_sale_price.trim() === '' ? null : d.online_sale_price.trim(),
@@ -132,7 +151,7 @@ export function MerchantOnlinePricingPage() {
       const updated = await patchOnlineProductPricing({ items })
       setRows(updated)
       const next: Record<number, RowDraft> = {}
-      for (const r of updated) next[r.id] = draftFromRow(r)
+      for (const r of updated) next[r.id] = draftFromRow(r, rate)
       setDrafts(next)
       setSaved(true)
     } catch (e) {
@@ -140,6 +159,11 @@ export function MerchantOnlinePricingPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const linkTitles = {
+    active: t('pos.usdLinkActiveTitle'),
+    inactive: t('pos.usdLinkInactiveTitle'),
   }
 
   if (authPending) return <PageAuthLoading />
@@ -300,7 +324,7 @@ export function MerchantOnlinePricingPage() {
               </thead>
               <tbody>
                 {filtered.map((row) => {
-                  const d = drafts[row.id] ?? draftFromRow(row)
+                  const d = drafts[row.id] ?? draftFromRow(row, rate)
                   const img = resolveMediaUrl(row.image_url)
                   return (
                     <tr
@@ -325,15 +349,23 @@ export function MerchantOnlinePricingPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 tabular-nums text-slate-500">${row.sale_price_retail}</td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          dir="ltr"
-                          value={d.online_sale_price}
-                          onChange={(e) => setDraft(row.id, { online_sale_price: e.target.value })}
-                          placeholder={row.sale_price_retail}
-                          className="w-28 rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm tabular-nums dark:border-slate-600 dark:bg-slate-800"
+                      <td className="min-w-[280px] px-4 py-3">
+                        <UsdIqdDualInput
+                          compact
+                          usdLabel={t('onlinePricing.priceUsd')}
+                          iqdLabel={t('onlinePricing.priceIqd')}
+                          usdValue={d.online_sale_price}
+                          iqdValue={d.online_sale_price_iqd}
+                          onUsdChange={(usd, iqd) => setPriceDraft(row.id, usd, iqd)}
+                          onIqdChange={(iqd, usd) => setPriceDraft(row.id, usd, iqd)}
+                          usdLinked={usdLinked}
+                          iqdLinked={iqdLinked}
+                          onToggleUsdLink={() => setUsdLinked((v) => !v)}
+                          onToggleIqdLink={() => setIqdLinked((v) => !v)}
+                          rate={rate}
+                          usdPlaceholder={row.sale_price_retail}
+                          linkActiveTitle={linkTitles.active}
+                          linkInactiveTitle={linkTitles.inactive}
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -372,25 +404,34 @@ export function MerchantOnlinePricingPage() {
 
           <ul className="divide-y divide-slate-100 md:hidden dark:divide-slate-800">
             {filtered.map((row) => {
-              const d = drafts[row.id] ?? draftFromRow(row)
+              const d = drafts[row.id] ?? draftFromRow(row, rate)
               return (
                 <li key={row.id} className="space-y-3 p-4">
                   <p className="font-bold text-slate-900 dark:text-white">{row.name}</p>
                   <p className="text-xs text-slate-500">
                     {t('onlinePricing.colRetail')}: ${row.sale_price_retail}
                   </p>
-                  <label className="block text-xs font-medium text-slate-500">
-                    {t('onlinePricing.colOnlinePrice')}
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      dir="ltr"
-                      value={d.online_sale_price}
-                      onChange={(e) => setDraft(row.id, { online_sale_price: e.target.value })}
-                      placeholder={row.sale_price_retail}
-                      className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800"
+                  <div>
+                    <p className="mb-1 text-xs font-medium text-slate-500">
+                      {t('onlinePricing.colOnlinePrice')}
+                    </p>
+                    <UsdIqdDualInput
+                      usdLabel={t('onlinePricing.priceUsd')}
+                      iqdLabel={t('onlinePricing.priceIqd')}
+                      usdValue={d.online_sale_price}
+                      iqdValue={d.online_sale_price_iqd}
+                      onUsdChange={(usd, iqd) => setPriceDraft(row.id, usd, iqd)}
+                      onIqdChange={(iqd, usd) => setPriceDraft(row.id, usd, iqd)}
+                      usdLinked={usdLinked}
+                      iqdLinked={iqdLinked}
+                      onToggleUsdLink={() => setUsdLinked((v) => !v)}
+                      onToggleIqdLink={() => setIqdLinked((v) => !v)}
+                      rate={rate}
+                      usdPlaceholder={row.sale_price_retail}
+                      linkActiveTitle={linkTitles.active}
+                      linkInactiveTitle={linkTitles.inactive}
                     />
-                  </label>
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <label className="block text-xs font-medium text-slate-500">
                       {t('onlinePricing.discountPercent')}

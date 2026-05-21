@@ -19,15 +19,28 @@ const DEFAULT_APPEARANCE: PublicStorefrontAppearance = {
   logo_url: null,
   accent_color: '#fbbf24',
   banner_rotate_seconds: 5,
+  price_display_default: 'usd',
+  contact_phone: '',
+  contact_whatsapp: '',
+  contact_email: '',
+  about_title: '',
+  about_body: '',
+  faq_items: [],
+  shop_address: '',
+  location_url: '',
+  location_image_url: null,
 }
 
 type Ctx = {
   shopId: number | null
   shopName: string
   appearance: PublicStorefrontAppearance
+  exchangeRate: string | null
   loading: boolean
   error: string | null
   reload: () => void
+  mergeAppearance: (patch: Partial<PublicStorefrontAppearance>) => void
+  setExchangeRate: (raw: string | null | undefined) => void
 }
 
 const StorefrontShopContext = createContext<Ctx | null>(null)
@@ -36,8 +49,17 @@ export function StorefrontShopProvider({ children }: { children: React.ReactNode
   const [shopId, setShopId] = useState<number | null>(null)
   const [shopName, setShopName] = useState('')
   const [appearance, setAppearance] = useState<PublicStorefrontAppearance>(DEFAULT_APPEARANCE)
+  const [exchangeRate, setExchangeRateState] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const mergeAppearance = useCallback((patch: Partial<PublicStorefrontAppearance>) => {
+    setAppearance((prev) => ({ ...prev, ...patch }))
+  }, [])
+
+  const setExchangeRate = useCallback((raw: string | null | undefined) => {
+    setExchangeRateState(raw != null && String(raw).trim() !== '' ? String(raw) : null)
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -47,6 +69,7 @@ export function StorefrontShopProvider({ children }: { children: React.ReactNode
       setShopId(row.shop_id)
       setShopName(row.storefront?.catalog_title || row.name)
       setAppearance(row.storefront ?? { ...DEFAULT_APPEARANCE, catalog_title: row.name })
+      setExchangeRateState(row.exchange_rate_usd_to_iqd ?? null)
     } catch (e) {
       setShopId(null)
       setShopName('')
@@ -62,8 +85,18 @@ export function StorefrontShopProvider({ children }: { children: React.ReactNode
   }, [load])
 
   const value = useMemo(
-    () => ({ shopId, shopName, appearance, loading, error, reload: load }),
-    [shopId, shopName, appearance, loading, error, load],
+    () => ({
+      shopId,
+      shopName,
+      appearance,
+      exchangeRate,
+      loading,
+      error,
+      reload: load,
+      mergeAppearance,
+      setExchangeRate,
+    }),
+    [shopId, shopName, appearance, exchangeRate, loading, error, load, mergeAppearance, setExchangeRate],
   )
 
   return (

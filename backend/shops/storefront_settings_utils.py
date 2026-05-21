@@ -29,17 +29,50 @@ def _storefront_logo_url(settings: StorefrontSettings, request: HttpRequest | No
         return None
 
 
+def _storefront_location_image_url(
+    settings: StorefrontSettings,
+    request: HttpRequest | None,
+) -> str | None:
+    if not settings.location_image:
+        return None
+    try:
+        url = settings.location_image.url
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+    except Exception:
+        return None
+
+
+def _normalize_faq_items(raw: object) -> list[dict[str, str]]:
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, str]] = []
+    for item in raw[:30]:
+        if not isinstance(item, dict):
+            continue
+        q = str(item.get("question") or item.get("q") or "").strip()[:500]
+        a = str(item.get("answer") or item.get("a") or "").strip()[:4000]
+        if not q and not a:
+            continue
+        out.append({"question": q, "answer": a})
+    return out
+
+
 def storefront_settings_public_dict(
     settings: StorefrontSettings,
     shop: Shop,
     request: HttpRequest | None = None,
-) -> dict[str, str | int | None]:
+) -> dict[str, str | int | list | None]:
     title = (settings.catalog_title or "").strip()
     rotate = settings.banner_rotate_seconds
     if rotate < 2:
         rotate = 2
     if rotate > 60:
         rotate = 60
+    default_currency = (settings.price_display_default or "usd").strip().lower()
+    if default_currency not in ("usd", "iqd", "both"):
+        default_currency = "usd"
     return {
         "catalog_title": title or shop.name,
         "catalog_subtitle": (settings.catalog_subtitle or "").strip(),
@@ -47,6 +80,16 @@ def storefront_settings_public_dict(
         "logo_url": _storefront_logo_url(settings, request),
         "accent_color": (settings.accent_color or "").strip() or "#fbbf24",
         "banner_rotate_seconds": rotate,
+        "price_display_default": default_currency,
+        "contact_phone": (settings.contact_phone or "").strip(),
+        "contact_whatsapp": (settings.contact_whatsapp or "").strip(),
+        "contact_email": (settings.contact_email or "").strip(),
+        "about_title": (settings.about_title or "").strip() or shop.name,
+        "about_body": (settings.about_body or "").strip(),
+        "faq_items": _normalize_faq_items(settings.faq_items),
+        "shop_address": (settings.shop_address or "").strip(),
+        "location_url": (settings.location_url or "").strip(),
+        "location_image_url": _storefront_location_image_url(settings, request),
     }
 
 

@@ -6,13 +6,9 @@ import { resolveMediaUrl } from '../../lib/api'
 import { isProductAvailable } from './productAvailability'
 import { triggerCartFly } from './cartFlyAnimation'
 import { UnavailableProductBanner } from './UnavailableProductBadge'
-import { formatUsd } from './storefrontStrings'
+import { useLocale } from '../../context/LocaleContext'
 import { accentAlpha } from './storefrontTheme'
-
-function formatPrice(price: number, usdLabel: string): string {
-  if (!Number.isFinite(price) || price <= 0) return '—'
-  return `$${formatUsd(price)} ${usdLabel}`
-}
+import { useStorefrontPriceLabel } from './useStorefrontPriceLabel'
 
 type Labels = {
   back: string
@@ -47,6 +43,8 @@ export function StorefrontProductDetail({
   onBack,
   onAdd,
 }: Props) {
+  const { lang } = useLocale()
+  const { format: formatPrice } = useStorefrontPriceLabel(lang)
   const img = resolveMediaUrl(product.image_url)
   const price = Number.parseFloat(product.sell_price)
   const available = isProductAvailable(product)
@@ -131,7 +129,7 @@ export function StorefrontProductDetail({
             ].join(' ')}
             style={available ? { color: accent } : undefined}
           >
-            {formatPrice(price, labels.usd)}
+            {formatPrice(price)}
           </p>
           {inCart > 0 && available ? (
             <p className="mt-2 text-sm font-medium text-slate-500">

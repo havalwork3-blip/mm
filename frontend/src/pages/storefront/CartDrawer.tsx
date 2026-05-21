@@ -9,8 +9,9 @@ import {
   cartTotal,
   useCartStore,
 } from '../../store/cartStore'
-import { formatUsd, storefrontStrings } from './storefrontStrings'
+import { storefrontStrings } from './storefrontStrings'
 import { accentAlpha } from './storefrontTheme'
+import { useStorefrontPriceLabel } from './useStorefrontPriceLabel'
 
 type Props = {
   open: boolean
@@ -22,6 +23,7 @@ type Props = {
 export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
   const { lang, isRtl } = useLocale()
   const s = storefrontStrings(lang)
+  const { format: formatPrice } = useStorefrontPriceLabel(lang)
   const lines = useCartStore((st) => st.lines)
   const setQuantity = useCartStore((st) => st.setQuantity)
   const removeItem = useCartStore((st) => st.removeItem)
@@ -115,7 +117,7 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold text-slate-800">{line.name}</p>
                       <p className="mt-0.5 text-sm font-bold" style={{ color: accent }}>
-                        ${formatUsd(cartLineTotal(line))} {s.usd}
+                        {formatPrice(cartLineTotal(line))}
                       </p>
                       <div className="mt-2 flex items-center gap-2">
                         <button
@@ -158,7 +160,7 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
           <div className="mb-4 flex items-center justify-between">
             <span className="text-sm text-slate-500">{s.total}</span>
             <span className="text-xl font-bold" style={{ color: accent }}>
-              ${formatUsd(total)} {s.usd}
+              {formatPrice(total)}
             </span>
           </div>
           <button

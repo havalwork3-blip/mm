@@ -6,6 +6,11 @@ const STOREFRONT_PRODUCTS_PATH = '/api/public/storefront/products/'
 const STOREFRONT_CATALOG_PATH = '/api/public/storefront/catalog/'
 const STOREFRONT_SUBMIT_PATH = '/api/public/storefront/submit_order/'
 
+export type StorefrontFaqItem = {
+  question: string
+  answer: string
+}
+
 export type PublicStorefrontAppearance = {
   catalog_title: string
   catalog_subtitle: string
@@ -13,6 +18,16 @@ export type PublicStorefrontAppearance = {
   logo_url: string | null
   accent_color: string
   banner_rotate_seconds: number
+  price_display_default?: 'usd' | 'iqd' | 'both'
+  contact_phone?: string
+  contact_whatsapp?: string
+  contact_email?: string
+  about_title?: string
+  about_body?: string
+  faq_items?: StorefrontFaqItem[]
+  shop_address?: string
+  location_url?: string
+  location_image_url?: string | null
 }
 
 export type PublicStorefrontBanner = {
@@ -31,6 +46,7 @@ export type PublicStorefrontResolve = {
   name: string
   storefront_host: string
   storefront?: PublicStorefrontAppearance
+  exchange_rate_usd_to_iqd?: string | null
 }
 
 export type PublicStorefrontCategory = {
@@ -47,6 +63,7 @@ export type PublicStorefrontCatalog = {
   storefront: PublicStorefrontAppearance
   banners: PublicStorefrontBanner[]
   categories: PublicStorefrontCategory[]
+  exchange_rate_usd_to_iqd?: string | null
 }
 
 function resolveQuery(): string {

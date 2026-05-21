@@ -123,6 +123,31 @@ class StorefrontSettings(ShopScopedModel):
     logo = models.ImageField(upload_to="storefront-logos/%Y/%m/", blank=True, null=True)
     accent_color = models.CharField(max_length=32, default="#fbbf24")
     banner_rotate_seconds = models.PositiveSmallIntegerField(default=5)
+
+    class PriceDisplay(models.TextChoices):
+        USD = "usd", "USD"
+        IQD = "iqd", "IQD"
+        BOTH = "both", "Both"
+
+    price_display_default = models.CharField(
+        max_length=8,
+        choices=PriceDisplay.choices,
+        default=PriceDisplay.USD,
+    )
+    contact_phone = models.CharField(max_length=64, blank=True, default="")
+    contact_whatsapp = models.CharField(max_length=64, blank=True, default="")
+    contact_email = models.EmailField(blank=True, default="")
+    about_title = models.CharField(max_length=255, blank=True, default="")
+    about_body = models.TextField(blank=True, default="")
+    faq_items = models.JSONField(default=list, blank=True)
+    shop_address = models.CharField(max_length=500, blank=True, default="")
+    location_url = models.URLField(blank=True, default="")
+    location_image = models.ImageField(
+        upload_to="storefront-location/%Y/%m/",
+        blank=True,
+        null=True,
+    )
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

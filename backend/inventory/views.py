@@ -832,12 +832,15 @@ def public_storefront_resolve(request):
             status=404,
         )
     settings = get_or_create_storefront_settings(shop)
+    rate_raw = latest_usd_to_iqd_for_shop(shop.pk)
+    exchange_rate = str(rate_raw) if rate_raw is not None else None
     return Response(
         {
             "shop_id": shop.id,
             "name": shop.name,
             "storefront_host": shop.storefront_host or "",
             "storefront": storefront_settings_public_dict(settings, shop, request),
+            "exchange_rate_usd_to_iqd": exchange_rate,
         },
     )
 
@@ -903,11 +906,14 @@ def public_storefront_catalog(request):
         [row for row in by_category.values() if row["products"]],
         key=lambda row: (row.get("name_ku") or row["name"]).casefold(),
     )
+    rate_raw = latest_usd_to_iqd_for_shop(shop.pk)
+    exchange_rate = str(rate_raw) if rate_raw is not None else None
     return Response(
         {
             "storefront": storefront_settings_public_dict(settings, shop, request),
             "banners": storefront_banners_public_list(shop, request),
             "categories": categories,
+            "exchange_rate_usd_to_iqd": exchange_rate,
         },
     )
 

@@ -5,11 +5,15 @@ import {
   Globe,
   Lightbulb,
   Loader2,
+  MapPin,
   Package,
   Palette,
+  Phone,
+  Plus,
   Save,
   ShoppingBag,
   Sparkles,
+  Trash2,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -21,8 +25,10 @@ import { resolveActiveShopId } from '../../lib/activeShop'
 import {
   fetchMerchantStorefrontSettings,
   patchMerchantStorefrontSettings,
+  uploadMerchantStorefrontLocationImage,
   uploadMerchantStorefrontLogo,
 } from '../../lib/merchantStorefrontSettingsApi'
+import type { StorefrontFaqItem } from '../../api/storefrontApi'
 import { resolveMediaUrl } from '../../lib/api'
 import { StorefrontPreview } from '../storefront/StorefrontPreview'
 import { storefrontStrings } from '../storefront/storefrontStrings'
@@ -82,6 +88,17 @@ export function MerchantOnlineShopPage() {
   const [copied, setCopied] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoUploading, setLogoUploading] = useState(false)
+  const [priceDisplayDefault, setPriceDisplayDefault] = useState<'usd' | 'iqd' | 'both'>('usd')
+  const [contactPhone, setContactPhone] = useState('')
+  const [contactWhatsapp, setContactWhatsapp] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+  const [aboutTitle, setAboutTitle] = useState('')
+  const [aboutBody, setAboutBody] = useState('')
+  const [faqItems, setFaqItems] = useState<StorefrontFaqItem[]>([])
+  const [shopAddress, setShopAddress] = useState('')
+  const [locationUrl, setLocationUrl] = useState('')
+  const [locationImageUrl, setLocationImageUrl] = useState<string | null>(null)
+  const [locationUploading, setLocationUploading] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -95,6 +112,16 @@ export function MerchantOnlineShopPage() {
       setBannerRotateSeconds(row.banner_rotate_seconds ?? 5)
       setStorefrontUrl(row.storefront_url || '')
       setLogoUrl(row.logo_url ?? null)
+      setPriceDisplayDefault(row.price_display_default ?? 'usd')
+      setContactPhone(row.contact_phone ?? '')
+      setContactWhatsapp(row.contact_whatsapp ?? '')
+      setContactEmail(row.contact_email ?? '')
+      setAboutTitle(row.about_title ?? '')
+      setAboutBody(row.about_body ?? '')
+      setFaqItems(Array.isArray(row.faq_items) ? row.faq_items : [])
+      setShopAddress(row.shop_address ?? '')
+      setLocationUrl(row.location_url ?? '')
+      setLocationImageUrl(row.location_image_url ?? null)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
@@ -124,6 +151,15 @@ export function MerchantOnlineShopPage() {
         welcome_message: welcomeMessage.trim(),
         accent_color: accentColor.trim() || '#FF5A00',
         banner_rotate_seconds: Math.max(2, Math.min(60, bannerRotateSeconds)),
+        price_display_default: priceDisplayDefault,
+        contact_phone: contactPhone.trim(),
+        contact_whatsapp: contactWhatsapp.trim(),
+        contact_email: contactEmail.trim(),
+        about_title: aboutTitle.trim(),
+        about_body: aboutBody.trim(),
+        faq_items: faqItems.filter((f) => f.question.trim() || f.answer.trim()),
+        shop_address: shopAddress.trim(),
+        location_url: locationUrl.trim(),
       })
       setSaved(true)
       await load()
@@ -326,6 +362,208 @@ export function MerchantOnlineShopPage() {
                   className={`${inputClass} resize-none`}
                 />
                 <p className="mt-1 text-[11px] text-slate-400">{t('onlineShop.welcomeFallbackHint')}</p>
+              </div>
+            </SectionCard>
+
+            <SectionCard title={t('onlineShop.storePagesSection')} icon={Phone}>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('onlineShop.storePagesHint')}</p>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                  {t('onlineShop.priceDisplayDefault')}
+                </label>
+                <select
+                  value={priceDisplayDefault}
+                  onChange={(e) =>
+                    setPriceDisplayDefault(e.target.value as 'usd' | 'iqd' | 'both')
+                  }
+                  className={inputClass}
+                >
+                  <option value="usd">{t('onlineShop.priceUsd')}</option>
+                  <option value="iqd">{t('onlineShop.priceIqd')}</option>
+                  <option value="both">{t('onlineShop.priceBoth')}</option>
+                </select>
+                <p className="mt-1 text-[11px] text-slate-400">{t('onlineShop.priceDisplayHint')}</p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                    {t('onlineShop.contactPhone')}
+                  </label>
+                  <input
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    className={inputClass}
+                    dir="ltr"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                    {t('onlineShop.contactWhatsapp')}
+                  </label>
+                  <input
+                    value={contactWhatsapp}
+                    onChange={(e) => setContactWhatsapp(e.target.value)}
+                    className={inputClass}
+                    dir="ltr"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                  {t('onlineShop.contactEmail')}
+                </label>
+                <input
+                  type="email"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  className={inputClass}
+                  dir="ltr"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                  {t('onlineShop.aboutTitle')}
+                </label>
+                <input
+                  value={aboutTitle}
+                  onChange={(e) => setAboutTitle(e.target.value)}
+                  placeholder={shopDisplayName}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                  {t('onlineShop.aboutBody')}
+                </label>
+                <textarea
+                  value={aboutBody}
+                  onChange={(e) => setAboutBody(e.target.value)}
+                  rows={4}
+                  className={`${inputClass} resize-y`}
+                />
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <label className="text-xs font-medium text-slate-500">{t('onlineShop.faqSection')}</label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFaqItems((prev) => [...prev, { question: '', answer: '' }])
+                    }
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-violet-700 hover:bg-violet-50 dark:border-slate-600"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {t('onlineShop.faqAdd')}
+                  </button>
+                </div>
+                <ul className="space-y-3">
+                  {faqItems.map((item, idx) => (
+                    <li
+                      key={idx}
+                      className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-700 dark:bg-slate-800/40"
+                    >
+                      <div className="mb-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setFaqItems((prev) => prev.filter((_, i) => i !== idx))}
+                          className="text-red-500 hover:text-red-600"
+                          aria-label={t('common.delete')}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <input
+                        value={item.question}
+                        onChange={(e) =>
+                          setFaqItems((prev) =>
+                            prev.map((f, i) =>
+                              i === idx ? { ...f, question: e.target.value } : f,
+                            ),
+                          )
+                        }
+                        placeholder={t('onlineShop.faqQuestion')}
+                        className={`${inputClass} mb-2`}
+                      />
+                      <textarea
+                        value={item.answer}
+                        onChange={(e) =>
+                          setFaqItems((prev) =>
+                            prev.map((f, i) => (i === idx ? { ...f, answer: e.target.value } : f)),
+                          )
+                        }
+                        rows={2}
+                        placeholder={t('onlineShop.faqAnswer')}
+                        className={`${inputClass} resize-none`}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                  {t('onlineShop.shopAddress')}
+                </label>
+                <textarea
+                  value={shopAddress}
+                  onChange={(e) => setShopAddress(e.target.value)}
+                  rows={2}
+                  className={`${inputClass} resize-none`}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                  {t('onlineShop.locationUrl')}
+                </label>
+                <input
+                  value={locationUrl}
+                  onChange={(e) => setLocationUrl(e.target.value)}
+                  placeholder="https://maps.google.com/..."
+                  className={inputClass}
+                  dir="ltr"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                  {t('onlineShop.locationImage')}
+                </label>
+                <div className="flex flex-wrap items-center gap-4">
+                  {locationImageUrl ? (
+                    <img
+                      src={resolveMediaUrl(locationImageUrl) ?? locationImageUrl}
+                      alt=""
+                      className="h-24 w-40 rounded-xl object-cover ring-1 ring-slate-200"
+                    />
+                  ) : (
+                    <span className="flex h-24 w-40 items-center justify-center rounded-xl bg-slate-100 text-slate-400 dark:bg-slate-800">
+                      <MapPin className="h-8 w-8" />
+                    </span>
+                  )}
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-semibold">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      disabled={locationUploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        e.target.value = ''
+                        if (!file) return
+                        setLocationUploading(true)
+                        void uploadMerchantStorefrontLocationImage(file)
+                          .then((row) => {
+                            setLocationImageUrl(row.location_image_url ?? null)
+                            setSaved(true)
+                          })
+                          .catch((err) => {
+                            setError(err instanceof Error ? err.message : t('common.error'))
+                          })
+                          .finally(() => setLocationUploading(false))
+                      }}
+                    />
+                    {locationUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    {t('onlineShop.uploadLocationImage')}
+                  </label>
+                </div>
               </div>
             </SectionCard>
 

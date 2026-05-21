@@ -4,13 +4,9 @@ import type { PublicStorefrontProduct } from '../../api/storefrontApi'
 import { resolveMediaUrl } from '../../lib/api'
 import { isProductAvailable, unavailableLabel } from './productAvailability'
 import { UnavailableProductBadge } from './UnavailableProductBadge'
-import { formatUsd } from './storefrontStrings'
 import { accentAlpha } from './storefrontTheme'
-
-function formatPrice(price: number, usdLabel: string): string {
-  if (!Number.isFinite(price) || price <= 0) return '—'
-  return `$${formatUsd(price)} ${usdLabel}`
-}
+import { useStorefrontPriceLabel } from './useStorefrontPriceLabel'
+import { useLocale } from '../../context/LocaleContext'
 
 type Props = {
   product: PublicStorefrontProduct
@@ -27,6 +23,8 @@ type Props = {
 }
 
 export function StorefrontProductCard({ product, accent, inCart, onOpen, labels }: Props) {
+  const { lang } = useLocale()
+  const { format: formatPrice } = useStorefrontPriceLabel(lang)
   const img = resolveMediaUrl(product.image_url)
   const price = Number.parseFloat(product.sell_price)
   const available = isProductAvailable(product)
@@ -77,7 +75,7 @@ export function StorefrontProductCard({ product, accent, inCart, onOpen, labels 
             className="absolute bottom-2.5 start-2.5 rounded-xl px-2.5 py-1 text-sm font-extrabold text-white shadow-md backdrop-blur-sm"
             style={{ backgroundColor: available ? accentAlpha(accent, 0.92) : 'rgba(100,116,139,0.85)' }}
           >
-            {formatPrice(price, labels.usd)}
+            {formatPrice(price)}
           </span>
         </div>
         <div className="space-y-1 p-3.5 pt-3">

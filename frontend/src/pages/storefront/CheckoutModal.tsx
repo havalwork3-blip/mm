@@ -6,7 +6,8 @@ import { ApiError } from '../../lib/api'
 import { useLocale } from '../../context/LocaleContext'
 import { cartTotal, useCartStore } from '../../store/cartStore'
 import { useStorefrontShop } from './StorefrontShopContext'
-import { formatUsd, storefrontStrings } from './storefrontStrings'
+import { storefrontStrings } from './storefrontStrings'
+import { useStorefrontPriceLabel } from './useStorefrontPriceLabel'
 import { accentAlpha } from './storefrontTheme'
 
 type Props = {
@@ -18,6 +19,7 @@ type Props = {
 export function CheckoutModal({ open, accent, onClose }: Props) {
   const { lang } = useLocale()
   const s = storefrontStrings(lang)
+  const { format: formatPrice } = useStorefrontPriceLabel(lang)
   const { shopId } = useStorefrontShop()
   const lines = useCartStore((st) => st.lines)
   const clearCart = useCartStore((st) => st.clearCart)
@@ -143,7 +145,7 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
               <p className="mb-5 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
                 {s.total}:{' '}
                 <span className="font-bold" style={{ color: accent }}>
-                  ${formatUsd(total)} {s.usd}
+                  {formatPrice(total)}
                 </span>
               </p>
 

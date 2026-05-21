@@ -174,6 +174,7 @@ class ShopSettingsSerializer(serializers.ModelSerializer):
 class StorefrontSettingsSerializer(serializers.ModelSerializer):
     shop = serializers.PrimaryKeyRelatedField(read_only=True)
     logo_url = serializers.SerializerMethodField(read_only=True)
+    location_image_url = serializers.SerializerMethodField(read_only=True)
     storefront_host = serializers.SerializerMethodField(read_only=True)
     storefront_url = serializers.SerializerMethodField(read_only=True)
 
@@ -189,6 +190,17 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
             "logo_url",
             "accent_color",
             "banner_rotate_seconds",
+            "price_display_default",
+            "contact_phone",
+            "contact_whatsapp",
+            "contact_email",
+            "about_title",
+            "about_body",
+            "faq_items",
+            "shop_address",
+            "location_url",
+            "location_image",
+            "location_image_url",
             "storefront_host",
             "storefront_url",
             "updated_at",
@@ -197,6 +209,7 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
             "id",
             "shop",
             "logo_url",
+            "location_image_url",
             "storefront_host",
             "storefront_url",
             "updated_at",
@@ -210,6 +223,26 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(url)
         return url
+
+    def get_location_image_url(self, obj: StorefrontSettings) -> str | None:
+        if not obj.location_image:
+            return None
+        request = self.context.get("request")
+        url = obj.location_image.url
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+
+    def validate_price_display_default(self, value: str) -> str:
+        v = (value or "usd").strip().lower()
+        if v not in ("usd", "iqd", "both"):
+            raise serializers.ValidationError("Must be usd, iqd, or both.")
+        return v
+
+    def validate_faq_items(self, value: object) -> list:
+        from shops.storefront_settings_utils import _normalize_faq_items
+
+        return _normalize_faq_items(value)
 
     def get_storefront_host(self, obj: StorefrontSettings) -> str:
         return (obj.shop.storefront_host or "").strip()
