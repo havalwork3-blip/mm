@@ -88,6 +88,8 @@ class PublicProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     is_available = serializers.SerializerMethodField(read_only=True)
     unavailable_reason = serializers.SerializerMethodField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    units_sold = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Product
@@ -105,6 +107,8 @@ class PublicProductSerializer(serializers.ModelSerializer):
             "category_name",
             "is_available",
             "unavailable_reason",
+            "created_at",
+            "units_sold",
         ]
         read_only_fields = fields
 
@@ -144,6 +148,10 @@ class PublicProductSerializer(serializers.ModelSerializer):
             return url
         except Exception:
             return None
+
+    def get_units_sold(self, obj: Product) -> int:
+        sold_map: dict[int, int] = self.context.get("units_sold_by_product") or {}
+        return int(sold_map.get(obj.id, 0))
 
 
 class StorefrontOrderItemSerializer(serializers.ModelSerializer):

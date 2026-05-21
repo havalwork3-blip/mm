@@ -7,6 +7,7 @@ import { isProductAvailable } from './productAvailability'
 import { triggerCartFly } from './cartFlyAnimation'
 import { UnavailableProductBanner } from './UnavailableProductBadge'
 import { useLocale } from '../../context/LocaleContext'
+import { StorefrontFavoriteButton } from './StorefrontFavoriteButton'
 import { accentAlpha } from './storefrontTheme'
 import { useStorefrontPriceLabel } from './useStorefrontPriceLabel'
 
@@ -25,16 +26,21 @@ type Labels = {
 }
 
 type Props = {
+  shopId: number
   product: PublicStorefrontProduct
   categoryName: string
   accent: string
   inCart: number
-  labels: Labels
+  labels: Labels & {
+    addToFavorites: string
+    removeFromFavorites: string
+  }
   onBack: () => void
   onAdd: (quantity: number) => void
 }
 
 export function StorefrontProductDetail({
+  shopId,
   product,
   categoryName,
   accent,
@@ -92,6 +98,13 @@ export function StorefrontProductDetail({
             <p className="truncate text-xs text-slate-500">{categoryName}</p>
           ) : null}
         </div>
+        <StorefrontFavoriteButton
+          shopId={shopId}
+          productId={product.id}
+          accent={accent}
+          addLabel={labels.addToFavorites}
+          removeLabel={labels.removeFromFavorites}
+        />
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">

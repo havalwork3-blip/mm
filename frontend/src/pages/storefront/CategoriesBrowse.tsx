@@ -1,9 +1,14 @@
-import { ArrowLeft, ChevronLeft, Sparkles } from 'lucide-react'
+import { ChevronLeft, Sparkles } from 'lucide-react'
 
-import type { PublicStorefrontCategory } from '../../api/storefrontApi'
+import type { PublicStorefrontCategory, StorefrontProductCollection } from '../../api/storefrontApi'
 import { useLocale } from '../../context/LocaleContext'
 import { categoryDisplayName } from '../../lib/categoryNames'
 import { resolveMediaUrl } from '../../lib/api'
+import {
+  COLLECTION_ICONS,
+  StorefrontCollectionsGrid,
+  type CollectionTile,
+} from './StorefrontCollectionsGrid'
 import { accentAlpha, SF_INSET_X } from './storefrontTheme'
 
 const GRADIENTS = [
@@ -24,8 +29,20 @@ type Props = {
     productCount: string
     categories: string
     shopCategories: string
+    shopHighlights: string
+    bestsellers: string
+    bestsellersHint: string
+    newArrivals: string
+    newArrivalsHint: string
+    onSale: string
+    onSaleHint: string
+    availableNow: string
+    availableNowHint: string
+    myFavorites: string
+    myFavoritesHint: string
   }
   onSelectCategory: (id: number) => void
+  onSelectCollection: (id: StorefrontProductCollection) => void
   onViewAllProducts: () => void
 }
 
@@ -34,9 +51,48 @@ export function CategoriesBrowse({
   accent,
   labels,
   onSelectCategory,
+  onSelectCollection,
   onViewAllProducts,
 }: Props) {
   const { lang } = useLocale()
+
+  const collectionTiles: CollectionTile[] = [
+    {
+      id: 'bestsellers',
+      title: labels.bestsellers,
+      hint: labels.bestsellersHint,
+      icon: COLLECTION_ICONS.bestsellers,
+      gradient: 'linear-gradient(145deg, #f97316 0%, #ea580c 55%, #9a3412 100%)',
+    },
+    {
+      id: 'new_arrivals',
+      title: labels.newArrivals,
+      hint: labels.newArrivalsHint,
+      icon: COLLECTION_ICONS.new_arrivals,
+      gradient: 'linear-gradient(145deg, #8b5cf6 0%, #7c3aed 55%, #4c1d95 100%)',
+    },
+    {
+      id: 'on_sale',
+      title: labels.onSale,
+      hint: labels.onSaleHint,
+      icon: COLLECTION_ICONS.on_sale,
+      gradient: 'linear-gradient(145deg, #10b981 0%, #059669 55%, #065f46 100%)',
+    },
+    {
+      id: 'available_now',
+      title: labels.availableNow,
+      hint: labels.availableNowHint,
+      icon: COLLECTION_ICONS.available_now,
+      gradient: 'linear-gradient(145deg, #3b82f6 0%, #2563eb 55%, #1e3a8a 100%)',
+    },
+    {
+      id: 'favorites',
+      title: labels.myFavorites,
+      hint: labels.myFavoritesHint,
+      icon: COLLECTION_ICONS.favorites,
+      gradient: 'linear-gradient(145deg, #ec4899 0%, #db2777 55%, #9d174d 100%)',
+    },
+  ]
 
   return (
     <section className={`${SF_INSET_X} sf-view-panel mt-2 sm:mt-4`}>
@@ -124,18 +180,16 @@ export function CategoriesBrowse({
         })}
       </div>
 
-      <button
-        type="button"
-        onClick={onViewAllProducts}
-        className="mt-7 flex w-full items-center justify-center gap-2.5 rounded-3xl py-4 text-[15px] font-extrabold text-white shadow-xl transition hover:brightness-105 active:scale-[0.99]"
-        style={{
-          background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
-          boxShadow: `0 12px 36px ${accentAlpha(accent, 0.38)}`,
-        }}
-      >
-        {labels.viewAllProducts}
-        <ArrowLeft className="h-5 w-5 rotate-180 rtl:rotate-0" aria-hidden />
-      </button>
+      <p className="sf-sidebar-muted mt-8 mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+        {labels.shopHighlights}
+      </p>
+      <StorefrontCollectionsGrid
+        accent={accent}
+        tiles={collectionTiles}
+        viewAllLabel={labels.viewAllProducts}
+        onSelectCollection={onSelectCollection}
+        onViewAllProducts={onViewAllProducts}
+      />
     </section>
   )
 }

@@ -435,6 +435,23 @@ html.sf-mode select {
   color: #cbd5e1;
 }
 
+.sf-favorites-empty {
+  background: #ffffff;
+}
+
+.sf-root.sf-dark .sf-favorites-empty {
+  background: #1e293b;
+  ring-color: rgba(51, 65, 85, 0.8);
+}
+
+.sf-root.sf-dark .sf-favorites-empty p:first-of-type {
+  color: #f1f5f9;
+}
+
+.sf-collection-tile {
+  -webkit-tap-highlight-color: transparent;
+}
+
 .sf-root.sf-dark .sf-social-icon-circle {
   background: #1e293b;
   border-color: #334155;

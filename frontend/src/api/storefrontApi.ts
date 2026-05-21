@@ -123,7 +123,16 @@ export type PublicStorefrontProduct = {
   category_name?: string
   is_available: boolean
   unavailable_reason: ProductUnavailableReason | null
+  created_at?: string
+  units_sold?: number
 }
+
+export type StorefrontProductCollection =
+  | 'bestsellers'
+  | 'new_arrivals'
+  | 'on_sale'
+  | 'available_now'
+  | 'favorites'
 
 export type StorefrontOrderPayload = {
   shop: number

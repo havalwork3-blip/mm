@@ -1,4 +1,4 @@
-import { Loader2, PackageOpen, RefreshCw } from 'lucide-react'
+import { Heart, Loader2, PackageOpen, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
@@ -14,11 +14,13 @@ import { StorefrontProductCard } from './StorefrontProductCard'
 import { StorefrontProductDetail } from './StorefrontProductDetail'
 import { useLocale } from '../../context/LocaleContext'
 import { useCartStore } from '../../store/cartStore'
+import { useStorefrontFavoritesStore } from '../../store/storefrontFavoritesStore'
 import { useStorefrontShop } from './StorefrontShopContext'
 import { useStorefrontCatalog } from './storefrontCatalogContext'
 import { storefrontStrings } from './storefrontStrings'
 import { categoryDisplayName } from '../../lib/categoryNames'
 import { sortProductsAvailableFirst } from './productAvailability'
+import { collectionTitleKey, filterCatalogByCollection } from './storefrontCollections'
 import { accentAlpha, resolveAccent, SF_INSET_X, SF_PRODUCT_GRID } from './storefrontTheme'
 
 export function StorefrontCatalog() {
@@ -29,11 +31,13 @@ export function StorefrontCatalog() {
   const {
     view,
     selectedCategoryId,
+    productCollection,
     selectedProduct,
     productCategoryName,
     search,
     selectCategory,
     showAllProducts,
+    showCollection,
     backToCategories,
     openProduct,
     backFromProduct,
@@ -43,6 +47,10 @@ export function StorefrontCatalog() {
   const addItem = useCartStore((st) => st.addItem)
   const setQuantity = useCartStore((st) => st.setQuantity)
   const cartLines = useCartStore((st) => st.lines)
+  const hydrateFavorites = useStorefrontFavoritesStore((st) => st.hydrate)
+  const favoriteIds = useStorefrontFavoritesStore((st) =>
+    shopId != null ? st.favoriteIds(shopId) : [],
+  )
 
   const [categories, setCategories] = useState<PublicStorefrontCategory[]>([])
   const [banners, setBanners] = useState<PublicStorefrontBanner[]>([])
@@ -83,6 +91,10 @@ export function StorefrontCatalog() {
   }, [load])
 
   useEffect(() => {
+    hydrateFavorites()
+  }, [hydrateFavorites])
+
+  useEffect(() => {
     if (view !== 'categories') return
     setSearchActive(false)
   }, [view, setSearchActive])
@@ -111,13 +123,18 @@ export function StorefrontCatalog() {
         categoryName: categoryDisplayName(c, lang),
       })),
     )
-    return sortProductsAvailableFirst(rows)
-  }, [filteredCategories, lang])
+    const filtered = filterCatalogByCollection(rows, productCollection, favoriteIds)
+    return sortProductsAvailableFirst(filtered)
+  }, [filteredCategories, lang, productCollection, favoriteIds])
 
   const selectedCategory =
     selectedCategoryId != null ? categories.find((c) => c.id === selectedCategoryId) : null
 
   const totalProducts = categories.reduce((n, c) => n + c.products.length, 0)
+
+  const collectionTitle = productCollection
+    ? s[collectionTitleKey(productCollection) ?? 'allProducts']
+    : null
 
   const cardLabels = {
     viewProduct: s.viewProduct,
@@ -125,6 +142,8 @@ export function StorefrontCatalog() {
     outOfStock: s.outOfStock,
     discontinued: s.discontinued,
     unavailable: s.unavailable,
+    addToFavorites: s.addToFavorites,
+    removeFromFavorites: s.removeFromFavorites,
   }
 
   const availabilityLabels = {
@@ -209,8 +228,20 @@ export function StorefrontCatalog() {
                 productCount: s.productCount,
                 categories: s.categories,
                 shopCategories: s.shopCategories,
+                shopHighlights: s.shopHighlights,
+                bestsellers: s.bestsellers,
+                bestsellersHint: s.bestsellersHint,
+                newArrivals: s.newArrivals,
+                newArrivalsHint: s.newArrivalsHint,
+                onSale: s.onSale,
+                onSaleHint: s.onSaleHint,
+                availableNow: s.availableNow,
+                availableNowHint: s.availableNowHint,
+                myFavorites: s.myFavorites,
+                myFavoritesHint: s.myFavoritesHint,
               }}
               onSelectCategory={selectCategory}
+              onSelectCollection={showCollection}
               onViewAllProducts={showAllProducts}
             />
           </div>
@@ -224,7 +255,7 @@ export function StorefrontCatalog() {
             ].join(' ')}
             aria-hidden={!showProductsView || view === 'product'}
           >
-            {categories.length > 0 ? (
+            {categories.length > 0 && !productCollection ? (
               <CategoryFilterBar
                 categories={categories}
                 selectedId={selectedCategoryId}
@@ -244,11 +275,13 @@ export function StorefrontCatalog() {
             <section className={`${SF_INSET_X} pb-6 pt-2 sm:pt-4`}>
               <div className="mb-5 flex items-center justify-between gap-3">
                 <h2 className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">
-                  {selectedCategory
-                    ? categoryDisplayName(selectedCategory, lang)
-                    : search.trim()
-                      ? s.searchResults.replace('{q}', search.trim())
-                      : s.allProducts}
+                  {collectionTitle
+                    ? collectionTitle
+                    : selectedCategory
+                      ? categoryDisplayName(selectedCategory, lang)
+                      : search.trim()
+                        ? s.searchResults.replace('{q}', search.trim())
+                        : s.allProducts}
                 </h2>
                 <span
                   className="rounded-full px-3 py-1 text-xs font-bold"
@@ -259,19 +292,35 @@ export function StorefrontCatalog() {
               </div>
 
               {flatProducts.length === 0 ? (
-                <p className="py-16 text-center text-sm text-slate-500">{s.noProductsInCategory}</p>
+                productCollection === 'favorites' ? (
+                  <div className="sf-favorites-empty flex flex-col items-center gap-3 rounded-3xl bg-white px-6 py-16 text-center shadow-sm ring-1 ring-slate-200/70">
+                    <span
+                      className="flex h-16 w-16 items-center justify-center rounded-full"
+                      style={{ backgroundColor: accentAlpha(accent, 0.12) }}
+                    >
+                      <Heart className="h-8 w-8" style={{ color: accent }} aria-hidden />
+                    </span>
+                    <p className="text-base font-extrabold text-slate-800">{s.favoritesEmpty}</p>
+                    <p className="max-w-xs text-sm text-slate-500">{s.favoritesEmptyHint}</p>
+                  </div>
+                ) : (
+                  <p className="py-16 text-center text-sm text-slate-500">{s.noProductsInCategory}</p>
+                )
               ) : (
                 <ul className={SF_PRODUCT_GRID}>
-                  {flatProducts.map(({ product, categoryName }) => (
+                  {shopId != null
+                    ? flatProducts.map(({ product, categoryName }) => (
                     <StorefrontProductCard
                       key={product.id}
+                      shopId={shopId}
                       product={product}
                       accent={accent}
                       inCart={qtyInCart(product.id)}
                       onOpen={() => handleOpenProduct(product, categoryName)}
                       labels={cardLabels}
                     />
-                  ))}
+                  ))
+                    : null}
                 </ul>
               )}
 
@@ -287,8 +336,9 @@ export function StorefrontCatalog() {
         </div>
       )}
 
-      {selectedProduct && view === 'product' ? (
+      {selectedProduct && view === 'product' && shopId != null ? (
         <StorefrontProductDetail
+          shopId={shopId}
           product={selectedProduct}
           categoryName={productCategoryName}
           accent={accent}
@@ -300,6 +350,8 @@ export function StorefrontCatalog() {
             quantity: s.quantity,
             usd: s.usd,
             inCart: s.inCart,
+            addToFavorites: s.addToFavorites,
+            removeFromFavorites: s.removeFromFavorites,
             ...availabilityLabels,
           }}
           onBack={backFromProduct}

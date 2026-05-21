@@ -4,11 +4,13 @@ import type { PublicStorefrontProduct } from '../../api/storefrontApi'
 import { resolveMediaUrl } from '../../lib/api'
 import { isProductAvailable, unavailableLabel } from './productAvailability'
 import { UnavailableProductBadge } from './UnavailableProductBadge'
+import { StorefrontFavoriteButton } from './StorefrontFavoriteButton'
 import { accentAlpha } from './storefrontTheme'
 import { useStorefrontPriceLabel } from './useStorefrontPriceLabel'
 import { useLocale } from '../../context/LocaleContext'
 
 type Props = {
+  shopId: number
   product: PublicStorefrontProduct
   accent: string
   inCart: number
@@ -19,10 +21,12 @@ type Props = {
     outOfStock: string
     discontinued: string
     unavailable: string
+    addToFavorites: string
+    removeFromFavorites: string
   }
 }
 
-export function StorefrontProductCard({ product, accent, inCart, onOpen, labels }: Props) {
+export function StorefrontProductCard({ shopId, product, accent, inCart, onOpen, labels }: Props) {
   const { lang } = useLocale()
   const { format: formatPrice } = useStorefrontPriceLabel(lang)
   const img = resolveMediaUrl(product.image_url)
@@ -30,7 +34,15 @@ export function StorefrontProductCard({ product, accent, inCart, onOpen, labels 
   const available = isProductAvailable(product)
 
   return (
-    <li>
+    <li className="relative">
+      <StorefrontFavoriteButton
+        shopId={shopId}
+        productId={product.id}
+        accent={accent}
+        addLabel={labels.addToFavorites}
+        removeLabel={labels.removeFromFavorites}
+        className="absolute end-2.5 top-2.5 z-10"
+      />
       <button
         type="button"
         onClick={onOpen}

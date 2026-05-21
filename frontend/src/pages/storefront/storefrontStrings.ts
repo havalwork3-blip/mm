@@ -137,6 +137,21 @@ const STRINGS = {
     unavailable: 'بەردەست نییە',
     unavailableHint: 'ئەم بەرهەمە ئێستا بەردەست نییە. دواتر سەیری بکەرەوە یان پەیوەندیمان پێوە بکە.',
     cannotOrder: 'ناتوانیت داوا بکەیت',
+    shopHighlights: 'تایبەتمەندیەکان',
+    bestsellers: 'پرفرۆشترین',
+    bestsellersHint: 'زۆرترین فرۆشراو',
+    newArrivals: 'نوێترین',
+    newArrivalsHint: 'تازە گەیشتووە',
+    onSale: 'داشکاندن',
+    onSaleHint: 'نرخی تایبەت',
+    availableNow: 'ئێستا بەردەستە',
+    availableNowHint: 'کۆگا هەیە',
+    myFavorites: 'دڵخوازەکانم',
+    myFavoritesHint: 'لیستی تۆ',
+    addToFavorites: 'زیادکردن بۆ دڵخواز',
+    removeFromFavorites: 'لابردن لە دڵخواز',
+    favoritesEmpty: 'هێشتا دڵخوازت نییە',
+    favoritesEmptyHint: 'لەسەر دڵ بگرە بۆ پاشەکەوتکردن',
   },
   ar: {
     hello: 'مرحباً',
@@ -237,6 +252,21 @@ const STRINGS = {
     unavailable: 'غير متاح',
     unavailableHint: 'هذا المنتج غير متاح حالياً. تحقق لاحقاً أو تواصل معنا.',
     cannotOrder: 'لا يمكن الطلب',
+    shopHighlights: 'مميز',
+    bestsellers: 'الأكثر مبيعاً',
+    bestsellersHint: 'الأكثر طلباً',
+    newArrivals: 'وصل حديثاً',
+    newArrivalsHint: 'منتجات جديدة',
+    onSale: 'تخفيضات',
+    onSaleHint: 'أسعار خاصة',
+    availableNow: 'متوفر الآن',
+    availableNowHint: 'متوفر في المخزن',
+    myFavorites: 'مفضلتي',
+    myFavoritesHint: 'قائمتك',
+    addToFavorites: 'إضافة للمفضلة',
+    removeFromFavorites: 'إزالة من المفضلة',
+    favoritesEmpty: 'لا مفضلات بعد',
+    favoritesEmptyHint: 'اضغط القلب لحفظ المنتج',
   },
   en: {
     hello: 'Hello',
@@ -337,6 +367,21 @@ const STRINGS = {
     unavailable: 'Unavailable',
     unavailableHint: 'This item is not available right now. Check back later or contact the shop.',
     cannotOrder: 'Cannot order',
+    shopHighlights: 'Highlights',
+    bestsellers: 'Best sellers',
+    bestsellersHint: 'Top ordered items',
+    newArrivals: 'New arrivals',
+    newArrivalsHint: 'Fresh in store',
+    onSale: 'On sale',
+    onSaleHint: 'Special prices',
+    availableNow: 'In stock',
+    availableNowHint: 'Ready to order',
+    myFavorites: 'My favorites',
+    myFavoritesHint: 'Your saved list',
+    addToFavorites: 'Add to favorites',
+    removeFromFavorites: 'Remove from favorites',
+    favoritesEmpty: 'No favorites yet',
+    favoritesEmptyHint: 'Tap the heart on any product to save it here',
   },
 }
 
@@ -439,6 +484,21 @@ export type StorefrontStrings = {
   unavailable: string
   unavailableHint: string
   cannotOrder: string
+  shopHighlights: string
+  bestsellers: string
+  bestsellersHint: string
+  newArrivals: string
+  newArrivalsHint: string
+  onSale: string
+  onSaleHint: string
+  availableNow: string
+  availableNowHint: string
+  myFavorites: string
+  myFavoritesHint: string
+  addToFavorites: string
+  removeFromFavorites: string
+  favoritesEmpty: string
+  favoritesEmptyHint: string
 }
 
 export function storefrontStrings(lang: Lang): StorefrontStrings {

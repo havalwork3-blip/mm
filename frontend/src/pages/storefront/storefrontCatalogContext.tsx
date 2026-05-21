@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import type {
   PublicStorefrontCategory,
   PublicStorefrontProduct,
+  StorefrontProductCollection,
 } from '../../api/storefrontApi'
 
 export type StorefrontView = 'categories' | 'products' | 'product'
@@ -10,6 +11,7 @@ export type StorefrontView = 'categories' | 'products' | 'product'
 type Ctx = {
   view: StorefrontView
   selectedCategoryId: number | null
+  productCollection: StorefrontProductCollection | null
   selectedProduct: PublicStorefrontProduct | null
   productCategoryName: string
   search: string
@@ -19,6 +21,7 @@ type Ctx = {
   closeSearch: () => void
   selectCategory: (id: number) => void
   showAllProducts: () => void
+  showCollection: (collection: StorefrontProductCollection) => void
   backToCategories: () => void
   openProduct: (product: PublicStorefrontProduct, categoryName?: string) => void
   backFromProduct: () => void
@@ -36,6 +39,9 @@ function scrollMainTop(smooth = true) {
 export function StorefrontCatalogProvider({ children }: { children: React.ReactNode }) {
   const [view, setView] = useState<StorefrontView>('categories')
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null)
+  const [productCollection, setProductCollection] = useState<StorefrontProductCollection | null>(
+    null,
+  )
   const [selectedProduct, setSelectedProduct] = useState<PublicStorefrontProduct | null>(null)
   const [productCategoryName, setProductCategoryName] = useState('')
   const [returnView, setReturnView] = useState<'categories' | 'products'>('products')
@@ -45,18 +51,28 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
 
   const selectCategory = useCallback((id: number) => {
     setSelectedCategoryId(id)
+    setProductCollection(null)
     setView('products')
     scrollMainTop()
   }, [])
 
   const showAllProducts = useCallback(() => {
     setSelectedCategoryId(null)
+    setProductCollection(null)
+    setView('products')
+    scrollMainTop()
+  }, [])
+
+  const showCollection = useCallback((collection: StorefrontProductCollection) => {
+    setSelectedCategoryId(null)
+    setProductCollection(collection)
     setView('products')
     scrollMainTop()
   }, [])
 
   const backToCategories = useCallback(() => {
     setSelectedCategoryId(null)
+    setProductCollection(null)
     setSelectedProduct(null)
     setSearch('')
     setSearchOpen(false)
@@ -101,6 +117,7 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
     () => ({
       view,
       selectedCategoryId,
+      productCollection,
       selectedProduct,
       productCategoryName,
       search,
@@ -110,6 +127,7 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
       closeSearch,
       selectCategory,
       showAllProducts,
+      showCollection,
       backToCategories,
       openProduct,
       backFromProduct,
@@ -120,12 +138,14 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
     [
       view,
       selectedCategoryId,
+      productCollection,
       selectedProduct,
       productCategoryName,
       search,
       searchOpen,
       selectCategory,
       showAllProducts,
+      showCollection,
       backToCategories,
       openProduct,
       backFromProduct,

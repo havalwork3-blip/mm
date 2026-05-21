@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch, Q, Sum
 
 from shops.storefront_settings_utils import (
     get_or_create_storefront_settings,
@@ -53,6 +53,7 @@ from .models import (
     SaleReturnLine,
     Shareholder,
     StorefrontOrder,
+    StorefrontOrderItem,
 )
 from .permissions import (
     IsShopOwnerOrCanPaySupplierDebt,
@@ -785,6 +786,27 @@ class ShareholderViewSet(OwnerScopedViewSet):
     }
 
 
+def _storefront_units_sold_by_product(shop_id: int) -> dict[int, int]:
+    """POS + online order quantities per product (excludes cancelled online orders)."""
+    totals: dict[int, int] = {}
+    for row in (
+        SaleLine.objects.filter(sale__shop_id=shop_id, product_id__isnull=False)
+        .values("product_id")
+        .annotate(total=Sum("quantity"))
+    ):
+        pid = row["product_id"]
+        totals[pid] = totals.get(pid, 0) + int(row["total"] or 0)
+    for row in (
+        StorefrontOrderItem.objects.filter(order__shop_id=shop_id)
+        .exclude(order__status="CANCELLED")
+        .values("product_id")
+        .annotate(total=Sum("quantity"))
+    ):
+        pid = row["product_id"]
+        totals[pid] = totals.get(pid, 0) + int(row["total"] or 0)
+    return totals
+
+
 def _storefront_shop_from_request(request):
     """Resolve shop by ?host= or ?shop_id= (must have online storefront enabled)."""
     raw_host = (request.query_params.get("host") or "").strip()
@@ -893,13 +915,15 @@ def public_storefront_catalog(request):
     for cat in Category.objects.filter(shop_id=shop.pk).order_by("name_ku", "name"):
         by_category[cat.id] = _category_row(cat)
 
+    units_sold = _storefront_units_sold_by_product(shop.pk)
+    ser_ctx = {"request": request, "units_sold_by_product": units_sold}
     for product in product_qs:
         cat = product.category
         block = by_category.get(cat.id)
         if block is None:
             block = _category_row(cat)
             by_category[cat.id] = block
-        ser = PublicProductSerializer(product, context={"request": request})
+        ser = PublicProductSerializer(product, context=ser_ctx)
         block["products"].append(ser.data)
 
     categories = sorted(
@@ -940,7 +964,12 @@ def public_storefront_products(request):
         .select_related("category")
         .order_by("is_discontinued", "name")
     )
-    ser = PublicProductSerializer(qs, many=True, context={"request": request})
+    units_sold = _storefront_units_sold_by_product(shop.pk)
+    ser = PublicProductSerializer(
+        qs,
+        many=True,
+        context={"request": request, "units_sold_by_product": units_sold},
+    )
     return Response(ser.data)
 
 

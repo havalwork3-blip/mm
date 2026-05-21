@@ -1,5 +1,6 @@
 import {
   Globe,
+  Heart,
   HelpCircle,
   Home,
   Info,
@@ -11,11 +12,13 @@ import {
   Sun,
   X,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
 import { useLocale } from '../../context/LocaleContext'
 import { isStorefrontMode } from '../../lib/storefrontConfig'
 import { socialPlatformLabel } from '../../lib/storefrontSocial'
+import { useStorefrontFavoritesStore } from '../../store/storefrontFavoritesStore'
 import { useStorefrontCatalog } from './storefrontCatalogContext'
 import { storefrontStrings } from './storefrontStrings'
 import { useStorefrontShop } from './StorefrontShopContext'
@@ -51,9 +54,28 @@ export function StorefrontSidebar({
   const { shopName, appearance } = useStorefrontShop()
   const { currency, setCurrency } = useStorefrontPrice()
   const { theme, setTheme } = useStorefrontTheme()
-  const { backToCategories, showAllProducts } = useStorefrontCatalog()
+  const { backToCategories, showAllProducts, showCollection } = useStorefrontCatalog()
+  const { shopId } = useStorefrontShop()
+  const favCount = useStorefrontFavoritesStore((st) =>
+    shopId != null ? st.count(shopId) : 0,
+  )
   const socials = appearance.social_links ?? []
   const isDark = theme === 'dark'
+  const [openSettings, setOpenSettings] = useState<'lang' | 'appearance' | null>(null)
+
+  useEffect(() => {
+    if (!open) setOpenSettings(null)
+  }, [open])
+
+  const toggleSettings = (panel: 'lang' | 'appearance') => {
+    setOpenSettings((prev) => (prev === panel ? null : panel))
+  }
+
+  const settingsIconCls = (active: boolean) =>
+    [
+      'flex h-11 w-11 items-center justify-center rounded-xl transition',
+      active ? 'text-white shadow-sm' : 'sf-sidebar-pill',
+    ].join(' ')
 
   const linkCls = ({ isActive }: { isActive: boolean }) =>
     [
@@ -115,6 +137,25 @@ export function StorefrontSidebar({
             <LayoutGrid className="h-4 w-4" />
             {s.scrollToProducts}
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              showCollection('favorites')
+              onClose()
+            }}
+            className={navBtnCls}
+          >
+            <Heart className="h-4 w-4" />
+            {s.myFavorites}
+            {favCount > 0 ? (
+              <span
+                className="ms-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
+                style={{ backgroundColor: accent }}
+              >
+                {favCount > 99 ? '99+' : favCount}
+              </span>
+            ) : null}
+          </button>
           <button type="button" onClick={() => { onOpenCart(); onClose() }} className={navBtnCls}>
             <ShoppingBag className="h-4 w-4" />
             {s.cart}
@@ -172,12 +213,37 @@ export function StorefrontSidebar({
         </nav>
 
         <div className="shrink-0 space-y-4 border-t border-slate-100 p-4">
-          <div>
-            <p className="sf-sidebar-muted mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
-              <Globe className="h-3 w-3" />
-              {s.language}
-            </p>
-            <div className="flex flex-wrap gap-1.5">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSettings('lang')}
+              className={settingsIconCls(openSettings === 'lang')}
+              style={openSettings === 'lang' ? { backgroundColor: accent } : undefined}
+              aria-label={s.language}
+              aria-expanded={openSettings === 'lang'}
+              title={s.language}
+            >
+              <Globe className="h-5 w-5" aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleSettings('appearance')}
+              className={settingsIconCls(openSettings === 'appearance')}
+              style={openSettings === 'appearance' ? { backgroundColor: accent } : undefined}
+              aria-label={s.appearance}
+              aria-expanded={openSettings === 'appearance'}
+              title={s.appearance}
+            >
+              {isDark ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
+            </button>
+          </div>
+
+          {openSettings === 'lang' ? (
+            <div
+              className="flex flex-wrap gap-1.5"
+              role="group"
+              aria-label={s.language}
+            >
               {(['ku', 'ar', 'en'] as const).map((code) => (
                 <button
                   key={code}
@@ -193,14 +259,10 @@ export function StorefrontSidebar({
                 </button>
               ))}
             </div>
-          </div>
+          ) : null}
 
-          <div>
-            <p className="sf-sidebar-muted mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
-              {isDark ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
-              {s.appearance}
-            </p>
-            <div className="flex gap-1.5">
+          {openSettings === 'appearance' ? (
+            <div className="flex gap-1.5" role="group" aria-label={s.appearance}>
               {(['light', 'dark'] as StorefrontTheme[]).map((t) => (
                 <button
                   key={t}
@@ -212,12 +274,12 @@ export function StorefrontSidebar({
                   ].join(' ')}
                   style={theme === t ? { backgroundColor: accent } : undefined}
                 >
-                  {t === 'light' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+                  {t === 'light' ? <Sun className="h-3.5 w-3.5" aria-hidden /> : <Moon className="h-3.5 w-3.5" aria-hidden />}
                   {t === 'light' ? s.lightMode : s.darkMode}
                 </button>
               ))}
             </div>
-          </div>
+          ) : null}
 
           <div>
             <p className="sf-sidebar-muted mb-2 text-[10px] font-bold uppercase tracking-wider">

@@ -7,6 +7,7 @@ import { useStorefrontCatalog } from './storefrontCatalogContext'
 import { useStorefrontTheme } from './storefrontThemeContext'
 import { useStorefrontShop } from './StorefrontShopContext'
 import { cartItemCount, useCartStore } from '../../store/cartStore'
+import { useStorefrontFavoritesStore } from '../../store/storefrontFavoritesStore'
 import { CartDrawer } from './CartDrawer'
 import { CheckoutModal } from './CheckoutModal'
 import { StorefrontSearchOverlay } from './StorefrontSearchOverlay'
@@ -37,6 +38,11 @@ export function StorefrontLayout() {
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [cartPulse, setCartPulse] = useState(false)
+  const hydrateFavorites = useStorefrontFavoritesStore((st) => st.hydrate)
+
+  useEffect(() => {
+    hydrateFavorites()
+  }, [hydrateFavorites])
 
   const isDark = theme === 'dark'
 
