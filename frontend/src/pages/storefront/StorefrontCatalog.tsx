@@ -20,7 +20,7 @@ import { useStorefrontCatalog } from './storefrontCatalogContext'
 import { storefrontStrings } from './storefrontStrings'
 import { categoryDisplayName } from '../../lib/categoryNames'
 import { sortProductsAvailableFirst } from './productAvailability'
-import { collectionTitleKey, filterCatalogByCollection } from './storefrontCollections'
+import { collectionTitle, filterCatalogByCollection } from './storefrontCollections'
 import { accentAlpha, resolveAccent, SF_INSET_X, SF_PRODUCT_GRID } from './storefrontTheme'
 
 export function StorefrontCatalog() {
@@ -132,9 +132,7 @@ export function StorefrontCatalog() {
 
   const totalProducts = categories.reduce((n, c) => n + c.products.length, 0)
 
-  const collectionTitle = productCollection
-    ? s[collectionTitleKey(productCollection) ?? 'allProducts']
-    : null
+  const productsHeading = collectionTitle(s, productCollection)
 
   const cardLabels = {
     viewProduct: s.viewProduct,
@@ -275,8 +273,8 @@ export function StorefrontCatalog() {
             <section className={`${SF_INSET_X} pb-6 pt-2 sm:pt-4`}>
               <div className="mb-5 flex items-center justify-between gap-3">
                 <h2 className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">
-                  {collectionTitle
-                    ? collectionTitle
+                  {productsHeading
+                    ? productsHeading
                     : selectedCategory
                       ? categoryDisplayName(selectedCategory, lang)
                       : search.trim()

@@ -1,5 +1,6 @@
 import type { PublicStorefrontProduct, StorefrontProductCollection } from '../../api/storefrontApi'
 import { isProductAvailable } from './productAvailability'
+import type { StorefrontStrings } from './storefrontStrings'
 
 export type CatalogProductRow = {
   product: PublicStorefrontProduct
@@ -50,19 +51,23 @@ export function filterCatalogByCollection(
   }
 }
 
-export function collectionTitleKey(
+export function collectionTitle(
+  s: StorefrontStrings,
   collection: StorefrontProductCollection | null,
-): keyof import('./storefrontStrings').StorefrontStrings | null {
+): string | null {
   if (!collection) return null
-  const map: Record<
-    StorefrontProductCollection,
-    keyof import('./storefrontStrings').StorefrontStrings
-  > = {
-    bestsellers: 'bestsellers',
-    new_arrivals: 'newArrivals',
-    on_sale: 'onSale',
-    available_now: 'availableNow',
-    favorites: 'myFavorites',
+  switch (collection) {
+    case 'bestsellers':
+      return s.bestsellers
+    case 'new_arrivals':
+      return s.newArrivals
+    case 'on_sale':
+      return s.onSale
+    case 'available_now':
+      return s.availableNow
+    case 'favorites':
+      return s.myFavorites
+    default:
+      return null
   }
-  return map[collection]
 }
