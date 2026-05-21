@@ -129,13 +129,9 @@ export type PublicStorefrontProduct = {
 
 export type StorefrontProductCollection =
   | 'bestsellers'
-  | 'best_deals'
   | 'new_arrivals'
   | 'on_sale'
-  | 'budget_picks'
-  | 'premium'
   | 'available_now'
-  | 'recently_viewed'
   | 'favorites'
 
 export type StorefrontOrderPayload = {

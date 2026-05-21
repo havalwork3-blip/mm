@@ -8,7 +8,6 @@ import { useStorefrontTheme } from './storefrontThemeContext'
 import { useStorefrontShop } from './StorefrontShopContext'
 import { cartItemCount, useCartStore } from '../../store/cartStore'
 import { useStorefrontFavoritesStore } from '../../store/storefrontFavoritesStore'
-import { useStorefrontRecentStore } from '../../store/storefrontRecentStore'
 import { CartDrawer } from './CartDrawer'
 import { CheckoutModal } from './CheckoutModal'
 import { StorefrontSearchOverlay } from './StorefrontSearchOverlay'
@@ -43,7 +42,6 @@ export function StorefrontLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [cartPulse, setCartPulse] = useState(false)
   const hydrateFavorites = useStorefrontFavoritesStore((st) => st.hydrate)
-  const hydrateRecent = useStorefrontRecentStore((st) => st.hydrate)
   const favCount = useStorefrontFavoritesStore((st) =>
     shopId != null ? st.count(shopId) : 0,
   )
@@ -51,8 +49,7 @@ export function StorefrontLayout() {
 
   useEffect(() => {
     hydrateFavorites()
-    hydrateRecent()
-  }, [hydrateFavorites, hydrateRecent])
+  }, [hydrateFavorites])
 
   const isDark = theme === 'dark'
 

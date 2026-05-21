@@ -138,23 +138,14 @@ const STRINGS = {
     unavailableHint: 'ئەم بەرهەمە ئێستا بەردەست نییە. دواتر سەیری بکەرەوە یان پەیوەندیمان پێوە بکە.',
     cannotOrder: 'ناتوانیت داوا بکەیت',
     shopHighlights: 'تایبەتمەندیەکان',
-    shopHighlightsSubtitle: 'هەڵبژاردەی تایبەت بۆ کڕینێکی خێرا',
     bestsellers: 'پرفرۆشترین',
     bestsellersHint: 'زۆرترین فرۆشراو',
-    bestDeals: 'باشترین داشکاندن',
-    bestDealsHint: 'بەرزترین ڕێژەی داشکاندن',
     newArrivals: 'نوێترین',
     newArrivalsHint: 'تازە گەیشتووە',
     onSale: 'داشکاندن',
     onSaleHint: 'نرخی تایبەت',
-    budgetPicks: 'نرخی گونجاو',
-    budgetPicksHint: 'هەڵبژاردەی ئابووری',
-    premium: 'تایبەت و جوان',
-    premiumHint: 'بەرهەمە پڕێمیەمەکان',
     availableNow: 'ئێستا بەردەستە',
     availableNowHint: 'کۆگا هەیە',
-    recentlyViewed: 'بینراوەکان',
-    recentlyViewedHint: 'دوایین سەیریت',
     myFavorites: 'دڵخوازەکانم',
     myFavoritesHint: 'لیستی تۆ',
     addToFavorites: 'زیادکردن بۆ دڵخواز',
@@ -262,23 +253,14 @@ const STRINGS = {
     unavailableHint: 'هذا المنتج غير متاح حالياً. تحقق لاحقاً أو تواصل معنا.',
     cannotOrder: 'لا يمكن الطلب',
     shopHighlights: 'مميز',
-    shopHighlightsSubtitle: 'اختيارات خاصة للتسوق السريع',
     bestsellers: 'الأكثر مبيعاً',
     bestsellersHint: 'الأكثر طلباً',
-    bestDeals: 'أفضل العروض',
-    bestDealsHint: 'أعلى نسبة خصم',
     newArrivals: 'وصل حديثاً',
     newArrivalsHint: 'منتجات جديدة',
     onSale: 'تخفيضات',
     onSaleHint: 'أسعار خاصة',
-    budgetPicks: 'أسعار مناسبة',
-    budgetPicksHint: 'خيارات اقتصادية',
-    premium: 'فاخر ومميز',
-    premiumHint: 'منتجات مميزة',
     availableNow: 'متوفر الآن',
     availableNowHint: 'متوفر في المخزن',
-    recentlyViewed: 'شاهدته مؤخراً',
-    recentlyViewedHint: 'آخر ما تصفحته',
     myFavorites: 'مفضلتي',
     myFavoritesHint: 'قائمتك',
     addToFavorites: 'إضافة للمفضلة',
@@ -386,23 +368,14 @@ const STRINGS = {
     unavailableHint: 'This item is not available right now. Check back later or contact the shop.',
     cannotOrder: 'Cannot order',
     shopHighlights: 'Highlights',
-    shopHighlightsSubtitle: 'Curated picks for faster shopping',
     bestsellers: 'Best sellers',
     bestsellersHint: 'Top ordered items',
-    bestDeals: 'Best deals',
-    bestDealsHint: 'Highest discount %',
     newArrivals: 'New arrivals',
     newArrivalsHint: 'Fresh in store',
     onSale: 'On sale',
     onSaleHint: 'Special prices',
-    budgetPicks: 'Budget picks',
-    budgetPicksHint: 'Great value choices',
-    premium: 'Premium picks',
-    premiumHint: 'Top-tier products',
     availableNow: 'In stock',
     availableNowHint: 'Ready to order',
-    recentlyViewed: 'Recently viewed',
-    recentlyViewedHint: 'Pick up where you left off',
     myFavorites: 'My favorites',
     myFavoritesHint: 'Your saved list',
     addToFavorites: 'Add to favorites',
@@ -512,23 +485,14 @@ export type StorefrontStrings = {
   unavailableHint: string
   cannotOrder: string
   shopHighlights: string
-  shopHighlightsSubtitle: string
   bestsellers: string
   bestsellersHint: string
-  bestDeals: string
-  bestDealsHint: string
   newArrivals: string
   newArrivalsHint: string
   onSale: string
   onSaleHint: string
-  budgetPicks: string
-  budgetPicksHint: string
-  premium: string
-  premiumHint: string
   availableNow: string
   availableNowHint: string
-  recentlyViewed: string
-  recentlyViewedHint: string
   myFavorites: string
   myFavoritesHint: string
   addToFavorites: string
