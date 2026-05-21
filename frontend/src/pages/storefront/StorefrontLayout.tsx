@@ -1,4 +1,4 @@
-import { Menu, Search, ShoppingBag } from 'lucide-react'
+import { Heart, Menu, Search, ShoppingBag } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 
@@ -8,6 +8,7 @@ import { useStorefrontTheme } from './storefrontThemeContext'
 import { useStorefrontShop } from './StorefrontShopContext'
 import { cartItemCount, useCartStore } from '../../store/cartStore'
 import { useStorefrontFavoritesStore } from '../../store/storefrontFavoritesStore'
+import { useStorefrontRecentStore } from '../../store/storefrontRecentStore'
 import { CartDrawer } from './CartDrawer'
 import { CheckoutModal } from './CheckoutModal'
 import { StorefrontSearchOverlay } from './StorefrontSearchOverlay'
@@ -19,13 +20,16 @@ import { resolveMediaUrl } from '../../lib/api'
 export function StorefrontLayout() {
   const { lang } = useLocale()
   const s = storefrontStrings(lang)
-  const { shopName, appearance, loading: shopLoading, error: shopError } = useStorefrontShop()
+  const { shopId, shopName, appearance, loading: shopLoading, error: shopError } =
+    useStorefrontShop()
   const { theme } = useStorefrontTheme()
   const {
     backToCategories,
     searchOpen,
     openSearch,
     closeSearch,
+    showCollection,
+    productCollection,
   } = useStorefrontCatalog()
   const location = useLocation()
 
@@ -39,10 +43,16 @@ export function StorefrontLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [cartPulse, setCartPulse] = useState(false)
   const hydrateFavorites = useStorefrontFavoritesStore((st) => st.hydrate)
+  const hydrateRecent = useStorefrontRecentStore((st) => st.hydrate)
+  const favCount = useStorefrontFavoritesStore((st) =>
+    shopId != null ? st.count(shopId) : 0,
+  )
+  const favoritesActive = productCollection === 'favorites'
 
   useEffect(() => {
     hydrateFavorites()
-  }, [hydrateFavorites])
+    hydrateRecent()
+  }, [hydrateFavorites, hydrateRecent])
 
   const isDark = theme === 'dark'
 
@@ -136,6 +146,44 @@ export function StorefrontLayout() {
                   aria-label={s.searchPlaceholder}
                 >
                   <Search className="h-[18px] w-[18px]" aria-hidden />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => showCollection('favorites')}
+                  className={[
+                    'relative flex h-10 w-10 items-center justify-center rounded-2xl transition active:scale-95',
+                    favoritesActive ? 'text-white shadow-md' : 'sf-surface-btn hover:opacity-90',
+                  ].join(' ')}
+                  style={
+                    favoritesActive
+                      ? {
+                          background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
+                          boxShadow: `0 6px 18px ${accentAlpha(accent, 0.35)}`,
+                        }
+                      : undefined
+                  }
+                  aria-label={s.myFavorites}
+                  aria-pressed={favoritesActive}
+                  title={s.myFavorites}
+                >
+                  <Heart
+                    className={['h-[18px] w-[18px]', favoritesActive ? 'fill-current' : ''].join(
+                      ' ',
+                    )}
+                    aria-hidden
+                  />
+                  {favCount > 0 ? (
+                    <span
+                      className={[
+                        'absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[9px] font-extrabold',
+                        favoritesActive ? 'bg-white/30 text-white' : 'text-white',
+                      ].join(' ')}
+                      style={favoritesActive ? undefined : { backgroundColor: accent }}
+                    >
+                      {favCount > 99 ? '99+' : favCount}
+                    </span>
+                  ) : null}
                 </button>
 
                 <button

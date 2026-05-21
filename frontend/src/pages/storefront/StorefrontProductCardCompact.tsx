@@ -72,7 +72,7 @@ export function StorefrontProductCardCompact({
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
           {onSale && available ? (
             <span className="absolute start-1.5 top-1.5 rounded-md bg-emerald-500 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm">
-              %
+              -{Math.round(discount)}%
             </span>
           ) : null}
           <span

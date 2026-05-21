@@ -510,6 +510,37 @@ html.sf-mode select {
   background: #0f172a;
 }
 
+.sf-highlights-hero {
+  background-color: #ffffff;
+}
+
+.sf-collection-chips button {
+  background: #ffffff;
+}
+
+.sf-perk-card {
+  background: #ffffff;
+}
+
+.sf-root.sf-dark .sf-highlights-hero {
+  background-color: #1e293b;
+}
+
+.sf-root.sf-dark .sf-collection-chips button {
+  background: #1e293b;
+  color: #e2e8f0;
+  ring-color: rgba(51, 65, 85, 0.75);
+}
+
+.sf-root.sf-dark .sf-perk-card {
+  background: #1e293b;
+  ring-color: rgba(51, 65, 85, 0.7);
+}
+
+.sf-root.sf-dark .sf-perk-card p {
+  color: #cbd5e1;
+}
+
 .sf-root.sf-dark .sf-social-icon-circle {
   background: #1e293b;
   border-color: #334155;

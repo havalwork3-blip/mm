@@ -8,7 +8,8 @@ import type {
 import { useLocale } from '../../context/LocaleContext'
 import { categoryDisplayName } from '../../lib/categoryNames'
 import { resolveMediaUrl } from '../../lib/api'
-import { StorefrontCollectionSections } from './StorefrontCollectionSections'
+import { StorefrontCollectionSections, type CollectionLabels } from './StorefrontCollectionSections'
+import { StorefrontShopPerks } from './StorefrontShopPerks'
 import type { CatalogProductRow } from './storefrontCollections'
 import { accentAlpha, SF_INSET_X } from './storefrontTheme'
 
@@ -25,30 +26,17 @@ type Props = {
   shopId: number
   catalogRows: CatalogProductRow[]
   favoriteIds: number[]
+  recentIds: number[]
   categories: PublicStorefrontCategory[]
   accent: string
-  labels: {
+  labels: CollectionLabels & {
     pickCategoryHint: string
-    viewAll: string
-    viewAllProducts: string
     productCount: string
     categories: string
     shopCategories: string
-    shopHighlights: string
-    bestsellers: string
-    bestsellersHint: string
-    newArrivals: string
-    newArrivalsHint: string
-    onSale: string
-    onSaleHint: string
-    availableNow: string
-    availableNowHint: string
-    myFavorites: string
-    myFavoritesHint: string
-    favoritesEmpty: string
-    favoritesEmptyHint: string
-    addToFavorites: string
-    removeFromFavorites: string
+    deliveryFast: string
+    orderEasy: string
+    support: string
   }
   onSelectCategory: (id: number) => void
   onSelectCollection: (id: StorefrontProductCollection) => void
@@ -60,6 +48,7 @@ export function CategoriesBrowse({
   shopId,
   catalogRows,
   favoriteIds,
+  recentIds,
   categories,
   accent,
   labels,
@@ -156,11 +145,19 @@ export function CategoriesBrowse({
         })}
       </div>
 
+      <StorefrontShopPerks
+        accent={accent}
+        deliveryFast={labels.deliveryFast}
+        orderEasy={labels.orderEasy}
+        support={labels.support}
+      />
+
       <StorefrontCollectionSections
         shopId={shopId}
         accent={accent}
         catalogRows={catalogRows}
         favoriteIds={favoriteIds}
+        recentIds={recentIds}
         labels={labels}
         onSelectCollection={onSelectCollection}
         onOpenProduct={onOpenProduct}

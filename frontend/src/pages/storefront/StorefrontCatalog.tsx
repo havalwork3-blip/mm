@@ -18,6 +18,10 @@ import {
   EMPTY_FAVORITE_IDS,
   useStorefrontFavoritesStore,
 } from '../../store/storefrontFavoritesStore'
+import {
+  EMPTY_RECENT_IDS,
+  useStorefrontRecentStore,
+} from '../../store/storefrontRecentStore'
 import { useStorefrontShop } from './StorefrontShopContext'
 import { useStorefrontCatalog } from './storefrontCatalogContext'
 import { storefrontStrings } from './storefrontStrings'
@@ -58,6 +62,10 @@ export function StorefrontCatalog() {
   const favoriteIds = useStorefrontFavoritesStore((st) =>
     shopId != null ? st.favoriteIds(shopId) : EMPTY_FAVORITE_IDS,
   )
+  const recordRecent = useStorefrontRecentStore((st) => st.recordView)
+  const recentIds = useStorefrontRecentStore((st) =>
+    shopId != null ? st.recentIds(shopId) : EMPTY_RECENT_IDS,
+  )
 
   const [categories, setCategories] = useState<PublicStorefrontCategory[]>([])
   const [banners, setBanners] = useState<PublicStorefrontBanner[]>([])
@@ -97,9 +105,12 @@ export function StorefrontCatalog() {
     void load()
   }, [load])
 
+  const hydrateRecent = useStorefrontRecentStore((st) => st.hydrate)
+
   useEffect(() => {
     hydrateFavorites()
-  }, [hydrateFavorites])
+    hydrateRecent()
+  }, [hydrateFavorites, hydrateRecent])
 
   useEffect(() => {
     if (view !== 'categories') return
@@ -138,9 +149,9 @@ export function StorefrontCatalog() {
               categoryName: categoryDisplayName(c, lang),
             })),
           )
-    const filtered = filterCatalogByCollection(rows, productCollection, favoriteIds)
+    const filtered = filterCatalogByCollection(rows, productCollection, favoriteIds, recentIds)
     return sortProductsAvailableFirst(filtered)
-  }, [filteredCategories, lang, productCollection, favoriteIds, allCatalogRows])
+  }, [filteredCategories, lang, productCollection, favoriteIds, recentIds, allCatalogRows])
 
   const selectedCategory =
     selectedCategoryId != null ? categories.find((c) => c.id === selectedCategoryId) : null
@@ -168,6 +179,7 @@ export function StorefrontCatalog() {
   }
 
   function handleOpenProduct(product: PublicStorefrontProduct, categoryName: string) {
+    if (shopId != null) recordRecent(shopId, product.id)
     openProduct(product, categoryName)
   }
 
@@ -237,6 +249,7 @@ export function StorefrontCatalog() {
                 shopId={shopId}
                 catalogRows={allCatalogRows}
                 favoriteIds={favoriteIds}
+                recentIds={recentIds}
                 categories={categories.filter((c) => c.products.length > 0)}
                 accent={accent}
                 labels={{
@@ -246,19 +259,27 @@ export function StorefrontCatalog() {
                   productCount: s.productCount,
                   categories: s.categories,
                   shopCategories: s.shopCategories,
+                  deliveryFast: s.deliveryFast,
+                  orderEasy: s.orderEasy,
+                  support: s.support,
                   shopHighlights: s.shopHighlights,
+                  shopHighlightsSubtitle: s.shopHighlightsSubtitle,
                   bestsellers: s.bestsellers,
                   bestsellersHint: s.bestsellersHint,
+                  bestDeals: s.bestDeals,
+                  bestDealsHint: s.bestDealsHint,
                   newArrivals: s.newArrivals,
                   newArrivalsHint: s.newArrivalsHint,
                   onSale: s.onSale,
                   onSaleHint: s.onSaleHint,
+                  budgetPicks: s.budgetPicks,
+                  budgetPicksHint: s.budgetPicksHint,
+                  premium: s.premium,
+                  premiumHint: s.premiumHint,
                   availableNow: s.availableNow,
                   availableNowHint: s.availableNowHint,
-                  myFavorites: s.myFavorites,
-                  myFavoritesHint: s.myFavoritesHint,
-                  favoritesEmpty: s.favoritesEmpty,
-                  favoritesEmptyHint: s.favoritesEmptyHint,
+                  recentlyViewed: s.recentlyViewed,
+                  recentlyViewedHint: s.recentlyViewedHint,
                   addToFavorites: s.addToFavorites,
                   removeFromFavorites: s.removeFromFavorites,
                 }}
@@ -326,6 +347,11 @@ export function StorefrontCatalog() {
                     </span>
                     <p className="text-base font-extrabold text-slate-800">{s.favoritesEmpty}</p>
                     <p className="max-w-xs text-sm text-slate-500">{s.favoritesEmptyHint}</p>
+                  </div>
+                ) : productCollection === 'recently_viewed' ? (
+                  <div className="sf-favorites-empty flex flex-col items-center gap-3 rounded-3xl bg-white px-6 py-16 text-center shadow-sm ring-1 ring-slate-200/70">
+                    <p className="text-base font-extrabold text-slate-800">{s.recentlyViewed}</p>
+                    <p className="max-w-xs text-sm text-slate-500">{s.recentlyViewedHint}</p>
                   </div>
                 ) : (
                   <p className="py-16 text-center text-sm text-slate-500">{s.noProductsInCategory}</p>
