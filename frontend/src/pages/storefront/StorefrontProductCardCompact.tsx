@@ -106,7 +106,6 @@ export function StorefrontProductCardCompact({
         </button>
         {available ? (
           <StorefrontAddToCartButton
-            product={product}
             accent={accent}
             label={addToCart}
             inCart={inCart}

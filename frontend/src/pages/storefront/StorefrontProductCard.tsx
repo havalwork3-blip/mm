@@ -126,7 +126,6 @@ export function StorefrontProductCard({
         {available ? (
           <div className="px-3.5 pb-3.5 pt-0">
             <StorefrontAddToCartButton
-              product={product}
               accent={accent}
               label={labels.addToCart}
               inCart={inCart}

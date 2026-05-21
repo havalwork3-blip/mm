@@ -1,12 +1,10 @@
 import { Plus, ShoppingBag } from 'lucide-react'
 import { useRef, type MouseEvent } from 'react'
 
-import type { PublicStorefrontProduct } from '../../api/storefrontApi'
 import { triggerCartFly } from './cartFlyAnimation'
 import { accentAlpha } from './storefrontTheme'
 
 type Props = {
-  product: PublicStorefrontProduct
   accent: string
   label: string
   inCart: number
@@ -16,7 +14,6 @@ type Props = {
 }
 
 export function StorefrontAddToCartButton({
-  product,
   accent,
   label,
   inCart,
