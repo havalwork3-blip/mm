@@ -92,10 +92,9 @@ STOREFRONT_GALLERY_MAX_PER_PRODUCT = 10
 
 
 def _storefront_gallery_prefetch() -> Prefetch:
-    return Prefetch(
-        "storefront_gallery_images",
-        queryset=StorefrontProductGalleryImage.objects.order_by("sort_order", "id"),
-    )
+    from inventory.online_product_schema import storefront_gallery_prefetch
+
+    return storefront_gallery_prefetch()
 
 
 class ShopScopedViewSet(viewsets.ModelViewSet):
@@ -1067,22 +1066,33 @@ class MerchantOnlineProductPricingView(APIView):
     permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
     http_method_names = ["get", "patch", "options", "head"]
 
-    def _products_qs(self, shop_id: int):
-        return (
-            Product.objects.filter(shop_id=shop_id, is_unregistered_placeholder=False)
-            .select_related("category")
-            .prefetch_related(_storefront_gallery_prefetch())
-            .order_by("name")
-        )
-
     def get(self, request):
         shop_id = require_shop_id(request)
         shop = Shop.objects.filter(pk=shop_id, online_storefront_enabled=True).first()
         if shop is None:
             raise PermissionDenied("Online storefront is not enabled for this shop.")
-        rows = self._products_qs(shop_id)
-        ser = OnlineProductPricingSerializer(rows, many=True, context={"request": request})
-        return Response(ser.data)
+        from django.db.utils import OperationalError, ProgrammingError
+
+        from inventory.online_product_schema import product_pricing_queryset
+
+        try:
+            rows = product_pricing_queryset(shop_id)
+            ser = OnlineProductPricingSerializer(rows, many=True, context={"request": request})
+            return Response(ser.data)
+        except (OperationalError, ProgrammingError) as exc:
+            import logging
+
+            logging.getLogger(__name__).exception("online-product-pricing failed")
+            return Response(
+                {
+                    "detail": (
+                        "Database schema is outdated. On the server run: "
+                        "python manage.py migrate"
+                    ),
+                    "error": str(exc)[:300],
+                },
+                status=503,
+            )
 
     def patch(self, request):
         shop_id = require_shop_id(request)
@@ -1132,6 +1142,13 @@ class MerchantOnlineProductPricingView(APIView):
             for key in allowed_fields:
                 if key not in row:
                     continue
+                if key == "online_description":
+                    from inventory.online_product_schema import (
+                        online_product_content_schema_ready,
+                    )
+
+                    if not online_product_content_schema_ready():
+                        continue
                 val = row[key]
                 if key == "online_sale_price":
                     if val is None or (isinstance(val, str) and not str(val).strip()):
@@ -1150,7 +1167,9 @@ class MerchantOnlineProductPricingView(APIView):
                 update_fields=list(patch.keys()) + ["updated_at"],
             )
 
-        rows = self._products_qs(shop_id)
+        from inventory.online_product_schema import product_pricing_queryset
+
+        rows = product_pricing_queryset(shop_id)
         ser = OnlineProductPricingSerializer(rows, many=True, context={"request": request})
         return Response(ser.data)
 
@@ -1161,6 +1180,15 @@ class MerchantOnlineProductGalleryView(APIView):
     permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
 
     def post(self, request, product_id: int):
+        from inventory.online_product_schema import online_product_content_schema_ready
+
+        if not online_product_content_schema_ready():
+            return Response(
+                {
+                    "detail": "Run python manage.py migrate to enable product gallery images.",
+                },
+                status=503,
+            )
         shop_id = require_shop_id(request)
         shop = Shop.objects.filter(pk=shop_id, online_storefront_enabled=True).first()
         if shop is None:

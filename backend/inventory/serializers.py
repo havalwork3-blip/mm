@@ -468,11 +468,8 @@ class OnlineProductPricingSerializer(serializers.ModelSerializer):
     )
     image_url = serializers.SerializerMethodField(read_only=True)
     effective_price = serializers.SerializerMethodField(read_only=True)
-    gallery_images = StorefrontProductGalleryImageSerializer(
-        source="storefront_gallery_images",
-        many=True,
-        read_only=True,
-    )
+    online_description = serializers.SerializerMethodField(read_only=True)
+    gallery_images = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Product
@@ -516,6 +513,28 @@ class OnlineProductPricingSerializer(serializers.ModelSerializer):
             return url
         except Exception:
             return None
+
+    def get_gallery_images(self, obj: Product) -> list:
+        from inventory.online_product_schema import online_product_content_schema_ready
+
+        if not online_product_content_schema_ready():
+            return []
+        try:
+            images = obj.storefront_gallery_images.all()
+        except Exception:
+            return []
+        return StorefrontProductGalleryImageSerializer(
+            images,
+            many=True,
+            context=self.context,
+        ).data
+
+    def get_online_description(self, obj: Product) -> str:
+        from inventory.online_product_schema import online_product_content_schema_ready
+
+        if not online_product_content_schema_ready():
+            return ""
+        return (getattr(obj, "online_description", None) or "").strip()
 
     def get_effective_price(self, obj: Product) -> str:
         from decimal import ROUND_HALF_UP, Decimal
