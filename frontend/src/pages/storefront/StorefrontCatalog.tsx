@@ -9,7 +9,6 @@ import {
 } from '../../api/storefrontApi'
 import { CategoriesBrowse } from './CategoriesBrowse'
 import { CategoryFilterBar } from './CategoryFilterBar'
-import { CategoryHero } from './CategoryHero'
 import { StorefrontHeroCarousel } from './StorefrontHeroCarousel'
 import { StorefrontProductCard } from './StorefrontProductCard'
 import { StorefrontProductDetail } from './StorefrontProductDetail'
@@ -225,14 +224,6 @@ export function StorefrontCatalog() {
             ].join(' ')}
             aria-hidden={!showProductsView || view === 'product'}
           >
-            {selectedCategory ? (
-              <CategoryHero
-                category={selectedCategory}
-                accent={accent}
-                productCountLabel={s.productCount}
-              />
-            ) : null}
-
             {categories.length > 0 ? (
               <CategoryFilterBar
                 categories={categories}
