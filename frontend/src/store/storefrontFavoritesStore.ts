@@ -2,6 +2,9 @@ import { create } from 'zustand'
 
 const STORAGE_KEY = 'sf_favorites_v1'
 
+/** Stable empty list — avoids infinite re-renders when used in Zustand selectors. */
+export const EMPTY_FAVORITE_IDS: number[] = []
+
 type FavoritesState = {
   byShop: Record<string, number[]>
   hydrate: () => void
@@ -67,7 +70,7 @@ export const useStorefrontFavoritesStore = create<FavoritesState>((set, get) => 
     return ids.includes(productId)
   },
 
-  favoriteIds: (shopId) => get().byShop[shopKey(shopId)] ?? [],
+  favoriteIds: (shopId) => get().byShop[shopKey(shopId)] ?? EMPTY_FAVORITE_IDS,
 
-  count: (shopId) => (get().byShop[shopKey(shopId)] ?? []).length,
+  count: (shopId) => (get().byShop[shopKey(shopId)] ?? EMPTY_FAVORITE_IDS).length,
 }))

@@ -1,4 +1,5 @@
 import { StorefrontCatalogProvider } from './storefrontCatalogContext'
+import { StorefrontErrorBoundary } from './StorefrontErrorBoundary'
 import { StorefrontLayout } from './StorefrontLayout'
 import { StorefrontPriceProvider } from './storefrontPriceContext'
 import { StorefrontShopProvider, useStorefrontShop } from './StorefrontShopContext'
@@ -19,8 +20,10 @@ function StorefrontInner() {
 
 export function StorefrontAppShell() {
   return (
-    <StorefrontShopProvider>
-      <StorefrontInner />
-    </StorefrontShopProvider>
+    <StorefrontErrorBoundary>
+      <StorefrontShopProvider>
+        <StorefrontInner />
+      </StorefrontShopProvider>
+    </StorefrontErrorBoundary>
   )
 }

@@ -14,7 +14,10 @@ import { StorefrontProductCard } from './StorefrontProductCard'
 import { StorefrontProductDetail } from './StorefrontProductDetail'
 import { useLocale } from '../../context/LocaleContext'
 import { useCartStore } from '../../store/cartStore'
-import { useStorefrontFavoritesStore } from '../../store/storefrontFavoritesStore'
+import {
+  EMPTY_FAVORITE_IDS,
+  useStorefrontFavoritesStore,
+} from '../../store/storefrontFavoritesStore'
 import { useStorefrontShop } from './StorefrontShopContext'
 import { useStorefrontCatalog } from './storefrontCatalogContext'
 import { storefrontStrings } from './storefrontStrings'
@@ -49,7 +52,7 @@ export function StorefrontCatalog() {
   const cartLines = useCartStore((st) => st.lines)
   const hydrateFavorites = useStorefrontFavoritesStore((st) => st.hydrate)
   const favoriteIds = useStorefrontFavoritesStore((st) =>
-    shopId != null ? st.favoriteIds(shopId) : [],
+    shopId != null ? st.favoriteIds(shopId) : EMPTY_FAVORITE_IDS,
   )
 
   const [categories, setCategories] = useState<PublicStorefrontCategory[]>([])
