@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageAuthLoading } from '../../components/PageAuthLoading'
 import { useLocale } from '../../context/LocaleContext'
+import { notifyOnlineOrdersChanged } from '../../hooks/useOnlineOrdersPendingCount'
 import { useSyncedSession } from '../../hooks/useSyncedSession'
 import {
   fetchMerchantStorefrontOrders,
@@ -132,6 +133,7 @@ export function MerchantOnlineOrdersPage() {
     try {
       const rows = await fetchMerchantStorefrontOrders()
       setOrders(rows)
+      notifyOnlineOrdersChanged()
     } catch (e) {
       setError(e instanceof Error ? e.message : t('onlineOrders.loadError'))
       setOrders([])
@@ -169,6 +171,7 @@ export function MerchantOnlineOrdersPage() {
       const updated = await patchMerchantStorefrontOrderStatus(orderId, next)
       setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)))
       if (detailOrder?.id === orderId) setDetailOrder(updated)
+      notifyOnlineOrdersChanged()
     } catch (e) {
       setError(e instanceof Error ? e.message : t('onlineOrders.statusUpdateError'))
     } finally {

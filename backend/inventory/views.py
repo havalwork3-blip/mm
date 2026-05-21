@@ -53,6 +53,7 @@ from .models import (
     SaleReturnLine,
     Shareholder,
     StorefrontOrder,
+    StorefrontOrderStatus,
     StorefrontOrderItem,
 )
 from .permissions import (
@@ -1004,6 +1005,12 @@ class MerchantStorefrontOrderViewSet(ShopScopedViewSet):
             if shop is None or not shop.online_storefront_enabled:
                 return qs.none()
         return qs.order_by("-created_at", "-id")
+
+    @action(detail=False, methods=["get"], url_path="pending-count")
+    def pending_count(self, request):
+        """Count new online orders (PENDING) for sidebar badge."""
+        count = self.get_queryset().filter(status=StorefrontOrderStatus.PENDING).count()
+        return Response({"pending_count": count})
 
 
 class MerchantOnlineProductPricingView(APIView):

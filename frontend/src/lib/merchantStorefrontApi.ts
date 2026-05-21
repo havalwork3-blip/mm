@@ -11,6 +11,15 @@ function asOrderList(
   return Array.isArray(data) ? data : data.results
 }
 
+export async function fetchMerchantStorefrontPendingCount(): Promise<{
+  pending_count: number
+}> {
+  return apiJson<{ pending_count: number }>(
+    '/api/merchant/storefront-orders/pending-count/',
+    { shopScoped: true },
+  )
+}
+
 export async function fetchMerchantStorefrontOrders(): Promise<
   MerchantStorefrontOrderRow[]
 > {

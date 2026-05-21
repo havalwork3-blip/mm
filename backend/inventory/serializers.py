@@ -1290,6 +1290,12 @@ class SaleLineNestedSerializer(serializers.ModelSerializer):
             return obj.product.name
         return obj.manual_name or ""
 
+    def validate_unit_price_usd(self, value) -> Decimal:
+        price = Decimal(str(value))
+        if price < 0:
+            raise serializers.ValidationError("Unit price cannot be negative.")
+        return price
+
     def validate(self, attrs: dict) -> dict:
         product = attrs.get("product")
         manual_name = str(attrs.get("manual_name", "") or "").strip()

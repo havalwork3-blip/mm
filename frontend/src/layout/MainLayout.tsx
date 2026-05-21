@@ -30,6 +30,7 @@ import { OnlineOrderNotificationLayer } from '../components/OnlineOrderNotificat
 import { useLocale } from '../context/LocaleContext'
 import { useSession } from '../context/SessionContext'
 import { useTheme } from '../context/ThemeContext'
+import { useOnlineOrdersPendingCount } from '../hooks/useOnlineOrdersPendingCount'
 import { apiJson, getGlobalView, setGlobalView, setSuperuserShopId } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
 import type { Me, ShopRow } from '../types/api'
@@ -48,6 +49,8 @@ type NavLeaf = {
   requiresOnlineStorefront?: boolean
   /** Shop POS settings (receipt, shortcuts): visible to owner or employee, not superuser sidebar. */
   employeeOnly?: boolean
+  /** Show pending online orders count badge (sidebar). */
+  showOnlineOrdersBadge?: boolean
 }
 
 type ShopNavEntry =
@@ -147,6 +150,7 @@ const SHOP_NAV: ShopNavEntry[] = [
         labelKey: 'nav.onlineOrders',
         icon: ShoppingCart,
         requiresOnlineStorefront: true,
+        showOnlineOrdersBadge: true,
       },
     ],
   },
@@ -303,6 +307,79 @@ function navLinkClass(collapsed: boolean, isActive: boolean) {
   } ${collapsed ? 'justify-center px-0' : ''}`
 }
 
+function NavPendingBadge({
+  count,
+  collapsed,
+}: {
+  count: number
+  collapsed: boolean
+}) {
+  if (count <= 0) return null
+  const label = count > 99 ? '99+' : String(count)
+  if (collapsed) {
+    return (
+      <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold leading-none text-slate-900 ring-2 ring-[var(--sidebar-bg,#0f172a)]">
+        {label}
+      </span>
+    )
+  }
+  return (
+    <span className="ms-auto shrink-0 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold leading-none text-slate-900">
+      {label}
+    </span>
+  )
+}
+
+function NavLinkWithOptionalBadge({
+  to,
+  end,
+  collapsed,
+  label,
+  icon: Icon,
+  badgeCount,
+  showBadge,
+  onNavigate,
+}: {
+  to: string
+  end?: boolean
+  collapsed: boolean
+  label: string
+  icon: LucideIcon
+  badgeCount: number
+  showBadge?: boolean
+  onNavigate: () => void
+}) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) =>
+        [
+          navLinkClass(collapsed, isActive),
+          showBadge && badgeCount > 0 ? 'relative' : '',
+        ].join(' ')
+      }
+      title={collapsed ? label : undefined}
+      onClick={onNavigate}
+    >
+      {showBadge && collapsed && badgeCount > 0 ? (
+        <span className="relative shrink-0">
+          <Icon className="h-5 w-5 opacity-90" aria-hidden />
+          <NavPendingBadge count={badgeCount} collapsed />
+        </span>
+      ) : (
+        <Icon className="h-5 w-5 shrink-0 opacity-90" aria-hidden />
+      )}
+      {!collapsed && (
+        <>
+          <span className="min-w-0 flex-1 break-words text-start leading-snug">{label}</span>
+          {showBadge ? <NavPendingBadge count={badgeCount} collapsed={false} /> : null}
+        </>
+      )}
+    </NavLink>
+  )
+}
+
 export function MainLayout() {
   const { t, lang, setLang } = useLocale()
   const { me, loading, logout } = useSession()
@@ -374,6 +451,12 @@ export function MainLayout() {
   }, [me, shops, globalViewOn, t, shopTick])
 
   const filteredShopNav = useMemo(() => filterShopNav(me, SHOP_NAV), [me])
+
+  const onlineOrdersBadgeEnabled = Boolean(
+    me?.online_storefront_enabled &&
+      (!me.is_superuser || Boolean((shopOverride || localStorage.getItem('pos_shop_id') || '').trim())),
+  )
+  const pendingOnlineOrders = useOnlineOrdersPendingCount(onlineOrdersBadgeEnabled)
 
   function applyShop(nextShopId?: string) {
     const v = (nextShopId ?? shopOverride).trim()
@@ -566,22 +649,18 @@ export function MainLayout() {
                               : 'ms-1 space-y-0.5 border-s border-slate-600/50 ps-2'
                           }
                         >
-                          {entry.items.map(({ to, labelKey, icon: Icon, end }) => (
-                            <li key={to + (end ? '-e' : '')}>
-                              <NavLink
-                                to={to}
-                                end={end}
-                                className={({ isActive }) => navLinkClass(collapsed, isActive)}
-                                title={collapsed ? t(labelKey) : undefined}
-                                onClick={() => setMobileOpen(false)}
-                              >
-                                <Icon className="h-5 w-5 shrink-0 opacity-90" />
-                                {!collapsed && (
-                                  <span className="min-w-0 flex-1 break-words text-start leading-snug">
-                                    {t(labelKey)}
-                                  </span>
-                                )}
-                              </NavLink>
+                          {entry.items.map((item) => (
+                            <li key={item.to + (item.end ? '-e' : '')}>
+                              <NavLinkWithOptionalBadge
+                                to={item.to}
+                                end={item.end}
+                                collapsed={collapsed}
+                                label={t(item.labelKey)}
+                                icon={item.icon}
+                                badgeCount={pendingOnlineOrders}
+                                showBadge={item.showOnlineOrdersBadge}
+                                onNavigate={() => setMobileOpen(false)}
+                              />
                             </li>
                           ))}
                         </ul>

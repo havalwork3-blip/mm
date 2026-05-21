@@ -69,6 +69,16 @@ function parseDec(s: string) {
   return Number.isNaN(n) ? 0 : n
 }
 
+/** POS line unit price: empty → 0; rejects negative and non-numeric input. */
+function parsePosUnitPriceUsd(raw: string): { ok: boolean; value: number } {
+  const trimmed = raw.trim().replace(/,/g, '')
+  if (!trimmed) return { ok: true, value: 0 }
+  const n = Number.parseFloat(trimmed)
+  if (!Number.isFinite(n)) return { ok: false, value: 0 }
+  if (n < 0) return { ok: false, value: n }
+  return { ok: true, value: n }
+}
+
 function formatMoneyCompact(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '0'
   const n = Number(String(value).replace(/,/g, '').trim())
@@ -1071,9 +1081,10 @@ export function PosPage() {
       setError(t('pos.cartEmptyError'))
       return
     }
-    const invalidLine = cart.some(
-      (l) => l.quantity <= 0 || parseDec(l.unitPriceUsd) <= 0,
-    )
+    const invalidLine = cart.some((l) => {
+      if (l.quantity <= 0) return true
+      return !parsePosUnitPriceUsd(l.unitPriceUsd).ok
+    })
     if (invalidLine) {
       setError(t('pos.enterQtyAndPrice'))
       return
@@ -1108,7 +1119,7 @@ export function PosPage() {
             ? { manual_name: l.product.name }
             : { product: l.product.id }),
           quantity: l.quantity,
-          unit_price_usd: l.unitPriceUsd,
+          unit_price_usd: formatDecimalTrim(parsePosUnitPriceUsd(l.unitPriceUsd).value),
         })),
       }
       if (me?.is_superuser) {
