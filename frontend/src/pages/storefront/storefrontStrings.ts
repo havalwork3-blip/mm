@@ -253,6 +253,16 @@ export type StorefrontStrings = {
   orderEasy: string
   support: string
   contactUs: string
+  aboutUs: string
+  faq: string
+  shopLocation: string
+  openMap: string
+  menu: string
+  menuInfo: string
+  infoEmpty: string
+  iqd: string
+  currencyLabel: string
+  language: string
   scrollToProducts: string
   shopTagline: string
   catalogTitle: string
