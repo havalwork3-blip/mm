@@ -285,6 +285,23 @@ export function HomePage() {
     }
   }, [me])
 
+  const fetchOnlineStats = useCallback(async () => {
+    if (!me?.online_storefront_enabled) {
+      setOnlineStats(null)
+      return
+    }
+    setLoadingOnlineStats(true)
+    try {
+      const q = `?from=${encodeURIComponent(dFrom)}&to=${encodeURIComponent(dTo)}`
+      const data = await fetchMerchantStorefrontOrderStats(q)
+      setOnlineStats(data)
+    } catch {
+      setOnlineStats(null)
+    } finally {
+      setLoadingOnlineStats(false)
+    }
+  }, [me?.online_storefront_enabled, dFrom, dTo])
+
   useEffect(() => {
     if (me && shouldFetchStats && !statsForbidden) void fetchStats()
   }, [me, shouldFetchStats, statsForbidden, fetchStats])
@@ -318,6 +335,9 @@ export function HomePage() {
     const onRefresh = () => {
       syncSuperuserScope()
       if (me && shouldFetchStats && !statsForbidden) void fetchStats()
+      if (me?.online_storefront_enabled && shouldFetchStats && !statsForbidden) {
+        void fetchOnlineStats()
+      }
       const shopScoped =
         me &&
         !getGlobalView() &&
@@ -335,6 +355,7 @@ export function HomePage() {
     shouldFetchStats,
     statsForbidden,
     fetchStats,
+    fetchOnlineStats,
     fetchTopSellingProducts,
     fetchStockProducts,
     fetchShopSettings,
@@ -379,23 +400,6 @@ export function HomePage() {
     }
     return visible
   }, [me, t])
-
-  const fetchOnlineStats = useCallback(async () => {
-    if (!me?.online_storefront_enabled) {
-      setOnlineStats(null)
-      return
-    }
-    setLoadingOnlineStats(true)
-    try {
-      const q = `?from=${encodeURIComponent(dFrom)}&to=${encodeURIComponent(dTo)}`
-      const data = await fetchMerchantStorefrontOrderStats(q)
-      setOnlineStats(data)
-    } catch {
-      setOnlineStats(null)
-    } finally {
-      setLoadingOnlineStats(false)
-    }
-  }, [me?.online_storefront_enabled, dFrom, dTo])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
