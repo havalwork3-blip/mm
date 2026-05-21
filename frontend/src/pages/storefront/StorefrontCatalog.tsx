@@ -390,6 +390,7 @@ export function StorefrontCatalog() {
           labels={{
             back: s.backToProducts,
             orderNow: s.orderNow,
+            productDetails: s.productDetails,
             added: s.addedToCart,
             quantity: s.quantity,
             usd: s.usd,

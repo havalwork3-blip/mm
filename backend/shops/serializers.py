@@ -181,6 +181,7 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
     storefront_host = serializers.SerializerMethodField(read_only=True)
     storefront_url = serializers.SerializerMethodField(read_only=True)
     telegram_bot_token_masked = serializers.SerializerMethodField(read_only=True)
+    whatsapp_access_token_masked = serializers.SerializerMethodField(read_only=True)
     telegram_regenerate_link = serializers.BooleanField(write_only=True, required=False, default=False)
 
     class Meta:
@@ -218,6 +219,10 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
             "telegram_link_code",
             "telegram_recipients",
             "telegram_regenerate_link",
+            "whatsapp_customer_notify_enabled",
+            "whatsapp_access_token",
+            "whatsapp_access_token_masked",
+            "whatsapp_phone_number_id",
             "storefront_host",
             "storefront_url",
             "updated_at",
@@ -229,18 +234,25 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
             "location_image_url",
             "telegram_bot_token_masked",
             "telegram_link_code",
+            "whatsapp_access_token_masked",
             "storefront_host",
             "storefront_url",
             "updated_at",
         ]
         extra_kwargs = {
             "telegram_bot_token": {"write_only": True, "required": False, "allow_blank": True},
+            "whatsapp_access_token": {"write_only": True, "required": False, "allow_blank": True},
         }
 
     def get_telegram_bot_token_masked(self, obj: StorefrontSettings) -> str:
         from shops.telegram_notify import mask_bot_token
 
         return mask_bot_token(obj.telegram_bot_token or "")
+
+    def get_whatsapp_access_token_masked(self, obj: StorefrontSettings) -> str:
+        from shops.whatsapp_notify import mask_access_token
+
+        return mask_access_token(obj.whatsapp_access_token or "")
 
     def validate_telegram_recipients(self, value: object) -> list:
         from shops.telegram_notify import normalize_recipients
@@ -271,6 +283,13 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
                 validated_data["telegram_bot_token"] = raw
             else:
                 validated_data.pop("telegram_bot_token", None)
+
+        if "whatsapp_access_token" in validated_data:
+            raw = (validated_data.get("whatsapp_access_token") or "").strip()
+            if raw:
+                validated_data["whatsapp_access_token"] = raw
+            else:
+                validated_data.pop("whatsapp_access_token", None)
 
         if "telegram_recipients" in validated_data:
             validated_data["telegram_recipients"] = normalize_recipients(
@@ -507,6 +526,23 @@ class QrLandingAdminPatchSerializer(serializers.Serializer):
     accent_color = serializers.CharField(max_length=32, required=False)
     phone = serializers.CharField(allow_blank=True, required=False, max_length=64)
     preset_links = serializers.ListField(required=False, child=serializers.DictField())
+    manager_telegram_notify_enabled = serializers.BooleanField(required=False)
+    manager_telegram_bot_token = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=256,
+    )
+    manager_telegram_chat_id = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=64,
+    )
+    manager_telegram_send_hour = serializers.IntegerField(required=False, min_value=0, max_value=23)
+    manager_telegram_send_minute = serializers.IntegerField(
+        required=False,
+        min_value=0,
+        max_value=59,
+    )
 
     def validate_preset_links(self, value):
         out = []

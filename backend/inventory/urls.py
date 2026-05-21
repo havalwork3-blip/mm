@@ -56,6 +56,16 @@ urlpatterns = [
         views.MerchantOnlineProductPricingView.as_view(),
         name="merchant-online-product-pricing",
     ),
+    path(
+        "merchant/online-product-pricing/<int:product_id>/gallery/",
+        views.MerchantOnlineProductGalleryView.as_view(),
+        name="merchant-online-product-gallery",
+    ),
+    path(
+        "merchant/online-product-pricing/gallery/<int:image_id>/",
+        views.MerchantOnlineProductGalleryDetailView.as_view(),
+        name="merchant-online-product-gallery-detail",
+    ),
     path("admin/stats/", GlobalAdminStatsView.as_view(), name="admin-global-stats"),
     path("reports/profit/", ProfitReportView.as_view(), name="profit-report"),
     path("reports/jard/", JardReportView.as_view(), name="jard-report"),

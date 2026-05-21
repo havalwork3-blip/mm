@@ -1,4 +1,4 @@
-import { Copy, Download, Plus, QrCode, Share2, Trash2 } from 'lucide-react'
+import { Copy, Download, Loader2, MessageCircle, Plus, QrCode, Send, Share2, Trash2 } from 'lucide-react'
 import QRCode from 'qrcode'
 import type { FormEvent } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -94,6 +94,11 @@ export function AdminQrSocialPage() {
   const [primaryLogoPreviewUrl, setPrimaryLogoPreviewUrl] = useState<string | null>(null)
   const primaryLogoPreviewRef = useRef<string | null>(null)
 
+  const [managerTokenInput, setManagerTokenInput] = useState('')
+  const [managerTelegramTesting, setManagerTelegramTesting] = useState(false)
+  const [managerTelegramSending, setManagerTelegramSending] = useState(false)
+  const [managerTelegramMsg, setManagerTelegramMsg] = useState<string | null>(null)
+
   const [newCustom, setNewCustom] = useState({
     label: '',
     url: 'https://',
@@ -174,6 +179,72 @@ export function AdminQrSocialPage() {
       primaryLogoPreviewRef.current = null
     }
     setPrimaryLogoPreviewUrl(null)
+  }
+
+  async function saveManagerTelegram(e: FormEvent) {
+    e.preventDefault()
+    if (!cfg) return
+    setSaving(true)
+    setError(null)
+    setManagerTelegramMsg(null)
+    try {
+      await apiJson<QrLandingAdminResponse>('/api/admin/qr-landing/', {
+        method: 'PATCH',
+        omitShopScope: true,
+        body: JSON.stringify({
+          manager_telegram_notify_enabled: cfg.manager_telegram_notify_enabled,
+          manager_telegram_chat_id: cfg.manager_telegram_chat_id,
+          manager_telegram_send_hour: cfg.manager_telegram_send_hour,
+          manager_telegram_send_minute: cfg.manager_telegram_send_minute,
+          ...(managerTokenInput.trim()
+            ? { manager_telegram_bot_token: managerTokenInput.trim() }
+            : {}),
+        }),
+      })
+      setManagerTokenInput('')
+      await load({ silent: true })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('common.error'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function testManagerTelegram() {
+    setManagerTelegramTesting(true)
+    setManagerTelegramMsg(null)
+    try {
+      const res = await apiJson<{ ok: boolean }>('/api/admin/qr-landing/manager-telegram-test/', {
+        method: 'POST',
+        omitShopScope: true,
+      })
+      setManagerTelegramMsg(res.ok ? t('qrAdmin.managerTelegramTestOk') : t('qrAdmin.managerTelegramTestFail'))
+    } catch (e) {
+      setManagerTelegramMsg(e instanceof Error ? e.message : t('qrAdmin.managerTelegramTestFail'))
+    } finally {
+      setManagerTelegramTesting(false)
+    }
+  }
+
+  async function sendManagerTelegramNow() {
+    setManagerTelegramSending(true)
+    setManagerTelegramMsg(null)
+    try {
+      const res = await apiJson<{ sent: number; shops: number }>(
+        '/api/admin/qr-landing/manager-telegram-send-now/',
+        { method: 'POST', omitShopScope: true },
+      )
+      setManagerTelegramMsg(
+        t('qrAdmin.managerTelegramSendOk')
+          .replace('{sent}', String(res.sent))
+          .replace('{shops}', String(res.shops)),
+      )
+      await load({ silent: true })
+    } catch (e) {
+      setManagerTelegramMsg(e instanceof Error ? e.message : t('qrAdmin.managerTelegramSendFail'))
+    } finally {
+      setManagerTelegramSending(false)
+    }
   }
 
   async function saveMain(e: FormEvent) {
@@ -556,6 +627,168 @@ export function AdminQrSocialPage() {
               >
                 {saving ? t('common.loading') : t('settings.save')}
               </button>
+            </form>
+
+            <form
+              onSubmit={saveManagerTelegram}
+              className="rounded-2xl border border-violet-200/80 bg-gradient-to-br from-violet-50/80 to-white p-5 shadow-sm dark:border-violet-900/40 dark:from-violet-950/25 dark:to-slate-800"
+            >
+              <h2 className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-100">
+                <MessageCircle className="h-5 w-5 text-violet-600 dark:text-violet-400" aria-hidden />
+                {t('qrAdmin.managerTelegramSection')}
+              </h2>
+              <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                {t('qrAdmin.managerTelegramHint')}
+              </p>
+              <label className="mt-4 flex cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={cfg.manager_telegram_notify_enabled}
+                  onChange={(e) =>
+                    setCfg((c) =>
+                      c ? { ...c, manager_telegram_notify_enabled: e.target.checked } : c,
+                    )
+                  }
+                  className="h-4 w-4 rounded border-slate-300 text-violet-600"
+                />
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  {t('qrAdmin.managerTelegramEnabled')}
+                </span>
+              </label>
+              {cfg.manager_telegram_notify_enabled ? (
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                      {t('qrAdmin.managerTelegramBotToken')}
+                    </label>
+                    <input
+                      type="password"
+                      dir="ltr"
+                      value={managerTokenInput}
+                      onChange={(e) => setManagerTokenInput(e.target.value)}
+                      placeholder={
+                        cfg.manager_telegram_bot_token_masked ||
+                        '123456789:ABCdefGHIjklMNOpqrsTUVwxyz'
+                      }
+                      className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-900"
+                    />
+                    <p className="mt-1 text-xs text-slate-500">{t('qrAdmin.managerTelegramBotTokenHint')}</p>
+                    {cfg.manager_telegram_bot_token_masked && !managerTokenInput ? (
+                      <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
+                        {t('qrAdmin.managerTelegramTokenSaved')}:{' '}
+                        {cfg.manager_telegram_bot_token_masked}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                      {t('qrAdmin.managerTelegramChatId')}
+                    </label>
+                    <input
+                      dir="ltr"
+                      value={cfg.manager_telegram_chat_id}
+                      onChange={(e) =>
+                        setCfg((c) => (c ? { ...c, manager_telegram_chat_id: e.target.value } : c))
+                      }
+                      placeholder="123456789"
+                      className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-900"
+                    />
+                    <p className="mt-1 text-xs text-slate-500">{t('qrAdmin.managerTelegramChatIdHint')}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                      {t('qrAdmin.managerTelegramSendTime')}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={23}
+                        value={cfg.manager_telegram_send_hour}
+                        onChange={(e) =>
+                          setCfg((c) =>
+                            c
+                              ? {
+                                  ...c,
+                                  manager_telegram_send_hour: Math.min(
+                                    23,
+                                    Math.max(0, Number.parseInt(e.target.value, 10) || 0),
+                                  ),
+                                }
+                              : c,
+                          )
+                        }
+                        className="w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+                      />
+                      <span className="text-slate-500">:</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={59}
+                        value={cfg.manager_telegram_send_minute}
+                        onChange={(e) =>
+                          setCfg((c) =>
+                            c
+                              ? {
+                                  ...c,
+                                  manager_telegram_send_minute: Math.min(
+                                    59,
+                                    Math.max(0, Number.parseInt(e.target.value, 10) || 0),
+                                  ),
+                                }
+                              : c,
+                          )
+                        }
+                        className="w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+                      />
+                    </div>
+                    {cfg.manager_telegram_last_sent_date ? (
+                      <p className="mt-2 text-xs text-slate-500">
+                        {t('qrAdmin.managerTelegramLastSent')}: {cfg.manager_telegram_last_sent_date}
+                      </p>
+                    ) : null}
+                    <p className="mt-2 text-[11px] text-slate-400">{t('qrAdmin.managerTelegramCronHint')}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="rounded-lg bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-800 disabled:opacity-60"
+                    >
+                      {saving ? t('common.loading') : t('settings.save')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={managerTelegramTesting}
+                      onClick={() => void testManagerTelegram()}
+                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                    >
+                      {managerTelegramTesting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <MessageCircle className="h-4 w-4" aria-hidden />
+                      )}
+                      {t('qrAdmin.managerTelegramTest')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={managerTelegramSending}
+                      onClick={() => void sendManagerTelegramNow()}
+                      className="inline-flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-900 hover:bg-violet-200 disabled:opacity-50 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-200"
+                    >
+                      {managerTelegramSending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Send className="h-4 w-4" aria-hidden />
+                      )}
+                      {t('qrAdmin.managerTelegramSendNow')}
+                    </button>
+                  </div>
+                  {managerTelegramMsg ? (
+                    <p className="text-xs text-slate-600 dark:text-slate-300">{managerTelegramMsg}</p>
+                  ) : null}
+                </div>
+              ) : null}
             </form>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">

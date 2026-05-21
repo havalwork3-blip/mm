@@ -61,6 +61,12 @@ export type QrLandingAdminResponse = {
   primary_logo_url: string | null
   preset_links: QrLandingPresetRow[]
   custom_links: QrLandingCustomLinkRow[]
+  manager_telegram_notify_enabled: boolean
+  manager_telegram_bot_token_masked: string
+  manager_telegram_chat_id: string
+  manager_telegram_send_hour: number
+  manager_telegram_send_minute: number
+  manager_telegram_last_sent_date: string | null
   updated_at: string | null
 }
 

@@ -37,6 +37,9 @@ export type MerchantStorefrontSettings = {
   telegram_bot_token_masked: string
   telegram_link_code: string
   telegram_recipients: TelegramRecipient[]
+  whatsapp_customer_notify_enabled: boolean
+  whatsapp_access_token_masked: string
+  whatsapp_phone_number_id: string
   storefront_host: string
   storefront_url: string
   updated_at: string
@@ -95,9 +98,12 @@ export type MerchantStorefrontSettingsPatch = Partial<
     | 'delivery_free_min_usd'
     | 'telegram_notify_enabled'
     | 'telegram_recipients'
+    | 'whatsapp_customer_notify_enabled'
+    | 'whatsapp_phone_number_id'
   > & {
     telegram_bot_token?: string
     telegram_regenerate_link?: boolean
+    whatsapp_access_token?: string
   }
 >
 
@@ -109,6 +115,14 @@ export async function postMerchantTelegramTest(): Promise<{ sent: number; total:
       shopScoped: true,
     },
   )
+}
+
+export async function postMerchantWhatsAppTest(phone?: string): Promise<{ ok: boolean }> {
+  return apiJson<{ ok: boolean }>('/api/merchant/storefront-settings/whatsapp-test/', {
+    method: 'POST',
+    shopScoped: true,
+    body: JSON.stringify(phone?.trim() ? { phone: phone.trim() } : {}),
+  })
 }
 
 export async function patchMerchantStorefrontSettings(

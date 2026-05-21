@@ -706,6 +706,99 @@ export function HomePage() {
     [preserveScrollPosition, resolvePresetRange],
   )
 
+  const onlineStorefrontDashboardSection = useMemo(() => {
+    if (!me?.online_storefront_enabled) return null
+    return (
+      <section className="mb-6 mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="text-start text-sm font-semibold text-slate-800 dark:text-slate-100">
+              {t('nav.onlineSection')}
+            </h2>
+            <p className="mt-0.5 text-start text-xs text-slate-500 dark:text-slate-400">
+              {t('dash.onlineStatsHint')}
+            </p>
+          </div>
+          {loadingOnlineStats ? (
+            <span className="text-xs text-slate-500">{t('common.loading')}</span>
+          ) : null}
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+          <StatCard
+            icon={<TrendingUp className="h-5 w-5" />}
+            label={t('dash.onlineTotalSales')}
+            value={onlineStats?.total_sales_usd ?? '0'}
+            tone="emerald"
+            currencyLabel={t('common.currencyUsd')}
+          />
+          <StatCard
+            icon={<ShoppingCart className="h-5 w-5" />}
+            label={t('dash.onlineOrderCount')}
+            value={String(onlineStats?.order_count ?? 0)}
+            tone="violet"
+            unit="count"
+            currencyLabel=""
+          />
+          <StatCard
+            icon={<Activity className="h-5 w-5" />}
+            label={t('dash.onlinePendingOrders')}
+            value={String(onlineStats?.pending_count ?? 0)}
+            tone="amber"
+            unit="count"
+            currencyLabel=""
+          />
+          <StatCard
+            icon={<Package className="h-5 w-5" />}
+            label={t('dash.onlineProcessingOrders')}
+            value={String(onlineStats?.processing_count ?? 0)}
+            tone="violet"
+            unit="count"
+            currencyLabel=""
+          />
+          <StatCard
+            icon={<TrendingUp className="h-5 w-5" />}
+            label={t('dash.onlineCompletedOrders')}
+            value={String(onlineStats?.completed_count ?? 0)}
+            tone="emerald"
+            unit="count"
+            currencyLabel=""
+          />
+          <StatCard
+            icon={<TrendingDown className="h-5 w-5" />}
+            label={t('dash.onlineCancelledOrders')}
+            value={String(onlineStats?.cancelled_count ?? 0)}
+            tone="rose"
+            unit="count"
+            currencyLabel=""
+          />
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link
+            to="/online-orders"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+          >
+            <ShoppingCart className="h-4 w-4" aria-hidden />
+            {t('nav.onlineOrders')}
+          </Link>
+          <Link
+            to="/online-shop"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+          >
+            <Globe className="h-4 w-4" aria-hidden />
+            {t('nav.onlineShop')}
+          </Link>
+          <Link
+            to="/online-pricing"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+          >
+            <DollarSign className="h-4 w-4" aria-hidden />
+            {t('dash.onlinePricingCard')}
+          </Link>
+        </div>
+      </section>
+    )
+  }, [me?.online_storefront_enabled, onlineStats, loadingOnlineStats, t])
+
   if (!me) {
     return (
       <div className="min-h-dvh bg-slate-50 dark:bg-slate-900">
@@ -879,96 +972,6 @@ export function HomePage() {
           </div>
         </section>
 
-        {me?.online_storefront_enabled ? (
-          <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <h2 className="text-start text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  {t('nav.onlineSection')}
-                </h2>
-                <p className="mt-0.5 text-start text-xs text-slate-500 dark:text-slate-400">
-                  {t('dash.onlineStatsHint')}
-                </p>
-              </div>
-              {loadingOnlineStats ? (
-                <span className="text-xs text-slate-500">{t('common.loading')}</span>
-              ) : null}
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
-              <StatCard
-                icon={<TrendingDown className="h-5 w-5" />}
-                label={t('dash.onlineCancelledOrders')}
-                value={String(onlineStats?.cancelled_count ?? 0)}
-                tone="rose"
-                unit="count"
-                currencyLabel=""
-              />
-              <StatCard
-                icon={<TrendingUp className="h-5 w-5" />}
-                label={t('dash.onlineCompletedOrders')}
-                value={String(onlineStats?.completed_count ?? 0)}
-                tone="emerald"
-                unit="count"
-                currencyLabel=""
-              />
-              <StatCard
-                icon={<Package className="h-5 w-5" />}
-                label={t('dash.onlineProcessingOrders')}
-                value={String(onlineStats?.processing_count ?? 0)}
-                tone="violet"
-                unit="count"
-                currencyLabel=""
-              />
-              <StatCard
-                icon={<Activity className="h-5 w-5" />}
-                label={t('dash.onlinePendingOrders')}
-                value={String(onlineStats?.pending_count ?? 0)}
-                tone="amber"
-                unit="count"
-                currencyLabel=""
-              />
-              <StatCard
-                icon={<ShoppingCart className="h-5 w-5" />}
-                label={t('dash.onlineOrderCount')}
-                value={String(onlineStats?.order_count ?? 0)}
-                tone="violet"
-                unit="count"
-                currencyLabel=""
-              />
-              <StatCard
-                icon={<TrendingUp className="h-5 w-5" />}
-                label={t('dash.onlineTotalSales')}
-                value={onlineStats?.total_sales_usd ?? '0'}
-                tone="emerald"
-                currencyLabel={t('common.currencyUsd')}
-              />
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link
-                to="/online-orders"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-              >
-                <ShoppingCart className="h-4 w-4" aria-hidden />
-                {t('nav.onlineOrders')}
-              </Link>
-              <Link
-                to="/online-shop"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-              >
-                <Globe className="h-4 w-4" aria-hidden />
-                {t('nav.onlineShop')}
-              </Link>
-              <Link
-                to="/online-pricing"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-              >
-                <DollarSign className="h-4 w-4" aria-hidden />
-                {t('dash.onlinePricingCard')}
-              </Link>
-            </div>
-          </section>
-        ) : null}
-
         {me?.is_superuser && globalAdminStats ? (
           <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
             <h2 className="text-start text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -1042,6 +1045,7 @@ export function HomePage() {
                 currencyLabel={t('common.currencyUsd')}
               />
             </div>
+            {onlineStorefrontDashboardSection}
             <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                 <div className="mb-3 flex items-center justify-between gap-2">
@@ -1206,7 +1210,7 @@ export function HomePage() {
                 </>
               )}
             </div>
-
+            {onlineStorefrontDashboardSection}
             <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                 <div className="mb-3 flex items-center justify-between gap-2">

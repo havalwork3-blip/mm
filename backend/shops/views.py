@@ -168,6 +168,8 @@ class QrLandingAdminView(APIView):
             many=True,
             context={"request": request},
         )
+        from shops.telegram_notify import mask_bot_token
+
         return Response(
             {
                 "headline": s.headline,
@@ -177,6 +179,18 @@ class QrLandingAdminView(APIView):
                 "primary_logo_url": _primary_logo_url(request, s),
                 "preset_links": s.preset_links if isinstance(s.preset_links, list) else [],
                 "custom_links": ser.data,
+                "manager_telegram_notify_enabled": bool(s.manager_telegram_notify_enabled),
+                "manager_telegram_bot_token_masked": mask_bot_token(
+                    s.manager_telegram_bot_token or "",
+                ),
+                "manager_telegram_chat_id": s.manager_telegram_chat_id or "",
+                "manager_telegram_send_hour": int(s.manager_telegram_send_hour or 8),
+                "manager_telegram_send_minute": int(s.manager_telegram_send_minute or 0),
+                "manager_telegram_last_sent_date": (
+                    s.manager_telegram_last_sent_date.isoformat()
+                    if s.manager_telegram_last_sent_date
+                    else None
+                ),
                 "updated_at": s.updated_at.isoformat() if s.updated_at else None,
             }
         )
@@ -204,8 +218,46 @@ class QrLandingAdminView(APIView):
             s.phone = data["phone"]
         if "preset_links" in data:
             s.preset_links = data["preset_links"]
+        if "manager_telegram_notify_enabled" in data:
+            s.manager_telegram_notify_enabled = bool(data["manager_telegram_notify_enabled"])
+        if "manager_telegram_bot_token" in data:
+            raw = (data.get("manager_telegram_bot_token") or "").strip()
+            if raw:
+                s.manager_telegram_bot_token = raw
+        if "manager_telegram_chat_id" in data:
+            s.manager_telegram_chat_id = (data.get("manager_telegram_chat_id") or "").strip()
+        if "manager_telegram_send_hour" in data:
+            s.manager_telegram_send_hour = int(data["manager_telegram_send_hour"])
+        if "manager_telegram_send_minute" in data:
+            s.manager_telegram_send_minute = int(data["manager_telegram_send_minute"])
         s.save()
         return self.get(request)
+
+
+class QrLandingManagerTelegramTestView(APIView):
+    """POST — test manager daily Telegram bot."""
+
+    permission_classes = [IsAuthenticated, IsSuperuser]
+
+    def post(self, request):
+        from shops.manager_daily_telegram import send_manager_test_message
+
+        s = QrLandingSettings.load()
+        ok = send_manager_test_message(s)
+        return Response({"ok": ok})
+
+
+class QrLandingManagerTelegramSendNowView(APIView):
+    """POST — send today's full digest immediately (superuser)."""
+
+    permission_classes = [IsAuthenticated, IsSuperuser]
+
+    def post(self, request):
+        from shops.manager_daily_telegram import send_manager_daily_digest
+
+        s = QrLandingSettings.load()
+        sent, total = send_manager_daily_digest(s, force=True)
+        return Response({"sent": sent, "shops": total})
 
 
 class QrLandingPrimaryLogoView(APIView):
@@ -693,3 +745,21 @@ class MerchantTelegramTestView(APIView):
         settings = get_or_create_storefront_settings(shop)
         ok, total = send_test_notification(settings)
         return Response({"sent": ok, "total": total})
+
+
+class MerchantWhatsAppTestView(APIView):
+    """POST — send a test WhatsApp message (optional body: { \"phone\": \"07...\" })."""
+
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+
+    def post(self, request):
+        from shops.whatsapp_notify import send_test_customer_notification
+
+        shop_id = require_shop_id(request)
+        shop = Shop.objects.filter(pk=shop_id, online_storefront_enabled=True).first()
+        if shop is None:
+            raise PermissionDenied("Online storefront is not enabled for this shop.")
+        settings = get_or_create_storefront_settings(shop)
+        phone = (request.data.get("phone") if isinstance(request.data, dict) else None) or ""
+        ok = send_test_customer_notification(settings, phone=str(phone).strip() or None)
+        return Response({"ok": ok})

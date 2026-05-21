@@ -17,6 +17,16 @@ urlpatterns = [
     path("public/qr-landing/", views.public_qr_landing, name="public-qr-landing"),
     path("admin/qr-landing/", views.QrLandingAdminView.as_view(), name="admin-qr-landing"),
     path("admin/qr-landing/logo/", views.QrLandingPrimaryLogoView.as_view(), name="admin-qr-landing-logo"),
+    path(
+        "admin/qr-landing/manager-telegram-test/",
+        views.QrLandingManagerTelegramTestView.as_view(),
+        name="admin-qr-landing-manager-telegram-test",
+    ),
+    path(
+        "admin/qr-landing/manager-telegram-send-now/",
+        views.QrLandingManagerTelegramSendNowView.as_view(),
+        name="admin-qr-landing-manager-telegram-send-now",
+    ),
     path("receipt-settings/", views.ReceiptSettingsView.as_view(), name="receipt-settings"),
     path("shop-settings/", views.ShopSettingsView.as_view(), name="shop-settings"),
     path(
@@ -28,6 +38,11 @@ urlpatterns = [
         "merchant/storefront-settings/telegram-test/",
         views.MerchantTelegramTestView.as_view(),
         name="merchant-storefront-telegram-test",
+    ),
+    path(
+        "merchant/storefront-settings/whatsapp-test/",
+        views.MerchantWhatsAppTestView.as_view(),
+        name="merchant-storefront-whatsapp-test",
     ),
     path(
         "merchant/storefront-banners/",

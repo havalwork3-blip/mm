@@ -36,6 +36,7 @@ from .models import (
     StorefrontOrder,
     StorefrontOrderItem,
     StorefrontOrderStatus,
+    StorefrontProductGalleryImage,
 )
 
 
@@ -92,6 +93,8 @@ class PublicProductSerializer(serializers.ModelSerializer):
     unavailable_reason = serializers.SerializerMethodField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
     units_sold = serializers.SerializerMethodField(read_only=True)
+    online_description = serializers.CharField(read_only=True)
+    gallery_image_urls = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Product
@@ -102,9 +105,11 @@ class PublicProductSerializer(serializers.ModelSerializer):
             "online_base_price",
             "online_discount_percent",
             "online_discount_min_quantity",
+            "online_description",
             "barcode",
             "image",
             "image_url",
+            "gallery_image_urls",
             "category_id",
             "category_name",
             "is_available",
@@ -154,6 +159,48 @@ class PublicProductSerializer(serializers.ModelSerializer):
     def get_units_sold(self, obj: Product) -> int:
         sold_map: dict[int, int] = self.context.get("units_sold_by_product") or {}
         return int(sold_map.get(obj.id, 0))
+
+    def get_gallery_image_urls(self, obj: Product) -> list[str]:
+        request = self.context.get("request")
+        urls: list[str] = []
+        images = getattr(obj, "storefront_gallery_images", None)
+        if images is None:
+            qs = StorefrontProductGalleryImage.objects.filter(product_id=obj.pk).order_by(
+                "sort_order",
+                "id",
+            )
+        else:
+            qs = images.all() if hasattr(images, "all") else images
+        for row in qs:
+            if not row.image:
+                continue
+            try:
+                url = row.image.url
+                urls.append(request.build_absolute_uri(url) if request else url)
+            except Exception:
+                continue
+        return urls
+
+
+class StorefrontProductGalleryImageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = StorefrontProductGalleryImage
+        fields = ["id", "image_url", "sort_order"]
+        read_only_fields = fields
+
+    def get_image_url(self, obj: StorefrontProductGalleryImage) -> str | None:
+        if not obj.image:
+            return None
+        try:
+            request = self.context.get("request")
+            url = obj.image.url
+            if request:
+                return request.build_absolute_uri(url)
+            return url
+        except Exception:
+            return None
 
 
 class StorefrontOrderItemSerializer(serializers.ModelSerializer):
@@ -397,6 +444,15 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
                     )
             order.status = new_status
             order.save(update_fields=["status", "updated_at"])
+            order_id = order.pk
+            prev_status = old_status
+
+            def _whatsapp_customer_notify() -> None:
+                from shops.whatsapp_notify import notify_storefront_order_status
+
+                notify_storefront_order_status(order_id, prev_status, new_status)
+
+            transaction.on_commit(_whatsapp_customer_notify)
         return order
 
 
@@ -412,6 +468,11 @@ class OnlineProductPricingSerializer(serializers.ModelSerializer):
     )
     image_url = serializers.SerializerMethodField(read_only=True)
     effective_price = serializers.SerializerMethodField(read_only=True)
+    gallery_images = StorefrontProductGalleryImageSerializer(
+        source="storefront_gallery_images",
+        many=True,
+        read_only=True,
+    )
 
     class Meta:
         model = Product
@@ -424,9 +485,11 @@ class OnlineProductPricingSerializer(serializers.ModelSerializer):
             "online_sale_price",
             "online_discount_percent",
             "online_discount_min_quantity",
+            "online_description",
             "current_stock_quantity",
             "is_discontinued",
             "image_url",
+            "gallery_images",
             "effective_price",
         ]
         read_only_fields = [
@@ -438,6 +501,7 @@ class OnlineProductPricingSerializer(serializers.ModelSerializer):
             "current_stock_quantity",
             "is_discontinued",
             "image_url",
+            "gallery_images",
             "effective_price",
         ]
 

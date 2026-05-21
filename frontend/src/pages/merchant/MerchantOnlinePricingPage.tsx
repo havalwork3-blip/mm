@@ -1,5 +1,18 @@
-import { DollarSign, Loader2, MapPin, Percent, Plus, RefreshCw, Save, Sparkles, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  ChevronDown,
+  ChevronUp,
+  DollarSign,
+  FileText,
+  Loader2,
+  MapPin,
+  Percent,
+  Plus,
+  RefreshCw,
+  Save,
+  Sparkles,
+  Trash2,
+} from 'lucide-react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { PageAuthLoading } from '../../components/PageAuthLoading'
@@ -19,14 +32,17 @@ import {
 import {
   fetchOnlineProductPricing,
   patchOnlineProductPricing,
+  type OnlineGalleryImage,
   type OnlineProductPricingRow,
 } from '../../lib/merchantOnlinePricingApi'
+import { OnlineProductContentEditor } from './OnlineProductContentEditor'
 
 type RowDraft = {
   online_sale_price: string
   online_sale_price_iqd: string
   online_discount_percent: string
   online_discount_min_quantity: string
+  online_description: string
 }
 
 function draftFromRow(row: OnlineProductPricingRow, rate: number | null): RowDraft {
@@ -43,6 +59,7 @@ function draftFromRow(row: OnlineProductPricingRow, rate: number | null): RowDra
     online_sale_price_iqd: iqd,
     online_discount_percent: formatMoney2(row.online_discount_percent ?? '0') || '0',
     online_discount_min_quantity: String(row.online_discount_min_quantity ?? 1),
+    online_description: row.online_description ?? '',
   }
 }
 
@@ -106,7 +123,22 @@ export function MerchantOnlinePricingPage() {
   const [zoneCounter, setZoneCounter] = useState(0)
   const [freeDeliveryUsd, setFreeDeliveryUsd] = useState('')
   const [freeDeliveryIqd, setFreeDeliveryIqd] = useState('')
+  const [expandedProductId, setExpandedProductId] = useState<number | null>(null)
   const { rate } = useShopExchangeRate(canAccessShopData)
+
+  const contentLabels = useMemo(
+    () => ({
+      description: t('onlinePricing.description'),
+      descriptionHint: t('onlinePricing.descriptionHint'),
+      gallery: t('onlinePricing.gallery'),
+      galleryHint: t('onlinePricing.galleryHint'),
+      addImage: t('onlinePricing.addGalleryImage'),
+      removeImage: t('onlinePricing.removeGalleryImage'),
+      uploading: t('common.loading'),
+      galleryMax: t('onlinePricing.galleryMax'),
+    }),
+    [t],
+  )
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -227,6 +259,12 @@ export function MerchantOnlinePricingPage() {
     }
   }
 
+  function updateRowGallery(productId: number, images: OnlineGalleryImage[]) {
+    setRows((prev) =>
+      prev.map((r) => (r.id === productId ? { ...r, gallery_images: images } : r)),
+    )
+  }
+
   function setPriceDraft(id: number, usd: string, iqd: string) {
     setDrafts((prev) => ({
       ...prev,
@@ -315,6 +353,7 @@ export function MerchantOnlinePricingPage() {
             1,
             Number.parseInt(d.online_discount_min_quantity, 10) || 1,
           ),
+          online_description: d.online_description.trim(),
         }
       })
       const updated = await patchOnlineProductPricing({ items })
@@ -642,10 +681,11 @@ export function MerchantOnlinePricingPage() {
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[880px] text-start text-sm">
+            <table className="w-full min-w-[960px] text-start text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-800/50">
                   <th className="px-4 py-3">{t('onlinePricing.colProduct')}</th>
+                  <th className="px-4 py-3">{t('onlinePricing.colContent')}</th>
                   <th className="px-4 py-3">{t('onlinePricing.colRetail')}</th>
                   <th className="px-4 py-3">{t('onlinePricing.colOnlinePrice')}</th>
                   <th className="px-4 py-3">{t('onlinePricing.discountPercent')}</th>
@@ -657,9 +697,10 @@ export function MerchantOnlinePricingPage() {
                 {filtered.map((row) => {
                   const d = drafts[row.id] ?? draftFromRow(row, rate)
                   const img = resolveMediaUrl(row.image_url)
+                  const expanded = expandedProductId === row.id
                   return (
+                    <Fragment key={row.id}>
                     <tr
-                      key={row.id}
                       className="border-b border-slate-50 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/40"
                     >
                       <td className="px-4 py-3">
@@ -678,6 +719,23 @@ export function MerchantOnlinePricingPage() {
                             <p className="text-xs text-slate-500">{row.category_name}</p>
                           </div>
                         </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedProductId((id) => (id === row.id ? null : row.id))
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200"
+                        >
+                          <FileText className="h-3.5 w-3.5" aria-hidden />
+                          {expanded ? t('onlinePricing.hideContent') : t('onlinePricing.editContent')}
+                          {expanded ? (
+                            <ChevronUp className="h-3.5 w-3.5" aria-hidden />
+                          ) : (
+                            <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+                          )}
+                        </button>
                       </td>
                       <td className="px-4 py-3 tabular-nums text-slate-500">
                         ${displayUsdPrice(row.sale_price_retail)}
@@ -729,6 +787,24 @@ export function MerchantOnlinePricingPage() {
                         ${displayUsdPrice(row.effective_price)}
                       </td>
                     </tr>
+                    {expanded ? (
+                      <tr className="border-b border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/30">
+                        <td colSpan={7} className="px-4 py-4">
+                          <OnlineProductContentEditor
+                            productId={row.id}
+                            description={d.online_description}
+                            galleryImages={row.gallery_images ?? []}
+                            labels={contentLabels}
+                            onDescriptionChange={(value) =>
+                              setDraft(row.id, { online_description: value })
+                            }
+                            onGalleryChange={(images) => updateRowGallery(row.id, images)}
+                            onError={(msg) => setError(msg)}
+                          />
+                        </td>
+                      </tr>
+                    ) : null}
+                    </Fragment>
                   )
                 })}
               </tbody>
@@ -738,9 +814,35 @@ export function MerchantOnlinePricingPage() {
           <ul className="divide-y divide-slate-100 md:hidden dark:divide-slate-800">
             {filtered.map((row) => {
               const d = drafts[row.id] ?? draftFromRow(row, rate)
+              const expanded = expandedProductId === row.id
               return (
                 <li key={row.id} className="space-y-3 p-4">
-                  <p className="font-bold text-slate-900 dark:text-white">{row.name}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-bold text-slate-900 dark:text-white">{row.name}</p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedProductId((id) => (id === row.id ? null : row.id))
+                      }
+                      className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-800"
+                    >
+                      <FileText className="h-3 w-3" aria-hidden />
+                      {expanded ? t('onlinePricing.hideContent') : t('onlinePricing.editContent')}
+                    </button>
+                  </div>
+                  {expanded ? (
+                    <OnlineProductContentEditor
+                      productId={row.id}
+                      description={d.online_description}
+                      galleryImages={row.gallery_images ?? []}
+                      labels={contentLabels}
+                      onDescriptionChange={(value) =>
+                        setDraft(row.id, { online_description: value })
+                      }
+                      onGalleryChange={(images) => updateRowGallery(row.id, images)}
+                      onError={(msg) => setError(msg)}
+                    />
+                  ) : null}
                   <p className="text-xs text-slate-500">
                     {t('onlinePricing.colRetail')}: ${displayUsdPrice(row.sale_price_retail)}
                   </p>

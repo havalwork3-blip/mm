@@ -29,6 +29,7 @@ import {
   fetchMerchantStorefrontSettings,
   patchMerchantStorefrontSettings,
   postMerchantTelegramTest,
+  postMerchantWhatsAppTest,
   uploadMerchantStorefrontLocationImage,
   uploadMerchantStorefrontLogo,
 } from '../../lib/merchantStorefrontSettingsApi'
@@ -120,6 +121,13 @@ export function MerchantOnlineShopPage() {
   const [telegramRecipients, setTelegramRecipients] = useState<TelegramRecipient[]>([])
   const [telegramTesting, setTelegramTesting] = useState(false)
   const [telegramTestMsg, setTelegramTestMsg] = useState<string | null>(null)
+  const [whatsappCustomerNotifyEnabled, setWhatsappCustomerNotifyEnabled] = useState(false)
+  const [whatsappAccessTokenInput, setWhatsappAccessTokenInput] = useState('')
+  const [whatsappAccessTokenMasked, setWhatsappAccessTokenMasked] = useState('')
+  const [whatsappPhoneNumberId, setWhatsappPhoneNumberId] = useState('')
+  const [whatsappTestPhone, setWhatsappTestPhone] = useState('')
+  const [whatsappTesting, setWhatsappTesting] = useState(false)
+  const [whatsappTestMsg, setWhatsappTestMsg] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -158,6 +166,12 @@ export function MerchantOnlineShopPage() {
       setTelegramRecipients(Array.isArray(row.telegram_recipients) ? row.telegram_recipients : [])
       setTelegramBotTokenInput('')
       setTelegramTestMsg(null)
+      setWhatsappCustomerNotifyEnabled(Boolean(row.whatsapp_customer_notify_enabled))
+      setWhatsappAccessTokenMasked(row.whatsapp_access_token_masked ?? '')
+      setWhatsappPhoneNumberId(row.whatsapp_phone_number_id ?? '')
+      setWhatsappAccessTokenInput('')
+      setWhatsappTestPhone('')
+      setWhatsappTestMsg(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
@@ -210,6 +224,11 @@ export function MerchantOnlineShopPage() {
         telegram_recipients: telegramRecipients,
         ...(telegramBotTokenInput.trim()
           ? { telegram_bot_token: telegramBotTokenInput.trim() }
+          : {}),
+        whatsapp_customer_notify_enabled: whatsappCustomerNotifyEnabled,
+        whatsapp_phone_number_id: whatsappPhoneNumberId.trim(),
+        ...(whatsappAccessTokenInput.trim()
+          ? { whatsapp_access_token: whatsappAccessTokenInput.trim() }
           : {}),
       })
       setSaved(true)
@@ -264,6 +283,19 @@ export function MerchantOnlineShopPage() {
   }
 
   const telegramStartCommand = telegramLinkCode ? `/start ${telegramLinkCode}` : ''
+
+  async function testWhatsApp() {
+    setWhatsappTesting(true)
+    setWhatsappTestMsg(null)
+    try {
+      const res = await postMerchantWhatsAppTest(whatsappTestPhone.trim() || contactWhatsapp)
+      setWhatsappTestMsg(res.ok ? t('onlineShop.whatsappTestOk') : t('onlineShop.whatsappTestFail'))
+    } catch (err) {
+      setWhatsappTestMsg(err instanceof Error ? err.message : t('onlineShop.whatsappTestFail'))
+    } finally {
+      setWhatsappTesting(false)
+    }
+  }
 
   async function copyLink() {
     if (!storefrontUrl) return
@@ -940,6 +972,93 @@ export function MerchantOnlineShopPage() {
                     </button>
                     {telegramTestMsg ? (
                       <p className="text-xs text-slate-600 dark:text-slate-300">{telegramTestMsg}</p>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+            </SectionCard>
+
+            <SectionCard title={t('onlineShop.whatsappSection')} icon={Phone}>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('onlineShop.whatsappHint')}</p>
+              <label className="flex cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={whatsappCustomerNotifyEnabled}
+                  onChange={(e) => setWhatsappCustomerNotifyEnabled(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  {t('onlineShop.whatsappEnabled')}
+                </span>
+              </label>
+              {whatsappCustomerNotifyEnabled ? (
+                <>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                      {t('onlineShop.whatsappAccessToken')}
+                    </label>
+                    <input
+                      type="password"
+                      value={whatsappAccessTokenInput}
+                      onChange={(e) => setWhatsappAccessTokenInput(e.target.value)}
+                      placeholder={
+                        whatsappAccessTokenMasked
+                          ? whatsappAccessTokenMasked
+                          : 'EAAxxxxxxxx...'
+                      }
+                      dir="ltr"
+                      autoComplete="off"
+                      className={inputClass}
+                    />
+                    <p className="mt-1 text-[11px] text-slate-400">{t('onlineShop.whatsappAccessTokenHint')}</p>
+                    {whatsappAccessTokenMasked && !whatsappAccessTokenInput ? (
+                      <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+                        {t('onlineShop.whatsappTokenSaved')}: {whatsappAccessTokenMasked}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                      {t('onlineShop.whatsappPhoneNumberId')}
+                    </label>
+                    <input
+                      value={whatsappPhoneNumberId}
+                      onChange={(e) => setWhatsappPhoneNumberId(e.target.value)}
+                      placeholder="123456789012345"
+                      dir="ltr"
+                      className={inputClass}
+                    />
+                    <p className="mt-1 text-[11px] text-slate-400">{t('onlineShop.whatsappPhoneNumberIdHint')}</p>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                      {t('onlineShop.whatsappTestPhone')}
+                    </label>
+                    <input
+                      value={whatsappTestPhone}
+                      onChange={(e) => setWhatsappTestPhone(e.target.value)}
+                      placeholder={contactWhatsapp || '07xxxxxxxxx'}
+                      dir="ltr"
+                      className={inputClass}
+                    />
+                    <p className="mt-1 text-[11px] text-slate-400">{t('onlineShop.whatsappTestPhoneHint')}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={whatsappTesting}
+                      onClick={() => void testWhatsApp()}
+                      className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+                    >
+                      {whatsappTesting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Phone className="h-4 w-4" aria-hidden />
+                      )}
+                      {t('onlineShop.whatsappTest')}
+                    </button>
+                    {whatsappTestMsg ? (
+                      <p className="text-xs text-slate-600 dark:text-slate-300">{whatsappTestMsg}</p>
                     ) : null}
                   </div>
                 </>

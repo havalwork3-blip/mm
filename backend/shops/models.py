@@ -168,6 +168,9 @@ class StorefrontSettings(ShopScopedModel):
     telegram_bot_token = models.CharField(max_length=256, blank=True, default="")
     telegram_link_code = models.CharField(max_length=32, blank=True, default="")
     telegram_recipients = models.JSONField(default=list, blank=True)
+    whatsapp_customer_notify_enabled = models.BooleanField(default=False)
+    whatsapp_access_token = models.CharField(max_length=512, blank=True, default="")
+    whatsapp_phone_number_id = models.CharField(max_length=64, blank=True, default="")
 
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -315,6 +318,12 @@ class QrLandingSettings(models.Model):
     primary_logo = models.ImageField(upload_to="qr-landing/", blank=True, null=True)
     phone = models.CharField(max_length=64, blank=True, default="")
     preset_links = models.JSONField(default=_default_qr_preset_links)
+    manager_telegram_notify_enabled = models.BooleanField(default=False)
+    manager_telegram_bot_token = models.CharField(max_length=256, blank=True, default="")
+    manager_telegram_chat_id = models.CharField(max_length=64, blank=True, default="")
+    manager_telegram_send_hour = models.PositiveSmallIntegerField(default=8)
+    manager_telegram_send_minute = models.PositiveSmallIntegerField(default=0)
+    manager_telegram_last_sent_date = models.DateField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

@@ -129,6 +129,7 @@ const STRINGS = {
     addedToCart: 'زیادکرا!',
     tapToAdd: 'کلیک بکە بۆ زیادکردن',
     viewProduct: 'وردەکاری',
+    productDetails: 'وردەکاری بەرهەم',
     orderNow: 'زیادکردن بۆ سەبەتە',
     backToProducts: 'گەڕانەوە',
     shopCategories: 'پۆلەکانی فرۆشگا',
@@ -244,6 +245,7 @@ const STRINGS = {
     addedToCart: 'تمت الإضافة!',
     tapToAdd: 'اضغط للإضافة',
     viewProduct: 'التفاصيل',
+    productDetails: 'تفاصيل المنتج',
     orderNow: 'أضف إلى السلة',
     backToProducts: 'رجوع',
     shopCategories: 'أقسام المتجر',
@@ -359,6 +361,7 @@ const STRINGS = {
     addedToCart: 'Added!',
     tapToAdd: 'Tap to add',
     viewProduct: 'View',
+    productDetails: 'Product details',
     orderNow: 'Add to cart',
     backToProducts: 'Back',
     shopCategories: 'Shop categories',
@@ -476,6 +479,7 @@ export type StorefrontStrings = {
   addedToCart: string
   tapToAdd: string
   viewProduct: string
+  productDetails: string
   orderNow: string
   backToProducts: string
   shopCategories: string

@@ -78,6 +78,11 @@ class Product(ShopScopedModel):
         default=0,
     )
     online_discount_min_quantity = models.PositiveSmallIntegerField(default=1)
+    online_description = models.TextField(
+        blank=True,
+        default="",
+        help_text="Extra product info shown on the public online storefront.",
+    )
     current_stock_quantity = models.IntegerField(default=0)
     low_stock_threshold = models.PositiveIntegerField(null=True, blank=True)
 
@@ -454,6 +459,25 @@ class ShopDayOpeningCash(ShopScopedModel):
                 name="uniq_shop_opening_date",
             ),
         ]
+
+
+class StorefrontProductGalleryImage(models.Model):
+    """Extra product photos for the online storefront (reviews / gallery)."""
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="storefront_gallery_images",
+    )
+    image = models.ImageField(upload_to="storefront-gallery/%Y/%m/")
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+
+    def __str__(self) -> str:
+        return f"GalleryImage(product={self.product_id}, #{self.sort_order})"
 
 
 class StorefrontOrderStatus(models.TextChoices):

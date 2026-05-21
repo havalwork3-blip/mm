@@ -56,6 +56,7 @@ from .models import (
     StorefrontOrder,
     StorefrontOrderStatus,
     StorefrontOrderItem,
+    StorefrontProductGalleryImage,
 )
 from .permissions import (
     IsShopOwnerOrCanPaySupplierDebt,
@@ -84,7 +85,17 @@ from .serializers import (
     ShareholderSerializer,
     StorefrontOrderSerializer,
     latest_usd_to_iqd_for_shop,
+    StorefrontProductGalleryImageSerializer,
 )
+
+STOREFRONT_GALLERY_MAX_PER_PRODUCT = 10
+
+
+def _storefront_gallery_prefetch() -> Prefetch:
+    return Prefetch(
+        "storefront_gallery_images",
+        queryset=StorefrontProductGalleryImage.objects.order_by("sort_order", "id"),
+    )
 
 
 class ShopScopedViewSet(viewsets.ModelViewSet):
@@ -889,6 +900,7 @@ def public_storefront_catalog(request):
     product_qs = (
         Product.objects.filter(shop_id=shop.pk, is_unregistered_placeholder=False)
         .select_related("category")
+        .prefetch_related(_storefront_gallery_prefetch())
         .order_by("is_discontinued", "name")
     )
 
@@ -964,6 +976,7 @@ def public_storefront_products(request):
     qs = (
         Product.objects.filter(shop_id=shop.pk, is_unregistered_placeholder=False)
         .select_related("category")
+        .prefetch_related(_storefront_gallery_prefetch())
         .order_by("is_discontinued", "name")
     )
     units_sold = _storefront_units_sold_by_product(shop.pk)
@@ -1058,6 +1071,7 @@ class MerchantOnlineProductPricingView(APIView):
         return (
             Product.objects.filter(shop_id=shop_id, is_unregistered_placeholder=False)
             .select_related("category")
+            .prefetch_related(_storefront_gallery_prefetch())
             .order_by("name")
         )
 
@@ -1101,6 +1115,7 @@ class MerchantOnlineProductPricingView(APIView):
             "online_sale_price",
             "online_discount_percent",
             "online_discount_min_quantity",
+            "online_description",
         }
         for row in items:
             pid = row.get("id")
@@ -1127,6 +1142,8 @@ class MerchantOnlineProductPricingView(APIView):
                     patch[key] = Decimal(str(val))
                 elif key == "online_discount_min_quantity":
                     patch[key] = max(1, int(val))
+                elif key == "online_description":
+                    patch[key] = str(val or "").strip()[:8000]
             for k, v in patch.items():
                 setattr(product, k, v)
             product.save(
@@ -1136,6 +1153,64 @@ class MerchantOnlineProductPricingView(APIView):
         rows = self._products_qs(shop_id)
         ser = OnlineProductPricingSerializer(rows, many=True, context={"request": request})
         return Response(ser.data)
+
+
+class MerchantOnlineProductGalleryView(APIView):
+    """POST multipart image — add gallery photo for an online storefront product."""
+
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+
+    def post(self, request, product_id: int):
+        shop_id = require_shop_id(request)
+        shop = Shop.objects.filter(pk=shop_id, online_storefront_enabled=True).first()
+        if shop is None:
+            raise PermissionDenied("Online storefront is not enabled for this shop.")
+        product = Product.objects.filter(
+            pk=product_id,
+            shop_id=shop_id,
+            is_unregistered_placeholder=False,
+        ).first()
+        if product is None:
+            raise ValidationError({"detail": "Product not found."})
+        upload = request.FILES.get("image")
+        if upload is None:
+            raise ValidationError({"image": "Image file is required."})
+        count = StorefrontProductGalleryImage.objects.filter(product_id=product.pk).count()
+        if count >= STOREFRONT_GALLERY_MAX_PER_PRODUCT:
+            raise ValidationError(
+                {
+                    "image": (
+                        f"Maximum {STOREFRONT_GALLERY_MAX_PER_PRODUCT} gallery images per product."
+                    ),
+                },
+            )
+        sort_order = count
+        row = StorefrontProductGalleryImage.objects.create(
+            product=product,
+            image=upload,
+            sort_order=sort_order,
+        )
+        ser = StorefrontProductGalleryImageSerializer(row, context={"request": request})
+        return Response(ser.data, status=201)
+
+
+class MerchantOnlineProductGalleryDetailView(APIView):
+    """DELETE — remove a gallery image."""
+
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+
+    def delete(self, request, image_id: int):
+        shop_id = require_shop_id(request)
+        row = (
+            StorefrontProductGalleryImage.objects.select_related("product")
+            .filter(pk=image_id, product__shop_id=shop_id)
+            .first()
+        )
+        if row is None:
+            raise ValidationError({"detail": "Image not found."})
+        row.image.delete(save=False)
+        row.delete()
+        return Response(status=204)
 
 
 class EmployeeDebtViewSet(OwnerScopedViewSet):

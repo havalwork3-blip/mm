@@ -133,6 +133,8 @@ export type PublicStorefrontProduct = {
   unavailable_reason: ProductUnavailableReason | null
   created_at?: string
   units_sold?: number
+  online_description?: string
+  gallery_image_urls?: string[]
 }
 
 export type StorefrontProductCollection =
