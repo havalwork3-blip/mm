@@ -47,6 +47,10 @@ import {
   setGlobalView,
   setSuperuserShopId,
 } from '../lib/api'
+import {
+  fetchMerchantStorefrontOrderStats,
+  type OnlineStorefrontOrderStats,
+} from '../lib/merchantStorefrontApi'
 import { hasPerm } from '../lib/permissions'
 import type {
   AdminGlobalStats,
@@ -101,6 +105,8 @@ export function HomePage() {
   const [superuserShopRankings, setSuperuserShopRankings] = useState<AdminGlobalStats | null>(null)
   const [loadingStats, setLoadingStats] = useState(false)
   const [statsForbidden, setStatsForbidden] = useState(false)
+  const [onlineStats, setOnlineStats] = useState<OnlineStorefrontOrderStats | null>(null)
+  const [loadingOnlineStats, setLoadingOnlineStats] = useState(false)
   const [topSellingFrom, setTopSellingFrom] = useState(() => new Date().toISOString().slice(0, 10))
   const [topSellingTo, setTopSellingTo] = useState(() => new Date().toISOString().slice(0, 10))
   const [topSellingProducts, setTopSellingProducts] = useState<TopSellingProductRow[]>([])
@@ -284,6 +290,12 @@ export function HomePage() {
   }, [me, shouldFetchStats, statsForbidden, fetchStats])
 
   useEffect(() => {
+    if (me?.online_storefront_enabled && shouldFetchStats && !statsForbidden) {
+      void fetchOnlineStats()
+    }
+  }, [me?.online_storefront_enabled, shouldFetchStats, statsForbidden, fetchOnlineStats])
+
+  useEffect(() => {
     if (!canFetchShopDashboardExtras) {
       if (me?.is_superuser) {
         setStockProducts([])
@@ -368,14 +380,22 @@ export function HomePage() {
     return visible
   }, [me, t])
 
-  const onlineQuickLinks = useMemo(() => {
-    if (!me?.online_storefront_enabled) return []
-    return [
-      { to: '/online-pricing', label: t('dash.onlinePricingCard'), hint: t('dash.onlinePricingCardHint'), icon: DollarSign },
-      { to: '/online-shop', label: t('nav.onlineShop'), hint: t('onlineShop.subtitle'), icon: Globe },
-      { to: '/online-orders', label: t('nav.onlineOrders'), hint: '', icon: ShoppingCart },
-    ]
-  }, [me?.online_storefront_enabled, t])
+  const fetchOnlineStats = useCallback(async () => {
+    if (!me?.online_storefront_enabled) {
+      setOnlineStats(null)
+      return
+    }
+    setLoadingOnlineStats(true)
+    try {
+      const q = `?from=${encodeURIComponent(dFrom)}&to=${encodeURIComponent(dTo)}`
+      const data = await fetchMerchantStorefrontOrderStats(q)
+      setOnlineStats(data)
+    } catch {
+      setOnlineStats(null)
+    } finally {
+      setLoadingOnlineStats(false)
+    }
+  }, [me?.online_storefront_enabled, dFrom, dTo])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -855,39 +875,92 @@ export function HomePage() {
           </div>
         </section>
 
-        {onlineQuickLinks.length > 0 ? (
-          <section className="mb-6 rounded-2xl border border-teal-200/80 bg-gradient-to-br from-teal-50/90 to-white p-4 shadow-sm dark:border-teal-900/50 dark:from-teal-950/30 dark:to-slate-900/80">
-            <h2 className="text-start text-sm font-semibold uppercase tracking-wide text-teal-800 dark:text-teal-200">
-              {t('nav.onlineSection')}
-            </h2>
-            <p className="mt-1 text-start text-xs text-slate-600 dark:text-slate-400">
-              {t('dash.quickAccess')}
-            </p>
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {onlineQuickLinks.map((item) => {
-                const Icon = item.icon
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    className="flex items-start gap-3 rounded-xl border border-teal-200/60 bg-white p-4 transition hover:border-teal-400 hover:shadow-md dark:border-teal-800/50 dark:bg-slate-900/60 dark:hover:border-teal-600"
-                  >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-200">
-                      <Icon className="h-5 w-5" aria-hidden />
-                    </span>
-                    <span className="min-w-0 text-start">
-                      <span className="block font-semibold text-slate-900 dark:text-slate-100">
-                        {item.label}
-                      </span>
-                      {item.hint ? (
-                        <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
-                          {item.hint}
-                        </span>
-                      ) : null}
-                    </span>
-                  </Link>
-                )
-              })}
+        {me?.online_storefront_enabled ? (
+          <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 className="text-start text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  {t('nav.onlineSection')}
+                </h2>
+                <p className="mt-0.5 text-start text-xs text-slate-500 dark:text-slate-400">
+                  {t('dash.onlineStatsHint')}
+                </p>
+              </div>
+              {loadingOnlineStats ? (
+                <span className="text-xs text-slate-500">{t('common.loading')}</span>
+              ) : null}
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <StatCard
+                icon={<TrendingUp className="h-5 w-5" />}
+                label={t('dash.onlineTotalSales')}
+                value={onlineStats?.total_sales_usd ?? '0'}
+                tone="emerald"
+                currencyLabel={t('common.currencyUsd')}
+              />
+              <StatCard
+                icon={<ShoppingCart className="h-5 w-5" />}
+                label={t('dash.onlineOrderCount')}
+                value={String(onlineStats?.order_count ?? 0)}
+                tone="violet"
+                unit="count"
+                currencyLabel=""
+              />
+              <StatCard
+                icon={<Activity className="h-5 w-5" />}
+                label={t('dash.onlinePendingOrders')}
+                value={String(onlineStats?.pending_count ?? 0)}
+                tone="amber"
+                unit="count"
+                currencyLabel=""
+              />
+              <StatCard
+                icon={<Package className="h-5 w-5" />}
+                label={t('dash.onlineProcessingOrders')}
+                value={String(onlineStats?.processing_count ?? 0)}
+                tone="violet"
+                unit="count"
+                currencyLabel=""
+              />
+              <StatCard
+                icon={<TrendingUp className="h-5 w-5" />}
+                label={t('dash.onlineCompletedOrders')}
+                value={String(onlineStats?.completed_count ?? 0)}
+                tone="emerald"
+                unit="count"
+                currencyLabel=""
+              />
+              <StatCard
+                icon={<TrendingDown className="h-5 w-5" />}
+                label={t('dash.onlineCancelledOrders')}
+                value={String(onlineStats?.cancelled_count ?? 0)}
+                tone="rose"
+                unit="count"
+                currencyLabel=""
+              />
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                to="/online-orders"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              >
+                <ShoppingCart className="h-4 w-4" aria-hidden />
+                {t('nav.onlineOrders')}
+              </Link>
+              <Link
+                to="/online-shop"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              >
+                <Globe className="h-4 w-4" aria-hidden />
+                {t('nav.onlineShop')}
+              </Link>
+              <Link
+                to="/online-pricing"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              >
+                <DollarSign className="h-4 w-4" aria-hidden />
+                {t('dash.onlinePricingCard')}
+              </Link>
             </div>
           </section>
         ) : null}

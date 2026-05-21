@@ -3,7 +3,8 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import Prefetch, Q, Sum
+from django.db.models import DecimalField, Prefetch, Q, Sum
+from django.db.models.functions import Coalesce
 
 from shops.storefront_settings_utils import (
     get_or_create_storefront_settings,
@@ -1011,6 +1012,40 @@ class MerchantStorefrontOrderViewSet(ShopScopedViewSet):
         """Count new online orders (PENDING) for sidebar badge."""
         count = self.get_queryset().filter(status=StorefrontOrderStatus.PENDING).count()
         return Response({"pending_count": count})
+
+    @action(detail=False, methods=["get"], url_path="stats")
+    def stats(self, request):
+        """Aggregate online order metrics for the dashboard (optional from/to dates)."""
+        qs = self.get_queryset()
+        from_raw = (request.query_params.get("from") or "").strip()
+        to_raw = (request.query_params.get("to") or "").strip()
+        if from_raw:
+            qs = qs.filter(created_at__date__gte=from_raw)
+        if to_raw:
+            qs = qs.filter(created_at__date__lte=to_raw)
+
+        active = qs.exclude(status=StorefrontOrderStatus.CANCELLED)
+        total_sales = active.aggregate(
+            total=Coalesce(
+                Sum("total_amount"),
+                Decimal("0"),
+                output_field=DecimalField(max_digits=18, decimal_places=4),
+            ),
+        )["total"]
+
+        def status_count(status: str) -> int:
+            return qs.filter(status=status).count()
+
+        return Response(
+            {
+                "order_count": active.count(),
+                "total_sales_usd": str(Decimal(total_sales).quantize(Decimal("0.01"))),
+                "pending_count": status_count(StorefrontOrderStatus.PENDING),
+                "processing_count": status_count(StorefrontOrderStatus.PROCESSING),
+                "completed_count": status_count(StorefrontOrderStatus.COMPLETED),
+                "cancelled_count": status_count(StorefrontOrderStatus.CANCELLED),
+            },
+        )
 
 
 class MerchantOnlineProductPricingView(APIView):

@@ -11,6 +11,24 @@ function asOrderList(
   return Array.isArray(data) ? data : data.results
 }
 
+export type OnlineStorefrontOrderStats = {
+  order_count: number
+  total_sales_usd: string
+  pending_count: number
+  processing_count: number
+  completed_count: number
+  cancelled_count: number
+}
+
+export async function fetchMerchantStorefrontOrderStats(
+  query = '',
+): Promise<OnlineStorefrontOrderStats> {
+  return apiJson<OnlineStorefrontOrderStats>(
+    `/api/merchant/storefront-orders/stats/${query}`,
+    { shopScoped: true },
+  )
+}
+
 export async function fetchMerchantStorefrontPendingCount(): Promise<{
   pending_count: number
 }> {
