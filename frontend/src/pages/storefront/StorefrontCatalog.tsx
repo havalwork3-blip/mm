@@ -38,6 +38,7 @@ export function StorefrontCatalog() {
     openProduct,
     backFromProduct,
     setSearchActive,
+    setCatalogCategories,
   } = useStorefrontCatalog()
   const addItem = useCartStore((st) => st.addItem)
   const setQuantity = useCartStore((st) => st.setQuantity)
@@ -61,6 +62,7 @@ export function StorefrontCatalog() {
     try {
       const data = await fetchPublicCatalog(shopId)
       setCategories(data.categories)
+      setCatalogCategories(data.categories)
       setBanners(data.banners ?? [])
       setRotateSeconds(data.storefront?.banner_rotate_seconds ?? 5)
       if (data.storefront) mergeAppearance(data.storefront)
@@ -68,10 +70,11 @@ export function StorefrontCatalog() {
     } catch (e) {
       setError(e instanceof Error ? e.message : s.loadError)
       setCategories([])
+      setCatalogCategories([])
     } finally {
       setLoading(false)
     }
-  }, [shopId, s.loadError, mergeAppearance, setExchangeRate])
+  }, [shopId, s.loadError, mergeAppearance, setExchangeRate, setCatalogCategories])
 
   useEffect(() => {
     void load()

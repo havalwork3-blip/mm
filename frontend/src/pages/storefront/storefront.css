@@ -335,6 +335,22 @@ html.sf-mode body {
   color: #475569;
 }
 
+.sf-sidebar-pill {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.sf-social-row {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.sf-social-icon-circle {
+  background: #ffffff;
+  ring-color: rgba(226, 232, 240, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
 /* Dark mode */
 .sf-root.sf-dark {
   color: #e2e8f0;
@@ -402,6 +418,25 @@ html.sf-mode body {
 .sf-root.sf-dark .sf-sidebar-social-icon {
   background: #334155;
   color: #e2e8f0;
+}
+
+.sf-root.sf-dark .sf-sidebar-pill {
+  background: #1e293b;
+  color: #cbd5e1;
+}
+
+.sf-root.sf-dark .sf-social-icon-circle {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.sf-root.sf-dark .sf-search-panel input {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.sf-root.sf-dark .sf-search-panel .hover\:bg-slate-50:hover {
+  background: #334155;
 }
 
 .sf-root.sf-dark .text-slate-900 {

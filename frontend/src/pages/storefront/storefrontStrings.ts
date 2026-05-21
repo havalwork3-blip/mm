@@ -70,6 +70,9 @@ const STRINGS = {
     lightMode: 'دۆخی ڕووناک',
     darkMode: 'دۆخی تاریک',
     followUs: 'شوێنمان بکەوە',
+    appearance: 'ڕووکار',
+    searchNoResults: 'هیچ بەرهەمێک نەدۆزرایەوە',
+    searchTypeHint: 'یەک پیت بنووسە بۆ بینینی بەرهەمەکان',
     socialPlatforms: SOCIAL_KU,
     scrollToProducts: 'بەرهەمەکان',
     categoriesCount: '{n} پۆل',
@@ -152,6 +155,9 @@ const STRINGS = {
     lightMode: 'الوضع الفاتح',
     darkMode: 'الوضع الداكن',
     followUs: 'تابعنا',
+    appearance: 'المظهر',
+    searchNoResults: 'لم يُعثر على منتجات',
+    searchTypeHint: 'اكتب حرفاً واحداً لعرض المنتجات',
     socialPlatforms: SOCIAL_AR,
     scrollToProducts: 'المنتجات',
     categoriesCount: '{n} أقسام',
@@ -234,6 +240,9 @@ const STRINGS = {
     lightMode: 'Light mode',
     darkMode: 'Dark mode',
     followUs: 'Follow us',
+    appearance: 'Appearance',
+    searchNoResults: 'No products found',
+    searchTypeHint: 'Type one letter to see matching products',
     socialPlatforms: SOCIAL_EN,
     scrollToProducts: 'Products',
     categoriesCount: '{n} categories',
@@ -315,6 +324,9 @@ export type StorefrontStrings = {
   lightMode: string
   darkMode: string
   followUs: string
+  appearance: string
+  searchNoResults: string
+  searchTypeHint: string
   socialPlatforms: Record<StorefrontSocialPlatform, string>
   scrollToProducts: string
   shopTagline: string

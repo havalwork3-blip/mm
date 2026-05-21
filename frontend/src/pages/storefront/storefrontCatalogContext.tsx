@@ -1,6 +1,9 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 
-import type { PublicStorefrontProduct } from '../../api/storefrontApi'
+import type {
+  PublicStorefrontCategory,
+  PublicStorefrontProduct,
+} from '../../api/storefrontApi'
 
 export type StorefrontView = 'categories' | 'products' | 'product'
 
@@ -20,6 +23,8 @@ type Ctx = {
   openProduct: (product: PublicStorefrontProduct, categoryName?: string) => void
   backFromProduct: () => void
   setSearchActive: (active: boolean) => void
+  catalogCategories: PublicStorefrontCategory[]
+  setCatalogCategories: (rows: PublicStorefrontCategory[]) => void
 }
 
 const StorefrontCatalogContext = createContext<Ctx | null>(null)
@@ -36,6 +41,7 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
   const [returnView, setReturnView] = useState<'categories' | 'products'>('products')
   const [search, setSearch] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
+  const [catalogCategories, setCatalogCategories] = useState<PublicStorefrontCategory[]>([])
 
   const selectCategory = useCallback((id: number) => {
     setSelectedCategoryId(id)
@@ -108,6 +114,8 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
       openProduct,
       backFromProduct,
       setSearchActive,
+      catalogCategories,
+      setCatalogCategories,
     }),
     [
       view,
@@ -122,6 +130,7 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
       openProduct,
       backFromProduct,
       setSearchActive,
+      catalogCategories,
     ],
   )
 
