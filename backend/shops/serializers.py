@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.utils.text import slugify as django_slugify
 from rest_framework import serializers
 
