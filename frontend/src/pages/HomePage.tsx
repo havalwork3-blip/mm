@@ -894,18 +894,27 @@ export function HomePage() {
                 <span className="text-xs text-slate-500">{t('common.loading')}</span>
               ) : null}
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
               <StatCard
-                icon={<TrendingUp className="h-5 w-5" />}
-                label={t('dash.onlineTotalSales')}
-                value={onlineStats?.total_sales_usd ?? '0'}
-                tone="emerald"
-                currencyLabel={t('common.currencyUsd')}
+                icon={<TrendingDown className="h-5 w-5" />}
+                label={t('dash.onlineCancelledOrders')}
+                value={String(onlineStats?.cancelled_count ?? 0)}
+                tone="rose"
+                unit="count"
+                currencyLabel=""
               />
               <StatCard
-                icon={<ShoppingCart className="h-5 w-5" />}
-                label={t('dash.onlineOrderCount')}
-                value={String(onlineStats?.order_count ?? 0)}
+                icon={<TrendingUp className="h-5 w-5" />}
+                label={t('dash.onlineCompletedOrders')}
+                value={String(onlineStats?.completed_count ?? 0)}
+                tone="emerald"
+                unit="count"
+                currencyLabel=""
+              />
+              <StatCard
+                icon={<Package className="h-5 w-5" />}
+                label={t('dash.onlineProcessingOrders')}
+                value={String(onlineStats?.processing_count ?? 0)}
                 tone="violet"
                 unit="count"
                 currencyLabel=""
@@ -919,28 +928,19 @@ export function HomePage() {
                 currencyLabel=""
               />
               <StatCard
-                icon={<Package className="h-5 w-5" />}
-                label={t('dash.onlineProcessingOrders')}
-                value={String(onlineStats?.processing_count ?? 0)}
+                icon={<ShoppingCart className="h-5 w-5" />}
+                label={t('dash.onlineOrderCount')}
+                value={String(onlineStats?.order_count ?? 0)}
                 tone="violet"
                 unit="count"
                 currencyLabel=""
               />
               <StatCard
                 icon={<TrendingUp className="h-5 w-5" />}
-                label={t('dash.onlineCompletedOrders')}
-                value={String(onlineStats?.completed_count ?? 0)}
+                label={t('dash.onlineTotalSales')}
+                value={onlineStats?.total_sales_usd ?? '0'}
                 tone="emerald"
-                unit="count"
-                currencyLabel=""
-              />
-              <StatCard
-                icon={<TrendingDown className="h-5 w-5" />}
-                label={t('dash.onlineCancelledOrders')}
-                value={String(onlineStats?.cancelled_count ?? 0)}
-                tone="rose"
-                unit="count"
-                currencyLabel=""
+                currencyLabel={t('common.currencyUsd')}
               />
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
