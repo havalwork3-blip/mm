@@ -179,13 +179,14 @@ export async function buildReceiptHtml(args: {
         const total = fmtUsd(qty * parseDec(price))
         const retQty = Number(ln.returned_quantity ?? 0)
         const returnedHint = retQty > 0 ? `<br/><small style="color:#047857;font-weight:700">گەڕاوە: ${retQty}</small>` : ''
+        const row = ln as Record<string, unknown>
         const flags = blankMode
           ? { soldAtZero: false, soldAtLoss: false }
           : saleLineFlagsFromRow({
-              unit_price_usd: String(ln.unit_price_usd ?? '0'),
-              unit_buy_price_usd: String(ln.unit_buy_price_usd ?? '0'),
-              sold_at_zero: ln.sold_at_zero as boolean | undefined,
-              sold_at_loss: ln.sold_at_loss as boolean | undefined,
+              unit_price_usd: String(row.unit_price_usd ?? '0'),
+              unit_buy_price_usd: String(row.unit_buy_price_usd ?? '0'),
+              sold_at_zero: row.sold_at_zero as boolean | undefined,
+              sold_at_loss: row.sold_at_loss as boolean | undefined,
             })
         const lossHint = flags.soldAtLoss
           ? flags.soldAtZero
