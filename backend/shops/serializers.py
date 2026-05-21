@@ -12,6 +12,7 @@ from .models import (
     Shop,
     ShopSettings,
     StorefrontBanner,
+    StorefrontDeliveryZone,
     StorefrontSettings,
 )
 
@@ -202,6 +203,7 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
             "location_image",
             "location_image_url",
             "social_links",
+            "delivery_free_min_usd",
             "storefront_host",
             "storefront_url",
             "updated_at",
@@ -249,6 +251,16 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
         from shops.storefront_settings_utils import _normalize_social_links
 
         return _normalize_social_links(value)
+
+    def validate_delivery_free_min_usd(self, value) -> Decimal | None:
+        from decimal import Decimal as D
+
+        if value is None or value == "":
+            return None
+        fee = D(str(value))
+        if fee <= 0:
+            return None
+        return fee.quantize(D("0.0001"))
 
     def get_storefront_host(self, obj: StorefrontSettings) -> str:
         return (obj.shop.storefront_host or "").strip()
@@ -450,4 +462,89 @@ class QrLandingAdminPatchSerializer(serializers.Serializer):
             out.append({"id": lid, "url": url, "enabled": enabled})
         if seen != QR_PRESET_IDS:
             raise serializers.ValidationError("preset_links must include every platform id exactly once.")
+        return out
+
+
+class StorefrontDeliveryZoneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StorefrontDeliveryZone
+        fields = [
+            "id",
+            "shop",
+            "name",
+            "delivery_fee_usd",
+            "sort_order",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "shop", "created_at", "updated_at"]
+
+    def validate_name(self, value: str) -> str:
+        name = (value or "").strip()
+        if not name:
+            raise serializers.ValidationError("Area name is required.")
+        return name[:255]
+
+    def validate_delivery_fee_usd(self, value) -> Decimal:
+        from decimal import Decimal as D
+
+        fee = D(str(value))
+        if fee < 0:
+            raise serializers.ValidationError("Delivery fee cannot be negative.")
+        return fee.quantize(D("0.0001"))
+
+
+class StorefrontDeliveryZonesPatchSerializer(serializers.Serializer):
+    """Replace/sync delivery zones and optional free-delivery threshold (USD subtotal)."""
+
+    zones = serializers.ListField(child=serializers.DictField(), required=True)
+    delivery_free_min_usd = serializers.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        required=False,
+        allow_null=True,
+    )
+
+    def validate_delivery_free_min_usd(self, value) -> Decimal | None:
+        from decimal import Decimal as D
+
+        if value is None:
+            return None
+        fee = D(str(value))
+        if fee <= 0:
+            return None
+        return fee.quantize(D("0.0001"))
+
+    def validate_zones(self, value: list) -> list:
+        if len(value) > 50:
+            raise serializers.ValidationError("Too many delivery zones (max 50).")
+        out: list[dict] = []
+        names: set[str] = set()
+        for row in value:
+            if not isinstance(row, dict):
+                raise serializers.ValidationError("Each zone must be an object.")
+            name = str(row.get("name") or "").strip()
+            if not name:
+                raise serializers.ValidationError("Each zone needs a name.")
+            key = name.casefold()
+            if key in names:
+                raise serializers.ValidationError(f"Duplicate area name: {name}")
+            names.add(key)
+            ser = StorefrontDeliveryZoneSerializer(
+                data={
+                    "name": name,
+                    "delivery_fee_usd": row.get("delivery_fee_usd", "0"),
+                    "sort_order": row.get("sort_order", 0),
+                    "is_active": row.get("is_active", True),
+                },
+            )
+            ser.is_valid(raise_exception=True)
+            item = dict(ser.validated_data)
+            if row.get("id") is not None:
+                try:
+                    item["id"] = int(row["id"])
+                except (TypeError, ValueError) as exc:
+                    raise serializers.ValidationError("Invalid zone id.") from exc
+            out.append(item)
         return out

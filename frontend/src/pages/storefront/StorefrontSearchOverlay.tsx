@@ -105,7 +105,7 @@ export function StorefrontSearchOverlay({
                   setSearchActive(v.trim().length > 0)
                 }}
                 placeholder={placeholder}
-                className="w-full rounded-2xl border-0 bg-slate-50/90 py-3.5 pe-3 ps-11 text-[15px] text-slate-800 outline-none ring-1 ring-slate-200/60 placeholder:text-slate-400 focus:ring-2"
+                className="sf-search-input w-full rounded-2xl border-0 bg-slate-50/90 py-3.5 pe-3 ps-11 text-base text-slate-800 outline-none ring-1 ring-slate-200/60 placeholder:text-slate-400 focus:ring-2"
                 style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.45) }}
                 autoComplete="off"
               />

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -91,6 +92,37 @@ def _normalize_faq_items(raw: object) -> list[dict[str, str]]:
     return out
 
 
+def delivery_free_min_usd_public(settings: StorefrontSettings) -> str | None:
+    raw = settings.delivery_free_min_usd
+    if raw is None:
+        return None
+    try:
+        val = Decimal(str(raw))
+    except Exception:
+        return None
+    if val <= 0:
+        return None
+    return str(val.quantize(Decimal("0.01")))
+
+
+def effective_delivery_fee_usd(
+    subtotal_usd: Decimal,
+    zone_fee_usd: Decimal,
+    settings: StorefrontSettings,
+) -> Decimal:
+    """Apply free-delivery threshold to a zone fee (subtotal and fees in USD)."""
+    fee = Decimal(zone_fee_usd or 0)
+    threshold = settings.delivery_free_min_usd
+    if threshold is not None:
+        try:
+            min_val = Decimal(str(threshold))
+        except Exception:
+            min_val = Decimal("0")
+        if min_val > 0 and subtotal_usd >= min_val:
+            return Decimal("0")
+    return fee.quantize(Decimal("0.0001"))
+
+
 def storefront_settings_public_dict(
     settings: StorefrontSettings,
     shop: Shop,
@@ -123,6 +155,7 @@ def storefront_settings_public_dict(
         "location_url": (settings.location_url or "").strip(),
         "location_image_url": _storefront_location_image_url(settings, request),
         "social_links": _normalize_social_links(settings.social_links),
+        "delivery_free_min_usd": delivery_free_min_usd_public(settings),
     }
 
 

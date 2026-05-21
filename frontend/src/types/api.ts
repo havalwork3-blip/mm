@@ -298,6 +298,9 @@ export type MerchantStorefrontOrderRow = {
   customer_name: string
   customer_phone: string
   customer_address: string
+  subtotal_amount?: string | null
+  delivery_fee?: string
+  delivery_zone_name?: string
   total_amount: string
   status: StorefrontOrderStatus
   items: MerchantStorefrontOrderItemRow[]

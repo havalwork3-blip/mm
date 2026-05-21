@@ -82,6 +82,14 @@ const STRINGS = {
     cart: 'سەبەتە',
     cartEmpty: 'سەبەتەکەت بەتاڵە',
     cartEmptyHint: 'بەرهەمێک زیاد بکە بۆ دەستپێکردن',
+    subtotal: 'کۆی بەرهەمەکان',
+    deliveryFee: 'کرێی گەیاندن',
+    deliveryArea: 'ناوچەی گەیاندن',
+    selectDeliveryArea: 'ناوچە هەڵبژێرە',
+    deliveryAreaRequired: 'تکایە ناوچەی گەیاندن هەڵبژێرە',
+    deliveryFree: 'گەیاندن خۆڕاییە',
+    deliveryFreeHint: 'گەیاندن خۆڕاییە لە {amount} زیاتر',
+    deliveryFreeRemaining: 'بۆ گەیاندنی خۆڕایی {amount} زیاتر بکڕە',
     total: 'کۆی گشتی',
     proceedCheckout: 'بەردەوامبوون بۆ داواکاری',
     checkout: 'تەواوکردنی داواکاری',
@@ -167,6 +175,14 @@ const STRINGS = {
     cart: 'السلة',
     cartEmpty: 'سلتك فارغة',
     cartEmptyHint: 'أضف منتجاً للبدء',
+    subtotal: 'مجموع المنتجات',
+    deliveryFee: 'رسوم التوصيل',
+    deliveryArea: 'منطقة التوصيل',
+    selectDeliveryArea: 'اختر المنطقة',
+    deliveryAreaRequired: 'يرجى اختيار منطقة التوصيل',
+    deliveryFree: 'توصيل مجاني',
+    deliveryFreeHint: 'توصيل مجاني للطلبات فوق {amount}',
+    deliveryFreeRemaining: 'أضف {amount} للحصول على توصيل مجاني',
     total: 'المجموع',
     proceedCheckout: 'متابعة الطلب',
     checkout: 'إتمام الطلب',
@@ -252,6 +268,14 @@ const STRINGS = {
     cart: 'Cart',
     cartEmpty: 'Your cart is empty',
     cartEmptyHint: 'Add a product to get started',
+    subtotal: 'Subtotal',
+    deliveryFee: 'Delivery fee',
+    deliveryArea: 'Delivery area',
+    selectDeliveryArea: 'Select area',
+    deliveryAreaRequired: 'Please select a delivery area',
+    deliveryFree: 'Free delivery',
+    deliveryFreeHint: 'Free delivery on orders over {amount}',
+    deliveryFreeRemaining: 'Add {amount} more for free delivery',
     total: 'Total',
     proceedCheckout: 'Proceed to checkout',
     checkout: 'Checkout',
@@ -339,6 +363,14 @@ export type StorefrontStrings = {
   cart: string
   cartEmpty: string
   cartEmptyHint: string
+  subtotal: string
+  deliveryFee: string
+  deliveryArea: string
+  selectDeliveryArea: string
+  deliveryAreaRequired: string
+  deliveryFree: string
+  deliveryFreeHint: string
+  deliveryFreeRemaining: string
   total: string
   proceedCheckout: string
   checkout: string

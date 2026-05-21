@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator
 from django.db import models
 
 
@@ -148,6 +149,14 @@ class StorefrontSettings(ShopScopedModel):
         null=True,
     )
     social_links = models.JSONField(default=list, blank=True)
+    delivery_free_min_usd = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Subtotal (USD) at or above this gets free delivery; null/0 = off.",
+    )
 
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -161,6 +170,34 @@ class StorefrontSettings(ShopScopedModel):
 
     def __str__(self) -> str:
         return f"StorefrontSettings({self.shop_id})"
+
+
+class StorefrontDeliveryZone(ShopScopedModel):
+    """Per-area delivery fee for the public online storefront."""
+
+    name = models.CharField(max_length=255)
+    delivery_fee_usd = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        default=0,
+        validators=[MinValueValidator(0)],
+    )
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "name", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["shop", "name"],
+                name="uniq_storefront_delivery_zone_shop_name",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.shop_id})"
 
 
 class StorefrontBanner(ShopScopedModel):

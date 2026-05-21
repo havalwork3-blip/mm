@@ -10,6 +10,7 @@ import {
 import {
   resolvePublicStorefront,
   type PublicStorefrontAppearance,
+  type StorefrontDeliveryZone,
 } from '../../api/storefrontApi'
 
 const DEFAULT_APPEARANCE: PublicStorefrontAppearance = {
@@ -36,11 +37,13 @@ type Ctx = {
   shopId: number | null
   shopName: string
   appearance: PublicStorefrontAppearance
+  deliveryZones: StorefrontDeliveryZone[]
   exchangeRate: string | null
   loading: boolean
   error: string | null
   reload: () => void
   mergeAppearance: (patch: Partial<PublicStorefrontAppearance>) => void
+  setDeliveryZones: (zones: StorefrontDeliveryZone[]) => void
   setExchangeRate: (raw: string | null | undefined) => void
 }
 
@@ -50,12 +53,17 @@ export function StorefrontShopProvider({ children }: { children: React.ReactNode
   const [shopId, setShopId] = useState<number | null>(null)
   const [shopName, setShopName] = useState('')
   const [appearance, setAppearance] = useState<PublicStorefrontAppearance>(DEFAULT_APPEARANCE)
+  const [deliveryZones, setDeliveryZonesState] = useState<StorefrontDeliveryZone[]>([])
   const [exchangeRate, setExchangeRateState] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const mergeAppearance = useCallback((patch: Partial<PublicStorefrontAppearance>) => {
     setAppearance((prev) => ({ ...prev, ...patch }))
+  }, [])
+
+  const setDeliveryZones = useCallback((zones: StorefrontDeliveryZone[]) => {
+    setDeliveryZonesState(zones)
   }, [])
 
   const setExchangeRate = useCallback((raw: string | null | undefined) => {
@@ -90,14 +98,28 @@ export function StorefrontShopProvider({ children }: { children: React.ReactNode
       shopId,
       shopName,
       appearance,
+      deliveryZones,
       exchangeRate,
       loading,
       error,
       reload: load,
       mergeAppearance,
+      setDeliveryZones,
       setExchangeRate,
     }),
-    [shopId, shopName, appearance, exchangeRate, loading, error, load, mergeAppearance, setExchangeRate],
+    [
+      shopId,
+      shopName,
+      appearance,
+      deliveryZones,
+      exchangeRate,
+      loading,
+      error,
+      load,
+      mergeAppearance,
+      setDeliveryZones,
+      setExchangeRate,
+    ],
   )
 
   return (

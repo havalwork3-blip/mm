@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-import type { PublicStorefrontProduct } from '../api/storefrontApi'
+import type { PublicStorefrontProduct, StorefrontDeliveryZone } from '../api/storefrontApi'
 import { effectiveOnlineUnitPrice } from '../lib/storefrontPrice'
 
 export type CartLine = {
@@ -15,9 +15,11 @@ export type CartLine = {
 
 type CartState = {
   lines: CartLine[]
+  deliveryZoneId: number | null
   addItem: (product: PublicStorefrontProduct, quantity?: number) => void
   removeItem: (productId: number) => void
   setQuantity: (productId: number, quantity: number) => void
+  setDeliveryZoneId: (zoneId: number | null) => void
   clearCart: () => void
 }
 
@@ -51,8 +53,44 @@ export function cartLineTotal(line: CartLine): number {
   return cartLineUnitPrice(line) * line.quantity
 }
 
-export function cartTotal(lines: CartLine[]): number {
+export function cartSubtotal(lines: CartLine[]): number {
   return lines.reduce((sum, line) => sum + cartLineTotal(line), 0)
+}
+
+/** @deprecated use cartSubtotal */
+export function cartTotal(lines: CartLine[]): number {
+  return cartSubtotal(lines)
+}
+
+export function parseDeliveryFreeMinUsd(raw: string | null | undefined): number | null {
+  if (raw == null || String(raw).trim() === '') return null
+  const n = Number.parseFloat(String(raw))
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+export function cartDeliveryFee(
+  zones: StorefrontDeliveryZone[],
+  zoneId: number | null,
+  subtotalUsd: number,
+  freeDeliveryMinUsd: number | null = null,
+): number {
+  if (zoneId == null) return 0
+  const zone = zones.find((z) => z.id === zoneId)
+  if (!zone) return 0
+  const n = Number.parseFloat(String(zone.delivery_fee_usd))
+  const base = Number.isFinite(n) && n > 0 ? n : 0
+  if (freeDeliveryMinUsd != null && subtotalUsd >= freeDeliveryMinUsd) return 0
+  return base
+}
+
+export function cartGrandTotal(
+  lines: CartLine[],
+  zones: StorefrontDeliveryZone[],
+  zoneId: number | null,
+  freeDeliveryMinUsd: number | null = null,
+): number {
+  const sub = cartSubtotal(lines)
+  return sub + cartDeliveryFee(zones, zoneId, sub, freeDeliveryMinUsd)
 }
 
 export function cartItemCount(lines: CartLine[]): number {
@@ -61,6 +99,7 @@ export function cartItemCount(lines: CartLine[]): number {
 
 export const useCartStore = create<CartState>((set, get) => ({
   lines: [],
+  deliveryZoneId: null,
 
   addItem: (product, quantity = 1) => {
     const qty = Math.max(1, Math.floor(quantity))
@@ -107,5 +146,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     }))
   },
 
-  clearCart: () => set({ lines: [] }),
+  setDeliveryZoneId: (zoneId) => set({ deliveryZoneId: zoneId }),
+
+  clearCart: () => set({ lines: [], deliveryZoneId: null }),
 }))

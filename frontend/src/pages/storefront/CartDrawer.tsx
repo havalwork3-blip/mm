@@ -4,13 +4,17 @@ import { useEffect } from 'react'
 import { resolveMediaUrl } from '../../lib/api'
 import { useLocale } from '../../context/LocaleContext'
 import {
+  cartDeliveryFee,
+  cartGrandTotal,
   cartItemCount,
   cartLineTotal,
-  cartTotal,
+  cartSubtotal,
+  parseDeliveryFreeMinUsd,
   useCartStore,
 } from '../../store/cartStore'
 import { storefrontStrings } from './storefrontStrings'
 import { accentAlpha } from './storefrontTheme'
+import { useStorefrontShop } from './StorefrontShopContext'
 import { useStorefrontPriceLabel } from './useStorefrontPriceLabel'
 
 type Props = {
@@ -24,11 +28,21 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
   const { lang, isRtl } = useLocale()
   const s = storefrontStrings(lang)
   const { format: formatPrice } = useStorefrontPriceLabel(lang)
+  const { deliveryZones, appearance } = useStorefrontShop()
+  const freeMin = parseDeliveryFreeMinUsd(appearance.delivery_free_min_usd)
   const lines = useCartStore((st) => st.lines)
+  const deliveryZoneId = useCartStore((st) => st.deliveryZoneId)
   const setQuantity = useCartStore((st) => st.setQuantity)
   const removeItem = useCartStore((st) => st.removeItem)
-  const total = cartTotal(lines)
+  const setDeliveryZoneId = useCartStore((st) => st.setDeliveryZoneId)
+  const subtotal = cartSubtotal(lines)
+  const delivery = cartDeliveryFee(deliveryZones, deliveryZoneId, subtotal, freeMin)
+  const grandTotal = cartGrandTotal(lines, deliveryZones, deliveryZoneId, freeMin)
+  const qualifiesFree = freeMin != null && subtotal >= freeMin
+  const remainingFree =
+    freeMin != null && subtotal < freeMin ? Math.max(0, freeMin - subtotal) : 0
   const count = cartItemCount(lines)
+  const hasZones = deliveryZones.length > 0
 
   useEffect(() => {
     if (!open) return
@@ -40,6 +54,11 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
   }, [open])
 
   if (!open) return null
+
+  function handleCheckout() {
+    if (hasZones && deliveryZoneId == null) return
+    onCheckout()
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label={s.cart}>
@@ -157,16 +176,78 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
         </div>
 
         <div className="border-t border-slate-200 bg-white p-4">
+          {hasZones && lines.length > 0 ? (
+            <label className="mb-3 block">
+              <span className="mb-1.5 block text-xs font-semibold text-slate-600">
+                {s.deliveryArea}
+              </span>
+              <select
+                value={deliveryZoneId ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setDeliveryZoneId(v === '' ? null : Number.parseInt(v, 10))
+                }}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-base text-slate-800 outline-none focus:ring-2"
+                style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.35) }}
+              >
+                <option value="">{s.selectDeliveryArea}</option>
+                {deliveryZones.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.name} — {formatPrice(Number.parseFloat(z.delivery_fee_usd) || 0)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {lines.length > 0 ? (
+            <div className="mb-3 space-y-1.5 text-sm">
+              <div className="flex items-center justify-between text-slate-500">
+                <span>{s.subtotal}</span>
+                <span className="font-semibold tabular-nums text-slate-700">
+                  {formatPrice(subtotal)}
+                </span>
+              </div>
+              {hasZones ? (
+                <div className="flex items-center justify-between text-slate-500">
+                  <span>{delivery === 0 && qualifiesFree ? s.deliveryFree : s.deliveryFee}</span>
+                  <span
+                    className={`font-semibold tabular-nums ${delivery === 0 && qualifiesFree ? 'text-emerald-600' : 'text-slate-700'}`}
+                  >
+                    {delivery === 0 && qualifiesFree ? formatPrice(0) : formatPrice(delivery)}
+                  </span>
+                </div>
+              ) : null}
+              {freeMin != null && lines.length > 0 ? (
+                <p className="text-xs text-slate-500">
+                  {qualifiesFree
+                    ? s.deliveryFree
+                    : s.deliveryFreeRemaining.replace('{amount}', formatPrice(remainingFree))}
+                </p>
+              ) : null}
+              {freeMin != null && !hasZones && lines.length > 0 ? (
+                <p className="text-xs text-slate-500">
+                  {s.deliveryFreeHint.replace('{amount}', formatPrice(freeMin))}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="mb-4 flex items-center justify-between">
             <span className="text-sm text-slate-500">{s.total}</span>
             <span className="text-xl font-bold" style={{ color: accent }}>
-              {formatPrice(total)}
+              {formatPrice(lines.length > 0 ? grandTotal : 0)}
             </span>
           </div>
+
+          {hasZones && deliveryZoneId == null && lines.length > 0 ? (
+            <p className="mb-3 text-center text-xs text-amber-700">{s.deliveryAreaRequired}</p>
+          ) : null}
+
           <button
             type="button"
-            disabled={lines.length === 0}
-            onClick={onCheckout}
+            disabled={lines.length === 0 || (hasZones && deliveryZoneId == null)}
+            onClick={handleCheckout}
             className="w-full rounded-2xl py-3.5 text-base font-bold text-white shadow-lg transition enabled:hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
             style={{
               backgroundColor: accent,

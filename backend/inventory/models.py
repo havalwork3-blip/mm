@@ -469,6 +469,21 @@ class StorefrontOrder(ShopScopedModel):
     customer_name = models.CharField(max_length=255)
     customer_phone = models.CharField(max_length=32)
     customer_address = models.TextField()
+    subtotal_amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        null=True,
+        blank=True,
+    )
+    delivery_zone = models.ForeignKey(
+        "shops.StorefrontDeliveryZone",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+    )
+    delivery_zone_name = models.CharField(max_length=255, blank=True, default="")
+    delivery_fee = models.DecimalField(max_digits=18, decimal_places=4, default=0)
     total_amount = models.DecimalField(max_digits=18, decimal_places=4)
     status = models.CharField(
         max_length=16,

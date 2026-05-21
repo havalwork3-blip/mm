@@ -29,6 +29,7 @@ from .models import (
     Shop,
     ShopSettings,
     StorefrontBanner,
+    StorefrontDeliveryZone,
     StorefrontSettings,
 )
 from .storefront_settings_utils import get_or_create_storefront_settings
@@ -53,6 +54,8 @@ from .serializers import (
     ShopSettingsSerializer,
     StorefrontBannerReorderSerializer,
     StorefrontBannerSerializer,
+    StorefrontDeliveryZoneSerializer,
+    StorefrontDeliveryZonesPatchSerializer,
     StorefrontSettingsSerializer,
 )
 
@@ -580,3 +583,76 @@ class MerchantStorefrontBannerDetailView(APIView):
             obj.image.delete(save=False)
         obj.delete()
         return Response(status=204)
+
+
+class MerchantStorefrontDeliveryZonesView(APIView):
+    """GET/PATCH delivery areas and fees for the online storefront."""
+
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    http_method_names = ["get", "patch", "options", "head"]
+
+    def _delivery_config_response(self, request, shop_id: int):
+        from shops.storefront_settings_utils import (
+            delivery_free_min_usd_public,
+            get_or_create_storefront_settings,
+        )
+
+        shop = Shop.objects.filter(pk=shop_id).first()
+        settings = get_or_create_storefront_settings(shop) if shop is not None else None
+        qs = StorefrontDeliveryZone.objects.filter(shop_id=shop_id).order_by(
+            "sort_order",
+            "name",
+            "id",
+        )
+        ser = StorefrontDeliveryZoneSerializer(qs, many=True)
+        return Response(
+            {
+                "zones": ser.data,
+                "delivery_free_min_usd": (
+                    delivery_free_min_usd_public(settings) if settings is not None else None
+                ),
+            },
+        )
+
+    def get(self, request):
+        shop_id = _storefront_shop_id(request)
+        return self._delivery_config_response(request, shop_id)
+
+    def patch(self, request):
+        shop_id = _storefront_shop_id(request)
+        body = StorefrontDeliveryZonesPatchSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        zones_data = body.validated_data["zones"]
+
+        if "delivery_free_min_usd" in body.validated_data:
+            from shops.storefront_settings_utils import get_or_create_storefront_settings
+
+            shop = Shop.objects.filter(pk=shop_id).first()
+            if shop is not None:
+                settings = get_or_create_storefront_settings(shop)
+                settings.delivery_free_min_usd = body.validated_data["delivery_free_min_usd"]
+                settings.save(update_fields=["delivery_free_min_usd", "updated_at"])
+
+        existing_ids = set(
+            StorefrontDeliveryZone.objects.filter(shop_id=shop_id).values_list("pk", flat=True),
+        )
+        keep_ids: set[int] = set()
+
+        for idx, row in enumerate(zones_data):
+            zone_id = row.pop("id", None)
+            row["sort_order"] = idx
+            if zone_id is not None and zone_id in existing_ids:
+                obj = StorefrontDeliveryZone.objects.filter(pk=zone_id, shop_id=shop_id).first()
+                if obj is None:
+                    continue
+                for key, val in row.items():
+                    setattr(obj, key, val)
+                obj.save()
+                keep_ids.add(zone_id)
+            else:
+                obj = StorefrontDeliveryZone.objects.create(shop_id=shop_id, **row)
+                keep_ids.add(obj.pk)
+
+        StorefrontDeliveryZone.objects.filter(shop_id=shop_id).exclude(pk__in=keep_ids).delete()
+
+        return self._delivery_config_response(request, shop_id)

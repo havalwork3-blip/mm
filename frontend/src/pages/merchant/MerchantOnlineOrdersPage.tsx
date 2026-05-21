@@ -585,6 +585,24 @@ function OrderCard({
         </div>
 
         <div className="flex shrink-0 flex-col items-stretch gap-3 sm:items-end sm:text-end">
+          {order.delivery_zone_name ? (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t('onlineOrders.deliveryArea')}: {order.delivery_zone_name}
+            </p>
+          ) : null}
+          {order.subtotal_amount != null && String(order.subtotal_amount).trim() !== '' ? (
+            <div className="text-xs text-slate-500 dark:text-slate-400">
+              <span>{t('onlineOrders.colSubtotal')}: </span>
+              <span className="font-semibold tabular-nums">${formatUsd(order.subtotal_amount)}</span>
+              {order.delivery_fee != null && Number.parseFloat(order.delivery_fee) > 0 ? (
+                <>
+                  <span className="mx-1">·</span>
+                  <span>{t('onlineOrders.colDelivery')}: </span>
+                  <span className="font-semibold tabular-nums">${formatUsd(order.delivery_fee)}</span>
+                </>
+              ) : null}
+            </div>
+          ) : null}
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
               {t('onlineOrders.colTotal')}
@@ -691,6 +709,19 @@ function OrderDetailModal({
             </div>
             <StatusBadge status={order.status} statusLabel={statusLabel} />
           </div>
+          {order.delivery_zone_name ? (
+            <p className="mt-2 text-sm text-white/90">
+              {t('onlineOrders.deliveryArea')}: {order.delivery_zone_name}
+            </p>
+          ) : null}
+          {order.subtotal_amount != null && String(order.subtotal_amount).trim() !== '' ? (
+            <p className="mt-2 text-sm text-white/80">
+              {t('onlineOrders.colSubtotal')}: ${formatUsd(order.subtotal_amount)}
+              {order.delivery_fee != null && Number.parseFloat(order.delivery_fee) > 0
+                ? ` · ${t('onlineOrders.colDelivery')}: $${formatUsd(order.delivery_fee)}`
+                : ''}
+            </p>
+          ) : null}
           <p className="mt-3 text-3xl font-extrabold tabular-nums">
             ${formatUsd(order.total_amount)}
           </p>

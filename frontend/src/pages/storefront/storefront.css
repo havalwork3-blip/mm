@@ -5,6 +5,9 @@ html.sf-mode body {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  /* Keep layout stable; do not block pinch-zoom — user can still zoom manually */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 html.sf-mode body {
@@ -12,6 +15,13 @@ html.sf-mode body {
   min-height: -webkit-fill-available;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* iOS Safari auto-zooms focused inputs when font-size < 16px */
+html.sf-mode input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']),
+html.sf-mode textarea,
+html.sf-mode select {
+  font-size: 16px;
 }
 
 .sf-root {
@@ -430,7 +440,12 @@ html.sf-mode body {
   border-color: #334155;
 }
 
-.sf-root.sf-dark .sf-search-panel input {
+.sf-search-input {
+  font-size: 16px;
+}
+
+.sf-root.sf-dark .sf-search-panel input,
+.sf-root.sf-dark .sf-search-input {
   background: #1e293b;
   color: #f1f5f9;
 }

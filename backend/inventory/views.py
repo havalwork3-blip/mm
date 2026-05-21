@@ -908,11 +908,14 @@ def public_storefront_catalog(request):
     )
     rate_raw = latest_usd_to_iqd_for_shop(shop.pk)
     exchange_rate = str(rate_raw) if rate_raw is not None else None
+    from shops.storefront_delivery_utils import delivery_zones_public_list
+
     return Response(
         {
             "storefront": storefront_settings_public_dict(settings, shop, request),
             "banners": storefront_banners_public_list(shop, request),
             "categories": categories,
+            "delivery_zones": delivery_zones_public_list(shop.pk),
             "exchange_rate_usd_to_iqd": exchange_rate,
         },
     )

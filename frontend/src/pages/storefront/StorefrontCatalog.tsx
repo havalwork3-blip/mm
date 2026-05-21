@@ -25,7 +25,8 @@ import { accentAlpha, resolveAccent, SF_INSET_X, SF_PRODUCT_GRID } from './store
 export function StorefrontCatalog() {
   const { lang } = useLocale()
   const s = storefrontStrings(lang)
-  const { shopId, appearance, mergeAppearance, setExchangeRate } = useStorefrontShop()
+  const { shopId, appearance, mergeAppearance, setExchangeRate, setDeliveryZones } =
+    useStorefrontShop()
   const {
     view,
     selectedCategoryId,
@@ -63,6 +64,7 @@ export function StorefrontCatalog() {
       const data = await fetchPublicCatalog(shopId)
       setCategories(data.categories)
       setCatalogCategories(data.categories)
+      setDeliveryZones(data.delivery_zones ?? [])
       setBanners(data.banners ?? [])
       setRotateSeconds(data.storefront?.banner_rotate_seconds ?? 5)
       if (data.storefront) mergeAppearance(data.storefront)
@@ -71,10 +73,11 @@ export function StorefrontCatalog() {
       setError(e instanceof Error ? e.message : s.loadError)
       setCategories([])
       setCatalogCategories([])
+      setDeliveryZones([])
     } finally {
       setLoading(false)
     }
-  }, [shopId, s.loadError, mergeAppearance, setExchangeRate, setCatalogCategories])
+  }, [shopId, s.loadError, mergeAppearance, setExchangeRate, setCatalogCategories, setDeliveryZones])
 
   useEffect(() => {
     void load()

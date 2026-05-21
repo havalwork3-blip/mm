@@ -157,6 +157,7 @@ class StorefrontOrderItemSerializer(serializers.ModelSerializer):
 
 class StorefrontOrderSerializer(serializers.ModelSerializer):
     items = StorefrontOrderItemSerializer(many=True)
+    delivery_zone_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = StorefrontOrder
@@ -166,13 +167,26 @@ class StorefrontOrderSerializer(serializers.ModelSerializer):
             "customer_name",
             "customer_phone",
             "customer_address",
+            "delivery_zone_id",
+            "subtotal_amount",
+            "delivery_fee",
+            "delivery_zone_name",
             "total_amount",
             "status",
             "items",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "total_amount", "status", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "subtotal_amount",
+            "delivery_fee",
+            "delivery_zone_name",
+            "total_amount",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
 
     def validate_shop(self, shop: Shop) -> Shop:
         if not shop.is_active:
@@ -185,15 +199,37 @@ class StorefrontOrderSerializer(serializers.ModelSerializer):
         items = attrs.get("items")
         if not items:
             raise serializers.ValidationError({"items": "At least one line item is required."})
+        shop = attrs.get("shop")
+        if shop is not None:
+            from shops.models import StorefrontDeliveryZone
+            from shops.storefront_delivery_utils import resolve_delivery_zone
+
+            zone_id = attrs.pop("delivery_zone_id", None)
+            has_zones = StorefrontDeliveryZone.objects.filter(
+                shop_id=shop.pk,
+                is_active=True,
+            ).exists()
+            if has_zones and zone_id is None:
+                raise serializers.ValidationError(
+                    {"delivery_zone_id": "Please select a delivery area."},
+                )
+            zone = resolve_delivery_zone(int(shop.pk), zone_id)
+            if zone_id is not None and zone is None:
+                raise serializers.ValidationError(
+                    {"delivery_zone_id": "Invalid delivery area."},
+                )
+            attrs["_delivery_zone"] = zone
         return attrs
 
     def create(self, validated_data: dict) -> StorefrontOrder:
         items_data: list = validated_data.pop("items")
+        validated_data.pop("delivery_zone_id", None)
+        delivery_zone = validated_data.pop("_delivery_zone", None)
         shop = validated_data["shop"]
         shop_id = int(shop.pk)
 
         with transaction.atomic():
-            total = Decimal("0")
+            subtotal = Decimal("0")
             line_blocks: list[dict] = []
             for row in items_data:
                 product = row["product"]
@@ -223,7 +259,7 @@ class StorefrontOrderSerializer(serializers.ModelSerializer):
 
                 unit_price = effective_online_unit_price(product, qty)
                 line_total = (unit_price * Decimal(qty)).quantize(Decimal("0.0001"))
-                total += line_total
+                subtotal += line_total
                 line_blocks.append(
                     {
                         "product": product,
@@ -232,9 +268,29 @@ class StorefrontOrderSerializer(serializers.ModelSerializer):
                     },
                 )
 
+            subtotal = subtotal.quantize(Decimal("0.0001"))
+
+            delivery_fee = Decimal("0")
+            delivery_zone_name = ""
+            if delivery_zone is not None:
+                from shops.storefront_settings_utils import (
+                    effective_delivery_fee_usd,
+                    get_or_create_storefront_settings,
+                )
+
+                settings = get_or_create_storefront_settings(shop)
+                zone_fee = Decimal(delivery_zone.delivery_fee_usd or 0)
+                delivery_fee = effective_delivery_fee_usd(subtotal, zone_fee, settings)
+                delivery_zone_name = (delivery_zone.name or "").strip()
+            grand_total = (subtotal + delivery_fee).quantize(Decimal("0.0001"))
+
             order = StorefrontOrder.objects.create(
                 **validated_data,
-                total_amount=total.quantize(Decimal("0.0001")),
+                subtotal_amount=subtotal,
+                delivery_zone=delivery_zone,
+                delivery_zone_name=delivery_zone_name,
+                delivery_fee=delivery_fee,
+                total_amount=grand_total,
                 status=StorefrontOrderStatus.PENDING,
             )
             for block in line_blocks:
@@ -257,6 +313,9 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
             "customer_name",
             "customer_phone",
             "customer_address",
+            "subtotal_amount",
+            "delivery_fee",
+            "delivery_zone_name",
             "total_amount",
             "status",
             "items",
@@ -269,6 +328,9 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
             "customer_name",
             "customer_phone",
             "customer_address",
+            "subtotal_amount",
+            "delivery_fee",
+            "delivery_zone_name",
             "total_amount",
             "items",
             "created_at",

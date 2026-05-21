@@ -4,7 +4,13 @@ import { useEffect, useState } from 'react'
 import { submitPublicOrder } from '../../api/storefrontApi'
 import { ApiError } from '../../lib/api'
 import { useLocale } from '../../context/LocaleContext'
-import { cartTotal, useCartStore } from '../../store/cartStore'
+import {
+  cartDeliveryFee,
+  cartGrandTotal,
+  cartSubtotal,
+  parseDeliveryFreeMinUsd,
+  useCartStore,
+} from '../../store/cartStore'
 import { useStorefrontShop } from './StorefrontShopContext'
 import { storefrontStrings } from './storefrontStrings'
 import { useStorefrontPriceLabel } from './useStorefrontPriceLabel'
@@ -20,10 +26,17 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
   const { lang } = useLocale()
   const s = storefrontStrings(lang)
   const { format: formatPrice } = useStorefrontPriceLabel(lang)
-  const { shopId } = useStorefrontShop()
+  const { shopId, deliveryZones, appearance } = useStorefrontShop()
+  const freeMin = parseDeliveryFreeMinUsd(appearance.delivery_free_min_usd)
   const lines = useCartStore((st) => st.lines)
+  const deliveryZoneId = useCartStore((st) => st.deliveryZoneId)
+  const setDeliveryZoneId = useCartStore((st) => st.setDeliveryZoneId)
   const clearCart = useCartStore((st) => st.clearCart)
-  const total = cartTotal(lines)
+  const subtotal = cartSubtotal(lines)
+  const delivery = cartDeliveryFee(deliveryZones, deliveryZoneId, subtotal, freeMin)
+  const grandTotal = cartGrandTotal(lines, deliveryZones, deliveryZoneId, freeMin)
+  const qualifiesFree = freeMin != null && subtotal >= freeMin
+  const hasZones = deliveryZones.length > 0
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -61,6 +74,10 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
       setError(s.required)
       return
     }
+    if (hasZones && deliveryZoneId == null) {
+      setError(s.deliveryAreaRequired)
+      return
+    }
     if (lines.length === 0 || shopId == null) {
       onClose()
       return
@@ -73,6 +90,7 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
         customer_name: trimmedName,
         customer_phone: trimmedPhone,
         customer_address: trimmedAddress,
+        delivery_zone_id: hasZones ? deliveryZoneId : undefined,
         items: lines.map((l) => ({ product: l.productId, quantity: l.quantity })),
       })
       clearCart()
@@ -94,7 +112,7 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
   }
 
   const inputClass =
-    'w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pe-4 ps-11 text-slate-800 outline-none transition focus:border-transparent focus:bg-white focus:ring-2'
+    'w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pe-4 ps-11 text-base text-slate-800 outline-none transition focus:border-transparent focus:bg-white focus:ring-2'
 
   return (
     <div
@@ -142,12 +160,51 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
             </div>
           ) : (
             <>
-              <p className="mb-5 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                {s.total}:{' '}
-                <span className="font-bold" style={{ color: accent }}>
-                  {formatPrice(total)}
-                </span>
-              </p>
+              <div className="mb-5 space-y-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                <div className="flex justify-between">
+                  <span>{s.subtotal}</span>
+                  <span className="font-semibold tabular-nums" style={{ color: accent }}>
+                    {formatPrice(subtotal)}
+                  </span>
+                </div>
+                {hasZones ? (
+                  <>
+                    <label className="block pt-1">
+                      <span className="mb-1 block text-xs font-semibold text-slate-600">
+                        {s.deliveryArea}
+                      </span>
+                      <select
+                        value={deliveryZoneId ?? ''}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          setDeliveryZoneId(v === '' ? null : Number.parseInt(v, 10))
+                        }}
+                        disabled={submitting}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-800"
+                      >
+                        <option value="">{s.selectDeliveryArea}</option>
+                        {deliveryZones.map((z) => (
+                          <option key={z.id} value={z.id}>
+                            {z.name} — {formatPrice(Number.parseFloat(z.delivery_fee_usd) || 0)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="flex justify-between">
+                      <span>{delivery === 0 && qualifiesFree ? s.deliveryFree : s.deliveryFee}</span>
+                      <span
+                        className={`font-semibold tabular-nums ${delivery === 0 && qualifiesFree ? 'text-emerald-600' : ''}`}
+                      >
+                        {formatPrice(delivery)}
+                      </span>
+                    </div>
+                  </>
+                ) : null}
+                <div className="flex justify-between border-t border-slate-200 pt-2 font-bold text-slate-800">
+                  <span>{s.total}</span>
+                  <span style={{ color: accent }}>{formatPrice(grandTotal)}</span>
+                </div>
+              </div>
 
               <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
                 <label className="relative flex flex-col gap-1.5 text-sm">
@@ -198,7 +255,7 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
 
                 <button
                   type="submit"
-                  disabled={submitting || lines.length === 0}
+                  disabled={submitting || lines.length === 0 || (hasZones && deliveryZoneId == null)}
                   className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 font-bold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
                   style={{
                     backgroundColor: accent,

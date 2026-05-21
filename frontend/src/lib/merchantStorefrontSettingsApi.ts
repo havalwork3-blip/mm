@@ -22,6 +22,7 @@ export type MerchantStorefrontSettings = {
   location_url: string
   location_image_url: string | null
   social_links: StorefrontSocialLink[]
+  delivery_free_min_usd: string | null
   storefront_host: string
   storefront_url: string
   updated_at: string
@@ -73,6 +74,7 @@ export type MerchantStorefrontSettingsPatch = Partial<
     | 'shop_address'
     | 'location_url'
     | 'social_links'
+    | 'delivery_free_min_usd'
   >
 >
 

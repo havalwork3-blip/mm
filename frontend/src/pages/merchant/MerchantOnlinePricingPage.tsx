@@ -1,4 +1,4 @@
-import { DollarSign, Loader2, Percent, RefreshCw, Save, Sparkles } from 'lucide-react'
+import { DollarSign, Loader2, MapPin, Percent, Plus, RefreshCw, Save, Sparkles, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -9,6 +9,12 @@ import { useShopExchangeRate } from '../../hooks/useShopExchangeRate'
 import { useSyncedSession } from '../../hooks/useSyncedSession'
 import { resolveMediaUrl } from '../../lib/api'
 import { formatMoney2, parseDec, usdToIqdString } from '../../lib/moneyInput'
+import {
+  fetchStorefrontDeliveryZones,
+  saveStorefrontDeliveryZones,
+  type DeliveryZoneDraft,
+  type StorefrontDeliveryZoneRow,
+} from '../../lib/merchantDeliveryZonesApi'
 import {
   fetchOnlineProductPricing,
   patchOnlineProductPricing,
@@ -44,6 +50,27 @@ function displayUsdPrice(raw: string | null | undefined): string {
   return s === '' ? '0' : s
 }
 
+type ZoneUiRow = DeliveryZoneDraft & { key: string }
+
+function zoneDraftFromRow(row: StorefrontDeliveryZoneRow, rate: number | null): DeliveryZoneDraft {
+  const usd = formatMoney2(row.delivery_fee_usd)
+  const usdNum = parseDec(usd)
+  const iqd =
+    usd && rate != null && rate > 0 && usdNum > 0 ? usdToIqdString(usdNum, rate) : ''
+  return {
+    id: row.id,
+    name: row.name,
+    delivery_fee_usd: usd,
+    delivery_fee_iqd: iqd,
+    sort_order: row.sort_order,
+    is_active: row.is_active,
+  }
+}
+
+function zoneUiFromDraft(d: DeliveryZoneDraft, key: string): ZoneUiRow {
+  return { ...d, key }
+}
+
 export function MerchantOnlinePricingPage() {
   const { t } = useLocale()
   const { me, authPending, showLogin, canAccessShopData, needsShop } = useSyncedSession()
@@ -60,6 +87,12 @@ export function MerchantOnlinePricingPage() {
   const [bulkMinQty, setBulkMinQty] = useState('1')
   const [usdLinked, setUsdLinked] = useState(true)
   const [iqdLinked, setIqdLinked] = useState(true)
+  const [zones, setZones] = useState<ZoneUiRow[]>([])
+  const [zonesLoading, setZonesLoading] = useState(true)
+  const [zonesSaving, setZonesSaving] = useState(false)
+  const [zoneCounter, setZoneCounter] = useState(0)
+  const [freeDeliveryUsd, setFreeDeliveryUsd] = useState('')
+  const [freeDeliveryIqd, setFreeDeliveryIqd] = useState('')
   const { rate } = useShopExchangeRate(canAccessShopData)
 
   const load = useCallback(async () => {
@@ -79,9 +112,38 @@ export function MerchantOnlinePricingPage() {
     }
   }, [t, rate])
 
+  const loadZones = useCallback(async () => {
+    setZonesLoading(true)
+    try {
+      const data = await fetchStorefrontDeliveryZones()
+      setZones(
+        data.zones.map((r, i) =>
+          zoneUiFromDraft(zoneDraftFromRow(r, rate), String(r.id ?? `z-${i}`)),
+        ),
+      )
+      const raw = data.delivery_free_min_usd
+      const usd = raw ? formatMoney2(raw) : ''
+      const usdNum = parseDec(usd)
+      const iqd =
+        usd && rate != null && rate > 0 && usdNum > 0 ? usdToIqdString(usdNum, rate) : ''
+      setFreeDeliveryUsd(usd)
+      setFreeDeliveryIqd(iqd)
+    } catch {
+      setZones([])
+      setFreeDeliveryUsd('')
+      setFreeDeliveryIqd('')
+    } finally {
+      setZonesLoading(false)
+    }
+  }, [rate])
+
   useEffect(() => {
     if (canAccessShopData) void load()
   }, [canAccessShopData, load])
+
+  useEffect(() => {
+    if (canAccessShopData) void loadZones()
+  }, [canAccessShopData, loadZones])
 
   useEffect(() => {
     if (!saved) return
@@ -136,6 +198,72 @@ export function MerchantOnlinePricingPage() {
       ...prev,
       [id]: { ...prev[id], online_sale_price: usd, online_sale_price_iqd: iqd },
     }))
+  }
+
+  function addZone() {
+    const key = `new-${zoneCounter}`
+    setZoneCounter((c) => c + 1)
+    setZones((prev) => [
+      ...prev,
+      zoneUiFromDraft(
+        {
+          name: '',
+          delivery_fee_usd: '',
+          delivery_fee_iqd: '',
+          sort_order: prev.length,
+          is_active: true,
+        },
+        key,
+      ),
+    ])
+  }
+
+  function removeZone(key: string) {
+    setZones((prev) => prev.filter((z) => z.key !== key))
+  }
+
+  function setZoneDraft(key: string, patch: Partial<DeliveryZoneDraft>) {
+    setZones((prev) => prev.map((z) => (z.key === key ? { ...z, ...patch } : z)))
+  }
+
+  function setZoneFee(key: string, usd: string, iqd: string) {
+    setZoneDraft(key, { delivery_fee_usd: usd, delivery_fee_iqd: iqd })
+  }
+
+  async function saveZones() {
+    setZonesSaving(true)
+    setError(null)
+    try {
+      const payload = zones
+        .filter((z) => z.name.trim() !== '')
+        .map((z, idx) => ({
+          ...(z.id != null ? { id: z.id } : {}),
+          name: z.name.trim(),
+          delivery_fee_usd: formatMoney2(z.delivery_fee_usd.trim() || '0') || '0',
+          sort_order: idx,
+          is_active: z.is_active,
+        }))
+      const freeMin =
+        freeDeliveryUsd.trim() === '' ? null : formatMoney2(freeDeliveryUsd.trim()) || null
+      const updated = await saveStorefrontDeliveryZones(payload, freeMin)
+      setZones(
+        updated.zones.map((r, i) =>
+          zoneUiFromDraft(zoneDraftFromRow(r, rate), String(r.id ?? `z-${i}`)),
+        ),
+      )
+      const raw = updated.delivery_free_min_usd
+      const usd = raw ? formatMoney2(raw) : ''
+      const usdNum = parseDec(usd)
+      const iqd =
+        usd && rate != null && rate > 0 && usdNum > 0 ? usdToIqdString(usdNum, rate) : ''
+      setFreeDeliveryUsd(usd)
+      setFreeDeliveryIqd(iqd)
+      setSaved(true)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('common.error'))
+    } finally {
+      setZonesSaving(false)
+    }
   }
 
   async function saveAll() {
@@ -273,6 +401,131 @@ export function MerchantOnlinePricingPage() {
             className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white hover:bg-violet-700 disabled:opacity-50"
           >
             {t('onlinePricing.applyToAll')}
+          </button>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-teal-200/80 bg-teal-50/50 p-5 dark:border-teal-900/40 dark:bg-teal-950/20">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+          <MapPin className="h-4 w-4 text-teal-600" aria-hidden />
+          {t('onlinePricing.deliveryZones')}
+        </h2>
+        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+          {t('onlinePricing.deliveryZonesHint')}
+        </p>
+
+        <div className="mt-4 rounded-xl border border-teal-200/60 bg-white p-4 dark:border-teal-900/40 dark:bg-slate-900">
+          <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+            {t('onlinePricing.freeDelivery')}
+          </h3>
+          <p className="mt-1 text-xs text-slate-500">{t('onlinePricing.freeDeliveryHint')}</p>
+          <div className="mt-3 max-w-md">
+            <p className="mb-1 text-xs font-medium text-slate-500">
+              {t('onlinePricing.freeDeliveryMin')}
+            </p>
+            <UsdIqdDualInput
+              compact
+              usdLabel={t('onlinePricing.priceUsd')}
+              iqdLabel={t('onlinePricing.priceIqd')}
+              usdValue={freeDeliveryUsd}
+              iqdValue={freeDeliveryIqd}
+              onUsdChange={(usd, iqd) => {
+                setFreeDeliveryUsd(usd)
+                setFreeDeliveryIqd(iqd)
+              }}
+              onIqdChange={(iqd, usd) => {
+                setFreeDeliveryIqd(iqd)
+                setFreeDeliveryUsd(usd)
+              }}
+              usdLinked={usdLinked}
+              iqdLinked={iqdLinked}
+              onToggleUsdLink={() => setUsdLinked((v) => !v)}
+              onToggleIqdLink={() => setIqdLinked((v) => !v)}
+              rate={rate}
+              usdPlaceholder="50"
+              linkActiveTitle={linkTitles.active}
+              linkInactiveTitle={linkTitles.inactive}
+            />
+          </div>
+        </div>
+
+        {zonesLoading ? (
+          <div className="mt-4 flex justify-center py-6">
+            <Loader2 className="h-6 w-6 animate-spin text-teal-600" aria-hidden />
+          </div>
+        ) : (
+          <ul className="mt-4 flex flex-col gap-3">
+            {zones.map((zone) => (
+              <li
+                key={zone.key}
+                className="flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-white p-4 dark:border-slate-700 dark:bg-slate-900 sm:flex-row sm:items-end"
+              >
+                <label className="min-w-0 flex-1">
+                  <span className="mb-1 block text-xs font-medium text-slate-500">
+                    {t('onlinePricing.zoneName')}
+                  </span>
+                  <input
+                    type="text"
+                    value={zone.name}
+                    onChange={(e) => setZoneDraft(zone.key, { name: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800"
+                    placeholder={t('onlinePricing.zoneName')}
+                  />
+                </label>
+                <div className="min-w-[240px] flex-1">
+                  <p className="mb-1 text-xs font-medium text-slate-500">{t('onlinePricing.zoneFee')}</p>
+                  <UsdIqdDualInput
+                    compact
+                    usdLabel={t('onlinePricing.priceUsd')}
+                    iqdLabel={t('onlinePricing.priceIqd')}
+                    usdValue={zone.delivery_fee_usd}
+                    iqdValue={zone.delivery_fee_iqd}
+                    onUsdChange={(usd, iqd) => setZoneFee(zone.key, usd, iqd)}
+                    onIqdChange={(iqd, usd) => setZoneFee(zone.key, usd, iqd)}
+                    usdLinked={usdLinked}
+                    iqdLinked={iqdLinked}
+                    onToggleUsdLink={() => setUsdLinked((v) => !v)}
+                    onToggleIqdLink={() => setIqdLinked((v) => !v)}
+                    rate={rate}
+                    usdPlaceholder="0"
+                    linkActiveTitle={linkTitles.active}
+                    linkInactiveTitle={linkTitles.inactive}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeZone(zone.key)}
+                  className="inline-flex items-center justify-center gap-1 rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-950/30"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  {t('onlinePricing.removeZone')}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={addZone}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-teal-300 bg-white px-4 py-2 text-sm font-bold text-teal-800 hover:bg-teal-50 dark:border-teal-800 dark:bg-slate-900 dark:text-teal-200"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            {t('onlinePricing.addZone')}
+          </button>
+          <button
+            type="button"
+            disabled={zonesSaving || zonesLoading}
+            onClick={() => void saveZones()}
+            className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-bold text-white hover:bg-teal-700 disabled:opacity-50"
+          >
+            {zonesSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Save className="h-4 w-4" aria-hidden />
+            )}
+            {t('onlinePricing.saveZones')}
           </button>
         </div>
       </section>

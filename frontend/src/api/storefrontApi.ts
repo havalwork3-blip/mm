@@ -16,6 +16,12 @@ export type StorefrontSocialLink = {
   url: string
 }
 
+export type StorefrontDeliveryZone = {
+  id: number
+  name: string
+  delivery_fee_usd: string
+}
+
 export type PublicStorefrontAppearance = {
   catalog_title: string
   catalog_subtitle: string
@@ -34,6 +40,8 @@ export type PublicStorefrontAppearance = {
   location_url?: string
   location_image_url?: string | null
   social_links?: StorefrontSocialLink[]
+  /** Subtotal (USD) at or above this → free delivery; null = disabled */
+  delivery_free_min_usd?: string | null
 }
 
 export type PublicStorefrontBanner = {
@@ -69,6 +77,7 @@ export type PublicStorefrontCatalog = {
   storefront: PublicStorefrontAppearance
   banners: PublicStorefrontBanner[]
   categories: PublicStorefrontCategory[]
+  delivery_zones?: StorefrontDeliveryZone[]
   exchange_rate_usd_to_iqd?: string | null
 }
 
@@ -121,6 +130,7 @@ export type StorefrontOrderPayload = {
   customer_name: string
   customer_phone: string
   customer_address: string
+  delivery_zone_id?: number | null
   items: Array<{ product: number; quantity: number }>
 }
 
@@ -130,6 +140,9 @@ export type StorefrontOrderResponse = {
   customer_name: string
   customer_phone: string
   customer_address: string
+  subtotal_amount?: string | null
+  delivery_fee?: string
+  delivery_zone_name?: string
   total_amount: string
   status: string
   items: Array<{
