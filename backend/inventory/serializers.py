@@ -307,6 +307,15 @@ class StorefrontOrderSerializer(serializers.ModelSerializer):
                     current_stock_quantity=F("current_stock_quantity") - block["quantity"],
                 )
 
+        order_id = order.pk
+
+        def _telegram_notify() -> None:
+            from shops.telegram_notify import notify_new_storefront_order
+
+            notify_new_storefront_order(order_id)
+
+        transaction.on_commit(_telegram_notify)
+
         return order
 
 

@@ -25,6 +25,9 @@ type Props = {
   shopId: number
   catalogRows: CatalogProductRow[]
   favoriteIds: number[]
+  cartProductIds: number[]
+  qtyInCart: (productId: number) => number
+  onAddToCart: (product: PublicStorefrontProduct) => void
   categories: PublicStorefrontCategory[]
   accent: string
   labels: {
@@ -43,6 +46,7 @@ type Props = {
     onSaleHint: string
     availableNow: string
     availableNowHint: string
+    addToCart: string
     addToFavorites: string
     removeFromFavorites: string
   }
@@ -56,6 +60,9 @@ export function CategoriesBrowse({
   shopId,
   catalogRows,
   favoriteIds,
+  cartProductIds,
+  qtyInCart,
+  onAddToCart,
   categories,
   accent,
   labels,
@@ -157,6 +164,9 @@ export function CategoriesBrowse({
         accent={accent}
         catalogRows={catalogRows}
         favoriteIds={favoriteIds}
+        cartProductIds={cartProductIds}
+        qtyInCart={qtyInCart}
+        onAddToCart={onAddToCart}
         labels={labels}
         onSelectCollection={onSelectCollection}
         onOpenProduct={onOpenProduct}

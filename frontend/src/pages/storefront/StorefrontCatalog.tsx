@@ -45,7 +45,6 @@ export function StorefrontCatalog() {
     selectCategory,
     showAllProducts,
     showCollection,
-    backToCategories,
     openProduct,
     backFromProduct,
     setSearchActive,
@@ -128,6 +127,11 @@ export function StorefrontCatalog() {
     [categories, lang],
   )
 
+  const cartProductIds = useMemo(
+    () => cartLines.map((l) => l.productId),
+    [cartLines],
+  )
+
   const flatProducts = useMemo(() => {
     const rows =
       productCollection != null
@@ -138,9 +142,16 @@ export function StorefrontCatalog() {
               categoryName: categoryDisplayName(c, lang),
             })),
           )
-    const filtered = filterCatalogByCollection(rows, productCollection, favoriteIds)
-    return sortProductsAvailableFirst(filtered)
-  }, [filteredCategories, lang, productCollection, favoriteIds, allCatalogRows])
+    const filtered = filterCatalogByCollection(
+      rows,
+      productCollection,
+      favoriteIds,
+      cartProductIds,
+    )
+    return productCollection === 'available_now'
+      ? filtered
+      : sortProductsAvailableFirst(filtered)
+  }, [filteredCategories, lang, productCollection, favoriteIds, cartProductIds, allCatalogRows])
 
   const selectedCategory =
     selectedCategoryId != null ? categories.find((c) => c.id === selectedCategoryId) : null
@@ -151,6 +162,7 @@ export function StorefrontCatalog() {
 
   const cardLabels = {
     viewProduct: s.viewProduct,
+    addToCart: s.addToCart,
     usd: s.usd,
     outOfStock: s.outOfStock,
     discontinued: s.discontinued,
@@ -169,6 +181,10 @@ export function StorefrontCatalog() {
 
   function handleOpenProduct(product: PublicStorefrontProduct, categoryName: string) {
     openProduct(product, categoryName)
+  }
+
+  function handleAddToCart(product: PublicStorefrontProduct) {
+    addItem(product, 1)
   }
 
   function handleAddFromDetail(quantity: number) {
@@ -237,6 +253,9 @@ export function StorefrontCatalog() {
                 shopId={shopId}
                 catalogRows={allCatalogRows}
                 favoriteIds={favoriteIds}
+                cartProductIds={cartProductIds}
+                qtyInCart={qtyInCart}
+                onAddToCart={handleAddToCart}
                 categories={categories.filter((c) => c.products.length > 0)}
                 accent={accent}
                 labels={{
@@ -255,6 +274,7 @@ export function StorefrontCatalog() {
                   onSaleHint: s.onSaleHint,
                   availableNow: s.availableNow,
                   availableNowHint: s.availableNowHint,
+                  addToCart: s.addToCart,
                   addToFavorites: s.addToFavorites,
                   removeFromFavorites: s.removeFromFavorites,
                 }}
@@ -337,6 +357,7 @@ export function StorefrontCatalog() {
                       accent={accent}
                       inCart={qtyInCart(product.id)}
                       onOpen={() => handleOpenProduct(product, categoryName)}
+                      onAddToCart={() => handleAddToCart(product)}
                       labels={cardLabels}
                     />
                   ))
@@ -344,13 +365,6 @@ export function StorefrontCatalog() {
                 </ul>
               )}
 
-              <button
-                type="button"
-                onClick={backToCategories}
-                className="sf-back-btn mt-6 w-full rounded-2xl py-3.5 text-sm font-bold shadow-sm ring-1 transition active:scale-[0.99]"
-              >
-                {s.backToCategories}
-              </button>
             </section>
           </div>
         </div>

@@ -483,7 +483,11 @@ class MerchantStorefrontSettingsView(APIView):
         return get_or_create_storefront_settings(shop)
 
     def get(self, request):
+        from shops.telegram_notify import ensure_link_code
+
         obj = self._get_settings(request)
+        if obj.telegram_notify_enabled:
+            ensure_link_code(obj)
         return Response(StorefrontSettingsSerializer(obj, context={"request": request}).data)
 
     def patch(self, request):
@@ -656,3 +660,36 @@ class MerchantStorefrontDeliveryZonesView(APIView):
         StorefrontDeliveryZone.objects.filter(shop_id=shop_id).exclude(pk__in=keep_ids).delete()
 
         return self._delivery_config_response(request, shop_id)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def public_telegram_webhook(request):
+    """Telegram Bot API webhook — links mobile chats via /start LINKCODE."""
+    import json
+
+    from shops.telegram_notify import process_telegram_update
+
+    try:
+        payload = request.data if isinstance(request.data, dict) else json.loads(request.body or b"{}")
+    except (json.JSONDecodeError, TypeError, ValueError):
+        payload = {}
+    process_telegram_update(payload)
+    return Response({"ok": True})
+
+
+class MerchantTelegramTestView(APIView):
+    """POST — send a test message to all linked Telegram recipients."""
+
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+
+    def post(self, request):
+        from shops.telegram_notify import send_test_notification
+
+        shop_id = require_shop_id(request)
+        shop = Shop.objects.filter(pk=shop_id, online_storefront_enabled=True).first()
+        if shop is None:
+            raise PermissionDenied("Online storefront is not enabled for this shop.")
+        settings = get_or_create_storefront_settings(shop)
+        ok, total = send_test_notification(settings)
+        return Response({"sent": ok, "total": total})

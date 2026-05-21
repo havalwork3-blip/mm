@@ -157,6 +157,10 @@ class StorefrontSettings(ShopScopedModel):
         validators=[MinValueValidator(0)],
         help_text="Subtotal (USD) at or above this gets free delivery; null/0 = off.",
     )
+    telegram_notify_enabled = models.BooleanField(default=False)
+    telegram_bot_token = models.CharField(max_length=256, blank=True, default="")
+    telegram_link_code = models.CharField(max_length=32, blank=True, default="")
+    telegram_recipients = models.JSONField(default=list, blank=True)
 
     updated_at = models.DateTimeField(auto_now=True)
 

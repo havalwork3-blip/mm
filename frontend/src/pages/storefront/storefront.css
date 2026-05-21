@@ -461,6 +461,16 @@ html.sf-mode select {
   background: #ffffff;
 }
 
+.sf-back-bar {
+  background: #ffffff;
+  border-color: rgba(226, 232, 240, 0.85);
+  color: #475569;
+}
+
+.sf-back-bar:hover {
+  background: #f8fafc;
+}
+
 .sf-back-btn {
   background: #ffffff;
   color: #475569;
@@ -494,6 +504,24 @@ html.sf-mode select {
 
 .sf-root.sf-dark .sf-product-card-compact p {
   color: #e2e8f0;
+}
+
+.sf-root.sf-dark .sf-back-bar {
+  background: #1e293b;
+  border-color: rgba(51, 65, 85, 0.8);
+}
+
+.sf-root.sf-dark .sf-back-bar span:first-child {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.sf-root.sf-dark .sf-back-bar span:last-child {
+  color: #e2e8f0;
+}
+
+.sf-root.sf-dark .sf-back-bar:hover {
+  background: #334155;
 }
 
 .sf-root.sf-dark .sf-back-btn {

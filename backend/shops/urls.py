@@ -13,6 +13,7 @@ router.register(
 )
 
 urlpatterns = [
+    path("public/telegram/webhook/", views.public_telegram_webhook, name="public-telegram-webhook"),
     path("public/qr-landing/", views.public_qr_landing, name="public-qr-landing"),
     path("admin/qr-landing/", views.QrLandingAdminView.as_view(), name="admin-qr-landing"),
     path("admin/qr-landing/logo/", views.QrLandingPrimaryLogoView.as_view(), name="admin-qr-landing-logo"),
@@ -22,6 +23,11 @@ urlpatterns = [
         "merchant/storefront-settings/",
         views.MerchantStorefrontSettingsView.as_view(),
         name="merchant-storefront-settings",
+    ),
+    path(
+        "merchant/storefront-settings/telegram-test/",
+        views.MerchantTelegramTestView.as_view(),
+        name="merchant-storefront-telegram-test",
     ),
     path(
         "merchant/storefront-banners/",

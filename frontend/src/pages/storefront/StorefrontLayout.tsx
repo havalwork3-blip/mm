@@ -1,8 +1,9 @@
 import { Heart, Menu, Search, ShoppingBag } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { useLocale } from '../../context/LocaleContext'
+import { isStorefrontMode } from '../../lib/storefrontConfig'
 import { useStorefrontCatalog } from './storefrontCatalogContext'
 import { useStorefrontTheme } from './storefrontThemeContext'
 import { useStorefrontShop } from './StorefrontShopContext'
@@ -10,10 +11,18 @@ import { cartItemCount, useCartStore } from '../../store/cartStore'
 import { useStorefrontFavoritesStore } from '../../store/storefrontFavoritesStore'
 import { CartDrawer } from './CartDrawer'
 import { CheckoutModal } from './CheckoutModal'
+import { StorefrontBackBar } from './StorefrontBackBar'
 import { StorefrontSearchOverlay } from './StorefrontSearchOverlay'
 import { StorefrontSidebar } from './StorefrontSidebar'
 import { storefrontStrings } from './storefrontStrings'
-import { accentAlpha, resolveAccent, SF_MAIN, SF_SHELL, storefrontCssVars } from './storefrontTheme'
+import {
+  accentAlpha,
+  resolveAccent,
+  SF_INSET_X,
+  SF_MAIN,
+  SF_SHELL,
+  storefrontCssVars,
+} from './storefrontTheme'
 import { resolveMediaUrl } from '../../lib/api'
 
 export function StorefrontLayout() {
@@ -29,8 +38,28 @@ export function StorefrontLayout() {
     closeSearch,
     showCollection,
     productCollection,
+    view,
+    search,
   } = useStorefrontCatalog()
   const location = useLocation()
+  const navigate = useNavigate()
+
+  const homePath = isStorefrontMode() ? '/' : '/store'
+  const onStoreHome =
+    location.pathname === homePath ||
+    location.pathname === `${homePath}/` ||
+    (homePath === '/store' && location.pathname.replace(/\/$/, '') === '/store')
+  const isInfoPage = /\/(contact|about|faq|location)\/?$/.test(location.pathname)
+  const showBackBar =
+    !shopLoading &&
+    !shopError &&
+    view !== 'product' &&
+    (isInfoPage || (onStoreHome && (view === 'products' || search.trim().length > 0)))
+
+  function handleGlobalBack() {
+    if (isInfoPage) navigate(homePath)
+    else backToCategories()
+  }
 
   const accent = resolveAccent(appearance.accent_color)
   const logoSrc = resolveMediaUrl(appearance.logo_url ?? null)
@@ -222,7 +251,17 @@ export function StorefrontLayout() {
               <p className="text-sm font-medium text-slate-500">{s.loading}</p>
             </div>
           ) : (
-            <Outlet />
+            <>
+              {showBackBar ? (
+                <div className={`${SF_INSET_X} pb-1 pt-3 sm:pt-4`}>
+                  <StorefrontBackBar
+                    label={isInfoPage ? s.home : s.backToCategories}
+                    onClick={handleGlobalBack}
+                  />
+                </div>
+              ) : null}
+              <Outlet />
+            </>
           )}
         </main>
       </div>

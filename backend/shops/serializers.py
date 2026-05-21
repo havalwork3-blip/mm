@@ -180,6 +180,8 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
     location_image_url = serializers.SerializerMethodField(read_only=True)
     storefront_host = serializers.SerializerMethodField(read_only=True)
     storefront_url = serializers.SerializerMethodField(read_only=True)
+    telegram_bot_token_masked = serializers.SerializerMethodField(read_only=True)
+    telegram_regenerate_link = serializers.BooleanField(write_only=True, required=False, default=False)
 
     class Meta:
         model = StorefrontSettings
@@ -206,6 +208,12 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
             "location_image_url",
             "social_links",
             "delivery_free_min_usd",
+            "telegram_notify_enabled",
+            "telegram_bot_token",
+            "telegram_bot_token_masked",
+            "telegram_link_code",
+            "telegram_recipients",
+            "telegram_regenerate_link",
             "storefront_host",
             "storefront_url",
             "updated_at",
@@ -215,10 +223,58 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
             "shop",
             "logo_url",
             "location_image_url",
+            "telegram_bot_token_masked",
+            "telegram_link_code",
             "storefront_host",
             "storefront_url",
             "updated_at",
         ]
+        extra_kwargs = {
+            "telegram_bot_token": {"write_only": True, "required": False, "allow_blank": True},
+        }
+
+    def get_telegram_bot_token_masked(self, obj: StorefrontSettings) -> str:
+        from shops.telegram_notify import mask_bot_token
+
+        return mask_bot_token(obj.telegram_bot_token or "")
+
+    def validate_telegram_recipients(self, value: object) -> list:
+        from shops.telegram_notify import normalize_recipients
+
+        return normalize_recipients(value)
+
+    def update(self, instance, validated_data):
+        from shops.telegram_notify import (
+            configure_telegram_on_save,
+            ensure_link_code,
+            normalize_recipients,
+        )
+
+        regenerate = bool(validated_data.pop("telegram_regenerate_link", False))
+        if regenerate:
+            import secrets
+
+            instance.telegram_link_code = secrets.token_hex(4).upper()[:10]
+
+        if "telegram_bot_token" in validated_data:
+            raw = (validated_data.get("telegram_bot_token") or "").strip()
+            if raw:
+                validated_data["telegram_bot_token"] = raw
+            else:
+                validated_data.pop("telegram_bot_token", None)
+
+        if "telegram_recipients" in validated_data:
+            validated_data["telegram_recipients"] = normalize_recipients(
+                validated_data["telegram_recipients"],
+            )
+
+        instance = super().update(instance, validated_data)
+        if regenerate and not instance.telegram_link_code:
+            ensure_link_code(instance)
+        elif not instance.telegram_link_code and instance.telegram_notify_enabled:
+            ensure_link_code(instance)
+        configure_telegram_on_save(instance)
+        return instance
 
     def get_logo_url(self, obj: StorefrontSettings) -> str | None:
         if not obj.logo:

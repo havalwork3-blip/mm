@@ -43,7 +43,10 @@ type Props = {
   accent: string
   catalogRows: CatalogProductRow[]
   favoriteIds: number[]
-  labels: CollectionLabels
+  cartProductIds: number[]
+  qtyInCart: (productId: number) => number
+  onAddToCart: (product: PublicStorefrontProduct) => void
+  labels: CollectionLabels & { addToCart: string }
   onSelectCollection: (id: StorefrontProductCollection) => void
   onOpenProduct: (product: PublicStorefrontProduct, categoryName: string) => void
   onViewAllProducts: () => void
@@ -54,6 +57,9 @@ export function StorefrontCollectionSections({
   accent,
   catalogRows,
   favoriteIds,
+  cartProductIds,
+  qtyInCart,
+  onAddToCart,
   labels,
   onSelectCollection,
   onOpenProduct,
@@ -61,11 +67,11 @@ export function StorefrontCollectionSections({
 }: Props) {
   const sections = useMemo(() => {
     return STOREFRONT_HOME_COLLECTIONS.map((id) => {
-      const all = previewCollectionProducts(catalogRows, id, favoriteIds, 9999)
+      const all = previewCollectionProducts(catalogRows, id, favoriteIds, cartProductIds, 9999)
       const preview = all.slice(0, COLLECTION_PREVIEW_COUNT)
       return { id, allCount: all.length, preview }
     }).filter((s) => s.allCount > 0)
-  }, [catalogRows, favoriteIds])
+  }, [catalogRows, favoriteIds, cartProductIds])
 
   if (sections.length === 0) return null
 
@@ -121,7 +127,10 @@ export function StorefrontCollectionSections({
                   shopId={shopId}
                   product={product}
                   accent={accent}
+                  inCart={qtyInCart(product.id)}
                   onOpen={() => onOpenProduct(product, categoryName)}
+                  onAddToCart={() => onAddToCart(product)}
+                  addToCart={labels.addToCart}
                   addToFavorites={labels.addToFavorites}
                   removeFromFavorites={labels.removeFromFavorites}
                 />

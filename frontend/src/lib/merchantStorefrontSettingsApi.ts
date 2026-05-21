@@ -2,6 +2,12 @@ import type { StorefrontSocialLink } from '../api/storefrontApi'
 import { apiJson } from './api'
 import type { StorefrontFaqItem } from '../api/storefrontApi'
 
+export type TelegramRecipient = {
+  chat_id: string
+  label: string
+  connected_at?: string
+}
+
 export type MerchantStorefrontSettings = {
   id: number
   shop: number
@@ -23,6 +29,10 @@ export type MerchantStorefrontSettings = {
   location_image_url: string | null
   social_links: StorefrontSocialLink[]
   delivery_free_min_usd: string | null
+  telegram_notify_enabled: boolean
+  telegram_bot_token_masked: string
+  telegram_link_code: string
+  telegram_recipients: TelegramRecipient[]
   storefront_host: string
   storefront_url: string
   updated_at: string
@@ -75,8 +85,23 @@ export type MerchantStorefrontSettingsPatch = Partial<
     | 'location_url'
     | 'social_links'
     | 'delivery_free_min_usd'
-  >
+    | 'telegram_notify_enabled'
+    | 'telegram_recipients'
+  > & {
+    telegram_bot_token?: string
+    telegram_regenerate_link?: boolean
+  }
 >
+
+export async function postMerchantTelegramTest(): Promise<{ sent: number; total: number }> {
+  return apiJson<{ sent: number; total: number }>(
+    '/api/merchant/storefront-settings/telegram-test/',
+    {
+      method: 'POST',
+      shopScoped: true,
+    },
+  )
+}
 
 export async function patchMerchantStorefrontSettings(
   body: MerchantStorefrontSettingsPatch,

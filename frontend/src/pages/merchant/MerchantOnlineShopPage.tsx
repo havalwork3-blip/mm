@@ -6,6 +6,7 @@ import {
   Lightbulb,
   Loader2,
   MapPin,
+  MessageCircle,
   Package,
   Palette,
   Phone,
@@ -26,9 +27,11 @@ import { resolveActiveShopId } from '../../lib/activeShop'
 import {
   fetchMerchantStorefrontSettings,
   patchMerchantStorefrontSettings,
+  postMerchantTelegramTest,
   uploadMerchantStorefrontLocationImage,
   uploadMerchantStorefrontLogo,
 } from '../../lib/merchantStorefrontSettingsApi'
+import type { TelegramRecipient } from '../../lib/merchantStorefrontSettingsApi'
 import type { StorefrontFaqItem, StorefrontSocialLink } from '../../api/storefrontApi'
 import { resolveMediaUrl } from '../../lib/api'
 import { STOREFRONT_SOCIAL_PLATFORMS } from '../../lib/storefrontSocial'
@@ -102,6 +105,13 @@ export function MerchantOnlineShopPage() {
   const [locationImageUrl, setLocationImageUrl] = useState<string | null>(null)
   const [locationUploading, setLocationUploading] = useState(false)
   const [socialLinks, setSocialLinks] = useState<StorefrontSocialLink[]>([])
+  const [telegramNotifyEnabled, setTelegramNotifyEnabled] = useState(false)
+  const [telegramBotTokenInput, setTelegramBotTokenInput] = useState('')
+  const [telegramBotTokenMasked, setTelegramBotTokenMasked] = useState('')
+  const [telegramLinkCode, setTelegramLinkCode] = useState('')
+  const [telegramRecipients, setTelegramRecipients] = useState<TelegramRecipient[]>([])
+  const [telegramTesting, setTelegramTesting] = useState(false)
+  const [telegramTestMsg, setTelegramTestMsg] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -126,6 +136,12 @@ export function MerchantOnlineShopPage() {
       setLocationUrl(row.location_url ?? '')
       setLocationImageUrl(row.location_image_url ?? null)
       setSocialLinks(Array.isArray(row.social_links) ? row.social_links : [])
+      setTelegramNotifyEnabled(Boolean(row.telegram_notify_enabled))
+      setTelegramBotTokenMasked(row.telegram_bot_token_masked ?? '')
+      setTelegramLinkCode(row.telegram_link_code ?? '')
+      setTelegramRecipients(Array.isArray(row.telegram_recipients) ? row.telegram_recipients : [])
+      setTelegramBotTokenInput('')
+      setTelegramTestMsg(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
@@ -165,6 +181,11 @@ export function MerchantOnlineShopPage() {
         shop_address: shopAddress.trim(),
         location_url: locationUrl.trim(),
         social_links: socialLinks.filter((l) => l.platform && l.url.trim()),
+        telegram_notify_enabled: telegramNotifyEnabled,
+        telegram_recipients: telegramRecipients,
+        ...(telegramBotTokenInput.trim()
+          ? { telegram_bot_token: telegramBotTokenInput.trim() }
+          : {}),
       })
       setSaved(true)
       await load()
@@ -174,6 +195,50 @@ export function MerchantOnlineShopPage() {
       setSaving(false)
     }
   }
+
+  async function regenerateTelegramCode() {
+    setError(null)
+    try {
+      const row = await patchMerchantStorefrontSettings({ telegram_regenerate_link: true })
+      setTelegramLinkCode(row.telegram_link_code ?? '')
+      setSaved(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('common.error'))
+    }
+  }
+
+  async function removeTelegramRecipient(chatId: string) {
+    setError(null)
+    const next = telegramRecipients.filter((r) => r.chat_id !== chatId)
+    try {
+      const row = await patchMerchantStorefrontSettings({ telegram_recipients: next })
+      setTelegramRecipients(row.telegram_recipients ?? [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('common.error'))
+    }
+  }
+
+  async function testTelegram() {
+    setTelegramTesting(true)
+    setTelegramTestMsg(null)
+    setError(null)
+    try {
+      const { sent, total } = await postMerchantTelegramTest()
+      if (sent > 0) {
+        setTelegramTestMsg(
+          t('onlineShop.telegramTestOk').replace('{sent}', String(sent)).replace('{total}', String(total)),
+        )
+      } else {
+        setTelegramTestMsg(t('onlineShop.telegramTestFail'))
+      }
+    } catch (err) {
+      setTelegramTestMsg(err instanceof Error ? err.message : t('onlineShop.telegramTestFail'))
+    } finally {
+      setTelegramTesting(false)
+    }
+  }
+
+  const telegramStartCommand = telegramLinkCode ? `/start ${telegramLinkCode}` : ''
 
   async function copyLink() {
     if (!storefrontUrl) return
@@ -631,6 +696,137 @@ export function MerchantOnlineShopPage() {
                   </li>
                 ))}
               </ul>
+            </SectionCard>
+
+            <SectionCard title={t('onlineShop.telegramSection')} icon={MessageCircle}>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('onlineShop.telegramHint')}</p>
+              <label className="flex cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={telegramNotifyEnabled}
+                  onChange={(e) => setTelegramNotifyEnabled(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                />
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  {t('onlineShop.telegramEnabled')}
+                </span>
+              </label>
+              {telegramNotifyEnabled ? (
+                <>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                      {t('onlineShop.telegramBotToken')}
+                    </label>
+                    <input
+                      type="password"
+                      value={telegramBotTokenInput}
+                      onChange={(e) => setTelegramBotTokenInput(e.target.value)}
+                      placeholder={
+                        telegramBotTokenMasked
+                          ? telegramBotTokenMasked
+                          : '123456789:ABCdefGHIjklMNOpqrsTUVwxyz'
+                      }
+                      className={inputClass}
+                      dir="ltr"
+                      autoComplete="off"
+                    />
+                    <p className="mt-1 text-[11px] text-slate-400">{t('onlineShop.telegramBotTokenHint')}</p>
+                    {telegramBotTokenMasked && !telegramBotTokenInput ? (
+                      <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+                        {t('onlineShop.telegramTokenSaved')}: {telegramBotTokenMasked}
+                      </p>
+                    ) : null}
+                  </div>
+                  {telegramLinkCode ? (
+                    <div className="rounded-xl border border-violet-200/80 bg-violet-50/50 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
+                      <p className="text-xs font-semibold text-violet-900 dark:text-violet-200">
+                        {t('onlineShop.telegramLinkCode')}
+                      </p>
+                      <p className="mt-1 text-[11px] text-violet-800/90 dark:text-violet-200/80">
+                        {t('onlineShop.telegramLinkSteps')}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <code
+                          className="rounded-lg bg-white px-3 py-2 font-mono text-sm text-slate-900 ring-1 ring-violet-200 dark:bg-slate-900 dark:text-white dark:ring-violet-800"
+                          dir="ltr"
+                        >
+                          {telegramStartCommand}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!telegramStartCommand) return
+                            void navigator.clipboard.writeText(telegramStartCommand)
+                            setCopied(true)
+                            window.setTimeout(() => setCopied(false), 2000)
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-violet-200 px-2.5 py-1.5 text-xs font-semibold text-violet-800 hover:bg-white dark:border-violet-800 dark:text-violet-200"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          {t('onlineShop.copyLink')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void regenerateTelegramCode()}
+                          className="text-xs font-semibold text-violet-700 underline hover:text-violet-900 dark:text-violet-300"
+                        >
+                          {t('onlineShop.telegramRegenerateCode')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <div>
+                    <p className="mb-2 text-xs font-medium text-slate-500">{t('onlineShop.telegramRecipients')}</p>
+                    {telegramRecipients.length === 0 ? (
+                      <p className="text-xs text-slate-400">{t('onlineShop.telegramNoRecipients')}</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {telegramRecipients.map((r) => (
+                          <li
+                            key={r.chat_id}
+                            className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/40"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
+                                {r.label || r.chat_id}
+                              </p>
+                              <p className="font-mono text-[10px] text-slate-400" dir="ltr">
+                                {r.chat_id}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => void removeTelegramRecipient(r.chat_id)}
+                              className="shrink-0 text-red-500 hover:text-red-600"
+                              aria-label={t('common.delete')}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={telegramTesting || telegramRecipients.length === 0}
+                      onClick={() => void testTelegram()}
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                    >
+                      {telegramTesting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <MessageCircle className="h-4 w-4" aria-hidden />
+                      )}
+                      {t('onlineShop.telegramTest')}
+                    </button>
+                    {telegramTestMsg ? (
+                      <p className="text-xs text-slate-600 dark:text-slate-300">{telegramTestMsg}</p>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
             </SectionCard>
 
             <SectionCard title={t('onlineShop.themeSection')} icon={Palette}>
