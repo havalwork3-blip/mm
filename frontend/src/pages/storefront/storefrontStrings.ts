@@ -96,6 +96,13 @@ const STRINGS = {
     customerName: 'ناو',
     customerPhone: 'ژمارەی مۆبایل',
     customerAddress: 'ناونیشان',
+    useMyLocation: 'شوێنەکەم دیاری بکە',
+    locating: 'دیاریکردنی شوێن…',
+    locationUnsupported: 'وێبگەڕەکەت پشتیوانی شوێن ناکات',
+    locationDenied: 'ڕێگەی شوێن نەدراوە — لە ڕێکخستنەکاندا چالاکی بکە',
+    locationUnavailable: 'نەتوانرا شوێن بدۆزرێتەوە، دووبارە هەوڵبدەرەوە',
+    locationTimeout: 'کات تەواو بوو — دووبارە هەوڵبدەرەوە',
+    openOnMap: 'کردنەوە لە نەخشە',
     submitOrder: 'ناردنی داواکاری',
     submitting: 'ناردن…',
     successTitle: 'داواکاریەکەت وەرگیرا!',
@@ -189,6 +196,13 @@ const STRINGS = {
     customerName: 'الاسم',
     customerPhone: 'رقم الهاتف',
     customerAddress: 'العنوان',
+    useMyLocation: 'تحديد موقعي',
+    locating: 'جارٍ تحديد الموقع…',
+    locationUnsupported: 'المتصفح لا يدعم تحديد الموقع',
+    locationDenied: 'لم يُسمح بالموقع — فعّله من الإعدادات',
+    locationUnavailable: 'تعذر تحديد الموقع، حاول مرة أخرى',
+    locationTimeout: 'انتهت المهلة — حاول مرة أخرى',
+    openOnMap: 'فتح على الخريطة',
     submitOrder: 'إرسال الطلب',
     submitting: 'جارٍ الإرسال…',
     successTitle: 'تم استلام طلبك!',
@@ -282,6 +296,13 @@ const STRINGS = {
     customerName: 'Name',
     customerPhone: 'Phone',
     customerAddress: 'Address',
+    useMyLocation: 'Use my location',
+    locating: 'Getting location…',
+    locationUnsupported: 'Your browser does not support location',
+    locationDenied: 'Location permission denied — enable it in settings',
+    locationUnavailable: 'Could not get location, try again',
+    locationTimeout: 'Timed out — try again',
+    openOnMap: 'Open on map',
     submitOrder: 'Place order',
     submitting: 'Submitting…',
     successTitle: 'Order received!',
@@ -377,6 +398,13 @@ export type StorefrontStrings = {
   customerName: string
   customerPhone: string
   customerAddress: string
+  useMyLocation: string
+  locating: string
+  locationUnsupported: string
+  locationDenied: string
+  locationUnavailable: string
+  locationTimeout: string
+  openOnMap: string
   submitOrder: string
   submitting: string
   successTitle: string

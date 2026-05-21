@@ -1,8 +1,9 @@
-import { CheckCircle2, Loader2, User, MapPin, Phone, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { CheckCircle2, Crosshair, ExternalLink, Loader2, User, MapPin, Phone, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { submitPublicOrder } from '../../api/storefrontApi'
 import { ApiError } from '../../lib/api'
+import { googleMapsUrl, resolveAddressFromDevice } from '../../lib/geolocation'
 import { useLocale } from '../../context/LocaleContext'
 import {
   cartDeliveryFee,
@@ -42,8 +43,18 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [locating, setLocating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  const mapsLink = useMemo(() => {
+    const m = address.match(/https:\/\/www\.google\.com\/maps\?q=([-\d.]+),([-\d.]+)/i)
+    if (!m) return null
+    const lat = Number.parseFloat(m[1])
+    const lon = Number.parseFloat(m[2])
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+    return googleMapsUrl({ lat, lon })
+  }, [address])
 
   useEffect(() => {
     if (!open) return
@@ -59,6 +70,7 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
       setError(null)
       setSuccess(false)
       setSubmitting(false)
+      setLocating(false)
     }
   }, [open])
 
@@ -107,8 +119,36 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
   }
 
   function handleClose() {
-    if (submitting) return
+    if (submitting || locating) return
     onClose()
+  }
+
+  function locationErrorMessage(code: string): string {
+    if (code === 'denied') return s.locationDenied
+    if (code === 'timeout') return s.locationTimeout
+    if (code === 'unsupported') return s.locationUnsupported
+    return s.locationUnavailable
+  }
+
+  async function handleUseMyLocation() {
+    setError(null)
+    setLocating(true)
+    try {
+      const resolved = await resolveAddressFromDevice(lang)
+      const trimmed = address.trim()
+      if (!trimmed) {
+        setAddress(resolved)
+      } else if (!trimmed.includes(resolved.split('\n')[0])) {
+        setAddress(`${trimmed}\n\n${resolved}`)
+      } else {
+        setAddress(resolved)
+      }
+    } catch (e) {
+      const code = e instanceof Error ? e.message : 'unavailable'
+      setError(locationErrorMessage(code))
+    } finally {
+      setLocating(false)
+    }
   }
 
   const inputClass =
@@ -234,18 +274,53 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
                     disabled={submitting}
                   />
                 </label>
-                <label className="relative flex flex-col gap-1.5 text-sm">
-                  <span className="font-medium text-slate-700">{s.customerAddress}</span>
-                  <MapPin className="pointer-events-none absolute start-3 top-[2.65rem] h-4 w-4 text-slate-400" aria-hidden />
-                  <textarea
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    rows={3}
-                    className={`${inputClass} resize-none`}
-                    style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.35) }}
-                    disabled={submitting}
-                  />
-                </label>
+                <div className="flex flex-col gap-1.5 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-medium text-slate-700">{s.customerAddress}</span>
+                    <button
+                      type="button"
+                      onClick={() => void handleUseMyLocation()}
+                      disabled={submitting || locating}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      style={{ borderColor: accentAlpha(accent, 0.35), color: accent }}
+                    >
+                      {locating ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                      ) : (
+                        <Crosshair className="h-3.5 w-3.5" aria-hidden />
+                      )}
+                      {locating ? s.locating : s.useMyLocation}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <MapPin
+                      className="pointer-events-none absolute start-3 top-3.5 h-4 w-4 text-slate-400"
+                      aria-hidden
+                    />
+                    <textarea
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      rows={4}
+                      placeholder={s.customerAddress}
+                      autoComplete="street-address"
+                      className={`${inputClass} resize-none`}
+                      style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.35) }}
+                      disabled={submitting || locating}
+                    />
+                  </div>
+                  {mapsLink ? (
+                    <a
+                      href={mapsLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold hover:underline"
+                      style={{ color: accent }}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                      {s.openOnMap}
+                    </a>
+                  ) : null}
+                </div>
 
                 {error ? (
                   <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -255,7 +330,12 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
 
                 <button
                   type="submit"
-                  disabled={submitting || lines.length === 0 || (hasZones && deliveryZoneId == null)}
+                  disabled={
+                    submitting ||
+                    locating ||
+                    lines.length === 0 ||
+                    (hasZones && deliveryZoneId == null)
+                  }
                   className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 font-bold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
                   style={{
                     backgroundColor: accent,
