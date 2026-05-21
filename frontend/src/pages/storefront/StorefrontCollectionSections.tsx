@@ -76,13 +76,18 @@ export function StorefrontCollectionSections({
   if (sections.length === 0) return null
 
   return (
-    <div className="sf-collections mt-10 space-y-8">
-      <div className="flex items-end justify-between gap-3">
+    <div className="sf-collections mt-2 space-y-7 sm:space-y-8">
+      <div className="flex items-center gap-2 px-0.5">
+        <span
+          className="h-6 w-1 rounded-full"
+          style={{ background: `linear-gradient(180deg, ${accent}, ${accent}88)` }}
+          aria-hidden
+        />
         <div>
-          <h2 className="sf-heading text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">
+          <h2 className="sf-heading text-base font-extrabold tracking-tight text-slate-900 sm:text-lg">
             {labels.shopHighlights}
           </h2>
-          <p className="mt-0.5 text-xs font-medium text-slate-500">{labels.bestsellersHint}</p>
+          <p className="text-[11px] font-medium text-slate-500">{labels.bestsellersHint}</p>
         </div>
       </div>
 
@@ -92,47 +97,45 @@ export function StorefrontCollectionSections({
         const title = labels[meta.titleKey]
         const hint = labels[meta.hintKey]
         return (
-          <section
-            key={id}
-            className="sf-collection-section overflow-hidden rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70 sm:p-5"
-          >
-            <div className="mb-3.5 flex items-center gap-3 lg:mb-4">
+          <section key={id} className="sf-collection-section">
+            <div className="mb-3 flex items-center gap-3">
               <span
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-sm"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
                 style={{
-                  backgroundColor: accentAlpha(accent, 0.12),
+                  background: `linear-gradient(135deg, ${accentAlpha(accent, 0.14)}, ${accentAlpha(accent, 0.06)})`,
                   color: accent,
+                  boxShadow: `0 4px 14px ${accentAlpha(accent, 0.12)}`,
                 }}
               >
-                <Icon className="h-5 w-5" aria-hidden />
+                <Icon className="h-[18px] w-[18px]" aria-hidden />
               </span>
               <div className="min-w-0 flex-1">
-                <h3 className="sf-heading truncate text-[15px] font-extrabold text-slate-900 sm:text-base lg:text-lg">
+                <h3 className="sf-heading truncate text-[15px] font-extrabold text-slate-900 sm:text-base">
                   {title}
                 </h3>
-                <p className="truncate text-[11px] font-medium text-slate-500 lg:text-xs">{hint}</p>
+                <p className="truncate text-[10px] font-medium text-slate-500 sm:text-[11px]">{hint}</p>
               </div>
               <button
                 type="button"
                 onClick={() => onSelectCollection(id)}
-                className="hidden shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold transition hover:brightness-95 lg:inline-flex"
+                className="hidden shrink-0 items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold transition hover:brightness-95 lg:inline-flex"
                 style={{
                   backgroundColor: accentAlpha(accent, 0.1),
                   color: accent,
                 }}
               >
                 {labels.viewAll}
-                <ArrowLeft className="h-4 w-4 rotate-180 rtl:rotate-0" aria-hidden />
+                <ArrowLeft className="h-3.5 w-3.5 rotate-180 rtl:rotate-0" aria-hidden />
               </button>
               <span
-                className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold lg:hidden"
+                className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold lg:hidden"
                 style={{ backgroundColor: accentAlpha(accent, 0.1), color: accent }}
               >
                 {allCount}
               </span>
             </div>
 
-            <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3 lg:flex lg:gap-4 lg:overflow-x-auto lg:pb-2 lg:snap-x lg:snap-mandatory sf-scrollbar-none">
+            <ul className="grid grid-cols-2 gap-3 sm:gap-3.5 lg:flex lg:gap-4 lg:overflow-x-auto lg:pb-2 lg:snap-x lg:snap-mandatory sf-scrollbar-none">
               {preview.map(({ product, categoryName }) => (
                 <StorefrontProductCardCompact
                   key={product.id}
@@ -145,7 +148,7 @@ export function StorefrontCollectionSections({
                   addToCart={labels.addToCart}
                   addToFavorites={labels.addToFavorites}
                   removeFromFavorites={labels.removeFromFavorites}
-                  className="lg:w-[11.5rem] lg:shrink-0 lg:snap-start"
+                  className="lg:w-[12rem] lg:shrink-0 lg:snap-start"
                 />
               ))}
             </ul>
@@ -154,9 +157,10 @@ export function StorefrontCollectionSections({
               <button
                 type="button"
                 onClick={() => onSelectCollection(id)}
-                className="sf-view-all-link mt-3.5 flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold transition active:scale-[0.99] lg:hidden"
+                className="sf-view-all-link mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border py-2.5 text-sm font-bold transition active:scale-[0.99] lg:hidden"
                 style={{
-                  backgroundColor: accentAlpha(accent, 0.08),
+                  borderColor: accentAlpha(accent, 0.22),
+                  backgroundColor: accentAlpha(accent, 0.06),
                   color: accent,
                 }}
               >
@@ -171,10 +175,10 @@ export function StorefrontCollectionSections({
       <button
         type="button"
         onClick={onViewAllProducts}
-        className="flex w-full items-center justify-center gap-2.5 rounded-3xl py-4 text-[15px] font-extrabold text-white shadow-lg transition hover:brightness-105 active:scale-[0.99]"
+        className="sf-cta-all flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-extrabold text-white shadow-lg transition hover:brightness-105 active:scale-[0.99] sm:py-4 sm:text-[15px]"
         style={{
           background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
-          boxShadow: `0 12px 32px ${accentAlpha(accent, 0.32)}`,
+          boxShadow: `0 10px 28px ${accentAlpha(accent, 0.28)}`,
         }}
       >
         {labels.viewAllProducts}

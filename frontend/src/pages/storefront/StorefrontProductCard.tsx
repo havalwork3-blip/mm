@@ -56,9 +56,9 @@ export function StorefrontProductCard({
       />
       <div
         className={[
-          'sf-product-card sf-card-shine flex w-full flex-col overflow-hidden rounded-3xl bg-white ring-1 transition duration-300',
+          'sf-product-card sf-card-shine flex w-full flex-col overflow-hidden rounded-2xl bg-white ring-1 transition duration-300',
           available
-            ? 'ring-slate-200/50 shadow-md hover:-translate-y-1.5 hover:shadow-xl'
+            ? 'ring-slate-200/50 shadow-[0_2px_12px_rgba(15,23,42,0.06)] hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(15,23,42,0.1)]'
             : 'sf-product-unavailable ring-slate-200/30 opacity-90 shadow-sm',
         ].join(' ')}
       >
@@ -67,14 +67,14 @@ export function StorefrontProductCard({
           onClick={onOpen}
           className="block w-full text-start active:scale-[0.99]"
         >
-          <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
+          <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-b from-slate-50 to-white p-3">
             {img ? (
               <img
                 src={img}
                 alt={product.name}
                 className={[
-                  'h-full w-full object-cover transition duration-700',
-                  available ? 'hover:scale-110' : 'grayscale-[0.6] brightness-95',
+                  'mx-auto h-full w-full rounded-xl object-contain transition duration-500',
+                  available ? 'hover:scale-[1.03]' : 'grayscale-[0.5]',
                 ].join(' ')}
                 loading="lazy"
               />

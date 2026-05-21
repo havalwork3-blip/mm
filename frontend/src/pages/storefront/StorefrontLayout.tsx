@@ -135,12 +135,12 @@ export function StorefrontLayout() {
         ) : null}
 
         {!shopLoading && !shopError ? (
-          <header className="sf-mobile-header sf-glass-strong sticky top-0 z-30 w-full border-b border-white/60 shadow-sm pt-[env(safe-area-inset-top)] lg:hidden">
-            <div className={`${SF_SHELL} flex items-center gap-2 py-3 sm:gap-2.5`}>
+          <header className="sf-mobile-header sf-glass-strong sticky top-0 z-30 w-full border-b border-slate-200/50 shadow-[0_4px_20px_rgba(15,23,42,0.06)] pt-[env(safe-area-inset-top)] lg:hidden">
+            <div className={`${SF_SHELL} flex items-center gap-2 py-2.5 sm:gap-2.5 sm:py-3`}>
               <button
                 type="button"
                 onClick={() => setSidebarOpen(true)}
-                className="sf-surface-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl transition hover:opacity-90"
+                className="sf-surface-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition hover:opacity-90"
                 aria-label={s.menu}
               >
                 <Menu className="h-[18px] w-[18px]" aria-hidden />
@@ -149,16 +149,16 @@ export function StorefrontLayout() {
               <button
                 type="button"
                 onClick={backToCategories}
-                className="flex min-w-0 flex-1 items-center gap-2.5 text-start transition active:scale-[0.98] sm:gap-3"
+                className="flex min-w-0 flex-1 items-center gap-2 text-start transition active:scale-[0.98]"
               >
                 <span
-                  className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-base font-bold text-white shadow-md sm:h-11 sm:w-11"
+                  className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl text-sm font-bold text-white shadow-md ring-2 ring-white"
                   style={
                     logoSrc
-                      ? { boxShadow: `0 6px 20px ${accentAlpha(accent, 0.25)}` }
+                      ? { boxShadow: `0 4px 14px ${accentAlpha(accent, 0.25)}` }
                       : {
                           background: `linear-gradient(135deg, ${accent}, ${accent}cc)`,
-                          boxShadow: `0 6px 20px ${accentAlpha(accent, 0.35)}`,
+                          boxShadow: `0 4px 14px ${accentAlpha(accent, 0.35)}`,
                         }
                   }
                 >
@@ -168,31 +168,31 @@ export function StorefrontLayout() {
                     shopName.charAt(0) || 'M'
                   )}
                 </span>
-                <div className="min-w-0 hidden sm:block">
-                  <p className="truncate text-[14px] font-extrabold tracking-tight text-slate-900 sm:text-[15px]">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-extrabold tracking-tight text-slate-900">
                     {shopName}
                   </p>
-                  <p className="truncate text-[10px] font-medium text-slate-500 sm:text-[11px]">
+                  <p className="truncate text-[10px] font-medium text-slate-500">
                     {appearance.catalog_subtitle || s.shopTagline}
                   </p>
                 </div>
               </button>
 
-              <div className="flex shrink-0 items-center gap-1">
+              <div className="flex shrink-0 items-center gap-1.5">
                 <button
                   type="button"
                   onClick={openSearch}
-                  className="sf-surface-btn flex h-10 w-10 items-center justify-center rounded-2xl transition hover:opacity-90"
+                  className="sf-surface-btn flex h-9 w-9 items-center justify-center rounded-xl transition hover:opacity-90 sm:h-10 sm:w-10"
                   aria-label={s.searchPlaceholder}
                 >
-                  <Search className="h-[18px] w-[18px]" aria-hidden />
+                  <Search className="h-[17px] w-[17px]" aria-hidden />
                 </button>
 
                 <button
                   type="button"
                   onClick={() => showCollection('favorites')}
                   className={[
-                    'relative flex h-10 w-10 items-center justify-center rounded-2xl transition active:scale-95',
+                    'relative flex h-9 w-9 items-center justify-center rounded-xl transition active:scale-95 sm:h-10 sm:w-10',
                     favoritesActive ? 'text-white shadow-md' : 'sf-surface-btn hover:opacity-90',
                   ].join(' ')}
                   style={
@@ -231,7 +231,7 @@ export function StorefrontLayout() {
                   type="button"
                   onClick={() => setCartOpen(true)}
                   className={[
-                    'relative flex h-10 items-center gap-1.5 rounded-2xl px-3 text-sm font-bold text-white shadow-md transition active:scale-95',
+                    'relative flex h-9 items-center gap-1 rounded-xl px-2.5 text-xs font-bold text-white shadow-md transition active:scale-95 sm:h-10 sm:gap-1.5 sm:rounded-xl sm:px-3 sm:text-sm',
                     cartPulse ? 'sf-cart-pulse' : '',
                   ].join(' ')}
                   style={{
