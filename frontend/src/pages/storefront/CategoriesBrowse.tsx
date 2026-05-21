@@ -8,6 +8,7 @@ import type {
 import { useLocale } from '../../context/LocaleContext'
 import { categoryDisplayName } from '../../lib/categoryNames'
 import { resolveMediaUrl } from '../../lib/api'
+import { StorefrontCategoryIconsRow } from './StorefrontCategoryIconsRow'
 import { StorefrontCollectionSections } from './StorefrontCollectionSections'
 import type { CatalogProductRow } from './storefrontCollections'
 import { accentAlpha, SF_INSET_X } from './storefrontTheme'
@@ -74,9 +75,17 @@ export function CategoriesBrowse({
   const { lang } = useLocale()
 
   return (
-    <section className={`${SF_INSET_X} sf-view-panel mt-2 sm:mt-4`}>
+    <section className={`${SF_INSET_X} sf-view-panel mt-2 sm:mt-4 lg:mt-6`}>
+      <StorefrontCategoryIconsRow
+        categories={categories}
+        accent={accent}
+        allLabel={labels.viewAllProducts}
+        onSelectAll={onViewAllProducts}
+        onSelectCategory={onSelectCategory}
+      />
+
       <div
-        className="sf-hero-panel mb-6 overflow-hidden rounded-3xl p-5 text-white sm:p-7"
+        className="sf-hero-panel mb-6 overflow-hidden rounded-3xl p-5 text-white sm:p-7 lg:hidden"
         style={{
           background: `linear-gradient(135deg, ${accent} 0%, ${accent}bb 45%, #1e293b 100%)`,
           boxShadow: `0 16px 48px ${accentAlpha(accent, 0.28)}`,
@@ -93,7 +102,7 @@ export function CategoriesBrowse({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3.5 min-[420px]:grid-cols-3 sm:gap-4 md:gap-5">
+      <div className="grid grid-cols-2 gap-3.5 min-[420px]:grid-cols-3 sm:gap-4 md:gap-5 lg:hidden">
         {categories.filter((cat) => cat.products.length > 0).map((cat, index, arr) => {
           const img = resolveMediaUrl(cat.image_url)
           const count = cat.products.length

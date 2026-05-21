@@ -44,7 +44,7 @@ export function accentAlpha(accent: string, alpha: number): string {
 }
 
 /** Max width scales with viewport; content areas add SF_INSET_X for padding. */
-export const SF_MAIN = 'mx-auto w-full max-w-[100%] lg:max-w-6xl xl:max-w-7xl'
+export const SF_MAIN = 'mx-auto w-full max-w-[100%] lg:max-w-[1280px] xl:max-w-[1400px]'
 
 export const SF_SHELL = [
   SF_MAIN,
@@ -52,6 +52,13 @@ export const SF_SHELL = [
   'pe-[max(1rem,env(safe-area-inset-right))]',
   'sm:px-6',
   'md:px-8',
+].join(' ')
+
+/** Full-width desktop header bar (wider than main content column). */
+export const SF_DESKTOP_SHELL = [
+  'mx-auto w-full max-w-[1400px]',
+  'px-6',
+  'xl:px-10',
 ].join(' ')
 
 export const SF_INSET_X =

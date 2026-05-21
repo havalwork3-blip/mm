@@ -36,7 +36,7 @@ export function CategoryFilterBar({
   const { lang } = useLocale()
 
   return (
-    <div className="sf-glass sticky top-[calc(3.75rem+env(safe-area-inset-top))] z-20 -mx-[max(1rem,env(safe-area-inset-left))] border-b border-white/50 px-[max(1rem,env(safe-area-inset-left))] pe-[max(1rem,env(safe-area-inset-right))] py-3.5 shadow-sm sm:top-[calc(4.25rem+env(safe-area-inset-top))]">
+    <div className="sf-glass sticky top-[calc(3.75rem+env(safe-area-inset-top))] z-20 -mx-[max(1rem,env(safe-area-inset-left))] border-b border-white/50 px-[max(1rem,env(safe-area-inset-left))] pe-[max(1rem,env(safe-area-inset-right))] py-3.5 shadow-sm sm:top-[calc(4.25rem+env(safe-area-inset-top))] lg:hidden">
       <div className="mb-2.5 flex items-center gap-2 px-1">
         <span
           className="flex h-7 w-7 items-center justify-center rounded-lg"

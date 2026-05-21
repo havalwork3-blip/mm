@@ -12,6 +12,7 @@ import { useStorefrontFavoritesStore } from '../../store/storefrontFavoritesStor
 import { CartDrawer } from './CartDrawer'
 import { CheckoutModal } from './CheckoutModal'
 import { StorefrontBackBar } from './StorefrontBackBar'
+import { StorefrontDesktopHeader } from './StorefrontDesktopHeader'
 import { StorefrontSearchOverlay } from './StorefrontSearchOverlay'
 import { StorefrontSidebar } from './StorefrontSidebar'
 import { storefrontStrings } from './storefrontStrings'
@@ -121,7 +122,20 @@ export function StorefrontLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {!shopLoading && !shopError ? (
-          <header className="sf-glass-strong sticky top-0 z-30 w-full border-b border-white/60 shadow-sm pt-[env(safe-area-inset-top)]">
+          <StorefrontDesktopHeader
+            accent={accent}
+            cartCount={count}
+            favCount={favCount}
+            favoritesActive={favoritesActive}
+            cartPulse={cartPulse}
+            onOpenCart={() => setCartOpen(true)}
+            onShowFavorites={() => showCollection('favorites')}
+            onOpenMenu={() => setSidebarOpen(true)}
+          />
+        ) : null}
+
+        {!shopLoading && !shopError ? (
+          <header className="sf-mobile-header sf-glass-strong sticky top-0 z-30 w-full border-b border-white/60 shadow-sm pt-[env(safe-area-inset-top)] lg:hidden">
             <div className={`${SF_SHELL} flex items-center gap-2 py-3 sm:gap-2.5`}>
               <button
                 type="button"
@@ -253,10 +267,11 @@ export function StorefrontLayout() {
           ) : (
             <>
               {showBackBar ? (
-                <div className={`${SF_INSET_X} pb-1 pt-3 sm:pt-4`}>
+                <div className={`${SF_INSET_X} pb-1 pt-3 sm:pt-4 lg:pb-2 lg:pt-4`}>
                   <StorefrontBackBar
                     label={isInfoPage ? s.home : s.backToCategories}
                     onClick={handleGlobalBack}
+                    accent={accent}
                   />
                 </div>
               ) : null}

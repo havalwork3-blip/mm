@@ -84,7 +84,7 @@ export function StorefrontHeroCarousel({
   if (count === 0) {
     return (
       <div
-        className={`sf-hero-frame ${SF_INSET_X} mt-4 overflow-hidden rounded-3xl p-6 text-white sm:mt-5 sm:p-8`}
+        className={`sf-hero-frame ${SF_INSET_X} mt-4 overflow-hidden rounded-3xl p-6 text-white sm:mt-5 sm:p-8 lg:mt-6 lg:rounded-2xl lg:p-10`}
         style={{
           background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 40%, #1a1a2e 100%)`,
           boxShadow: `0 16px 48px ${accentAlpha(accent, 0.3)}`,
@@ -109,8 +109,8 @@ export function StorefrontHeroCarousel({
   }
 
   return (
-    <div className={`relative ${SF_INSET_X} mt-4 sm:mt-5`}>
-      <div className="sf-hero-frame relative aspect-[2.1/1] w-full max-h-[min(48vh,300px)] overflow-hidden rounded-3xl bg-slate-200 sm:aspect-[2.5/1] sm:max-h-[min(42vh,380px)] md:max-h-[400px]">
+    <div className={`relative ${SF_INSET_X} mt-4 sm:mt-5 lg:mt-6`}>
+      <div className="sf-hero-frame relative aspect-[2.1/1] w-full max-h-[min(48vh,300px)] overflow-hidden rounded-3xl bg-slate-200 sm:aspect-[2.5/1] sm:max-h-[min(42vh,380px)] md:max-h-[400px] lg:aspect-[3/1] lg:max-h-[420px] lg:rounded-2xl">
         {slides.map((slide, i) => {
           const img = resolveMediaUrl(slide.image_url)
           const clickable = slide.link_type === 'url' || slide.link_type === 'category'

@@ -87,7 +87,11 @@ export function StorefrontProductDetail({
         <button
           type="button"
           onClick={onBack}
-          className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50"
+          className="flex h-11 w-11 items-center justify-center rounded-2xl text-white shadow-md transition hover:brightness-110 sm:h-12 sm:w-12"
+          style={{
+            background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
+            boxShadow: `0 4px 14px ${accentAlpha(accent, 0.35)}`,
+          }}
           aria-label={labels.back}
         >
           <ArrowRight className="h-5 w-5 rotate-180 rtl:rotate-0" aria-hidden />

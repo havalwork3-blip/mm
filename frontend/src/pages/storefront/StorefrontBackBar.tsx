@@ -1,25 +1,45 @@
 import { ArrowRight } from 'lucide-react'
 
+import { accentAlpha } from './storefrontTheme'
+
 type Props = {
   label: string
   onClick: () => void
+  accent?: string
   className?: string
+  sticky?: boolean
 }
 
-export function StorefrontBackBar({ label, onClick, className = '' }: Props) {
+export function StorefrontBackBar({
+  label,
+  onClick,
+  accent = '#FF5A00',
+  className = '',
+  sticky = true,
+}: Props) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
       className={[
-        'sf-back-bar group flex max-w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-start text-sm font-bold shadow-sm ring-1 transition active:scale-[0.98] sm:px-3 sm:py-2.5',
+        sticky ? 'sf-back-bar-wrap sticky z-[25] -mx-1 mb-2 py-1 top-[calc(3.75rem+env(safe-area-inset-top))] lg:top-[7.25rem]' : 'mb-2',
         className,
       ].join(' ')}
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition group-hover:bg-slate-200">
-        <ArrowRight className="h-4 w-4 rotate-180 rtl:rotate-0" aria-hidden />
-      </span>
-      <span className="truncate text-slate-700">{label}</span>
-    </button>
+      <button
+        type="button"
+        onClick={onClick}
+        className="sf-back-bar sf-back-bar--prominent group flex w-full max-w-md items-center gap-3 rounded-2xl px-3 py-2.5 text-start text-sm font-extrabold shadow-md ring-1 transition active:scale-[0.98] sm:px-4 sm:py-3 sm:text-base"
+      >
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition group-hover:brightness-110 sm:h-11 sm:w-11"
+          style={{
+            background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
+            boxShadow: `0 4px 14px ${accentAlpha(accent, 0.35)}`,
+          }}
+        >
+          <ArrowRight className="h-5 w-5 rotate-180 rtl:rotate-0" aria-hidden />
+        </span>
+        <span className="truncate text-slate-800">{label}</span>
+      </button>
+    </div>
   )
 }

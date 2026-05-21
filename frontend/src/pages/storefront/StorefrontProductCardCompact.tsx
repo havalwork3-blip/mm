@@ -19,6 +19,7 @@ type Props = {
   addToCart: string
   addToFavorites: string
   removeFromFavorites: string
+  className?: string
 }
 
 export function StorefrontProductCardCompact({
@@ -31,6 +32,7 @@ export function StorefrontProductCardCompact({
   addToCart,
   addToFavorites,
   removeFromFavorites,
+  className = '',
 }: Props) {
   const { lang } = useLocale()
   const { format: formatPrice } = useStorefrontPriceLabel(lang)
@@ -41,7 +43,7 @@ export function StorefrontProductCardCompact({
   const onSale = Number.isFinite(discount) && discount > 0
 
   return (
-    <li className="relative min-w-0">
+    <li className={['relative min-w-0', className].join(' ')}>
       <StorefrontFavoriteButton
         shopId={shopId}
         productId={product.id}
