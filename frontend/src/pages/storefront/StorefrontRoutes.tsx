@@ -3,7 +3,6 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import './storefront.css'
 import { isStorefrontMode } from '../../lib/storefrontConfig'
 import { StorefrontCatalog } from './StorefrontCatalog'
-import { StorefrontCatalogProvider } from './storefrontCatalogContext'
 import {
   StorefrontAboutPage,
   StorefrontContactPage,
