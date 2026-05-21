@@ -1,4 +1,4 @@
-import { Globe, Home, LayoutGrid, Menu, Search, ShoppingBag } from 'lucide-react'
+import { Globe, Menu, Moon, Search, ShoppingBag, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 
@@ -6,6 +6,7 @@ import { useLocale } from '../../context/LocaleContext'
 import { useStorefrontCatalog } from './storefrontCatalogContext'
 import { useStorefrontShop } from './StorefrontShopContext'
 import { useStorefrontPrice } from './storefrontPriceContext'
+import { useStorefrontTheme } from './storefrontThemeContext'
 import { cartItemCount, useCartStore } from '../../store/cartStore'
 import { CartDrawer } from './CartDrawer'
 import { CheckoutModal } from './CheckoutModal'
@@ -20,10 +21,9 @@ export function StorefrontLayout() {
   const s = storefrontStrings(lang)
   const { shopName, appearance, loading: shopLoading, error: shopError } = useStorefrontShop()
   const { currency, setCurrency } = useStorefrontPrice()
+  const { theme, toggleTheme } = useStorefrontTheme()
   const {
-    view,
     backToCategories,
-    showAllProducts,
     search,
     searchOpen,
     setSearch,
@@ -32,7 +32,6 @@ export function StorefrontLayout() {
     setSearchActive,
   } = useStorefrontCatalog()
   const location = useLocation()
-  const isInfoPage = /\/(contact|about|faq|location)\/?$/.test(location.pathname)
 
   const accent = resolveAccent(appearance.accent_color)
   const logoSrc = resolveMediaUrl(appearance.logo_url ?? null)
@@ -45,8 +44,7 @@ export function StorefrontLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [cartPulse, setCartPulse] = useState(false)
 
-  const onHome = view === 'categories' && !isInfoPage
-  const onShop = (view === 'products' || view === 'product') && !isInfoPage
+  const isDark = theme === 'dark'
 
   useEffect(() => {
     document.documentElement.classList.add('sf-mode')
@@ -67,10 +65,13 @@ export function StorefrontLayout() {
 
   useEffect(() => {
     setSidebarOpen(false)
-  }, [location.pathname, view])
+  }, [location.pathname])
 
   return (
-    <div className="sf-root relative flex min-h-screen w-full overflow-x-hidden text-slate-900" style={storefrontCssVars(accent)}>
+    <div
+      className={['sf-root relative flex min-h-screen w-full overflow-x-hidden', isDark ? 'sf-dark' : ''].join(' ')}
+      style={storefrontCssVars(accent)}
+    >
       {!shopLoading && !shopError ? (
         <StorefrontSidebar
           open={sidebarOpen}
@@ -89,7 +90,7 @@ export function StorefrontLayout() {
               <button
                 type="button"
                 onClick={() => setSidebarOpen(true)}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200/80 lg:hidden"
+                className="sf-surface-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl transition hover:opacity-90"
                 aria-label={s.menu}
               >
                 <Menu className="h-[18px] w-[18px]" aria-hidden />
@@ -128,8 +129,21 @@ export function StorefrontLayout() {
               </button>
 
               <div className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="sf-surface-btn flex h-10 w-10 items-center justify-center rounded-2xl transition hover:opacity-90"
+                  aria-label={isDark ? s.lightMode : s.darkMode}
+                >
+                  {isDark ? (
+                    <Sun className="h-[18px] w-[18px]" aria-hidden />
+                  ) : (
+                    <Moon className="h-[18px] w-[18px]" aria-hidden />
+                  )}
+                </button>
+
                 <div
-                  className="flex rounded-xl bg-white p-0.5 text-[10px] font-bold shadow-sm ring-1 ring-slate-200/80"
+                  className="sf-surface-pill flex rounded-xl p-0.5 text-[10px] font-bold"
                   role="group"
                   aria-label={s.currencyLabel}
                 >
@@ -152,7 +166,7 @@ export function StorefrontLayout() {
                 <button
                   type="button"
                   onClick={openSearch}
-                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50"
+                  className="sf-surface-btn flex h-10 w-10 items-center justify-center rounded-2xl transition hover:opacity-90"
                   aria-label={s.searchPlaceholder}
                 >
                   <Search className="h-[18px] w-[18px]" aria-hidden />
@@ -162,7 +176,7 @@ export function StorefrontLayout() {
                   <button
                     type="button"
                     onClick={() => setLangOpen((v) => !v)}
-                    className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50"
+                    className="sf-surface-btn flex h-10 w-10 items-center justify-center rounded-2xl transition hover:opacity-90"
                     aria-expanded={langOpen}
                     aria-label={s.language}
                   >
@@ -224,7 +238,7 @@ export function StorefrontLayout() {
           </header>
         ) : null}
 
-        <main className={`relative z-10 flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom))] ${SF_MAIN}`}>
+        <main className={`relative z-10 flex-1 pb-6 ${SF_MAIN}`}>
           {shopError ? (
             <div className="mx-4 mt-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
               {shopError}
@@ -241,68 +255,6 @@ export function StorefrontLayout() {
             <Outlet />
           )}
         </main>
-
-        {!shopLoading && !shopError && view !== 'product' ? (
-          <nav
-            className="sf-nav-pill fixed inset-x-4 bottom-[max(0.5rem,env(safe-area-inset-bottom))] z-40 mx-auto max-w-md lg:hidden sm:inset-x-auto sm:start-1/2 sm:-translate-x-1/2 sm:rtl:translate-x-1/2"
-            aria-label="Navigation"
-          >
-            <div className="sf-glass-strong flex items-center justify-around rounded-2xl border border-white/80 px-1 py-1.5 shadow-lg">
-              <button
-                type="button"
-                onClick={() => {
-                  backToCategories()
-                }}
-                className={[
-                  'flex min-w-[3.5rem] flex-col items-center gap-0.5 rounded-xl px-2 py-2 text-[10px] font-bold transition',
-                  onHome ? 'sf-nav-item-active text-white' : 'text-slate-500',
-                ].join(' ')}
-                style={onHome ? { backgroundColor: accent } : undefined}
-              >
-                <Home className="h-5 w-5" strokeWidth={onHome ? 2.5 : 2} aria-hidden />
-                {s.home}
-              </button>
-              <button
-                type="button"
-                onClick={showAllProducts}
-                className={[
-                  'flex min-w-[3.5rem] flex-col items-center gap-0.5 rounded-xl px-2 py-2 text-[10px] font-bold transition',
-                  onShop ? 'sf-nav-item-active text-white' : 'text-slate-500',
-                ].join(' ')}
-                style={onShop ? { backgroundColor: accent } : undefined}
-              >
-                <LayoutGrid className="h-5 w-5" strokeWidth={onShop ? 2.5 : 2} aria-hidden />
-                {s.scrollToProducts}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                className="flex min-w-[3.5rem] flex-col items-center gap-0.5 rounded-xl px-2 py-2 text-[10px] font-bold text-slate-500"
-              >
-                <Menu className="h-5 w-5" aria-hidden />
-                {s.menu}
-              </button>
-              <button
-                type="button"
-                onClick={() => setCartOpen(true)}
-                className="relative flex min-w-[3.5rem] flex-col items-center gap-0.5 rounded-xl px-2 py-2 text-[10px] font-bold text-slate-500"
-              >
-                <span className="relative">
-                  <ShoppingBag className="h-5 w-5" strokeWidth={2} aria-hidden />
-                  {count > 0 ? (
-                    <span
-                      className="absolute -end-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[8px] font-extrabold text-white"
-                      style={{ backgroundColor: accent }}
-                    >
-                      {count > 9 ? '9+' : count}
-                    </span>
-                  ) : null}
-                </span>
-                {s.cart}
-              </button>
-            </div>
-          </nav>
-        ) : null}
       </div>
 
       <CartDrawer

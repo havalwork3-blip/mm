@@ -44,6 +44,38 @@ def _storefront_location_image_url(
         return None
 
 
+_SOCIAL_PLATFORMS = frozenset(
+    {
+        "facebook",
+        "instagram",
+        "tiktok",
+        "youtube",
+        "twitter",
+        "telegram",
+        "whatsapp",
+        "snapchat",
+        "website",
+    },
+)
+
+
+def _normalize_social_links(raw: object) -> list[dict[str, str]]:
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, str]] = []
+    for item in raw[:12]:
+        if not isinstance(item, dict):
+            continue
+        platform = str(item.get("platform") or "").strip().lower()[:32]
+        url = str(item.get("url") or "").strip()[:500]
+        if platform not in _SOCIAL_PLATFORMS or not url:
+            continue
+        if not url.startswith(("http://", "https://")):
+            continue
+        out.append({"platform": platform, "url": url})
+    return out
+
+
 def _normalize_faq_items(raw: object) -> list[dict[str, str]]:
     if not isinstance(raw, list):
         return []
@@ -90,6 +122,7 @@ def storefront_settings_public_dict(
         "shop_address": (settings.shop_address or "").strip(),
         "location_url": (settings.location_url or "").strip(),
         "location_image_url": _storefront_location_image_url(settings, request),
+        "social_links": _normalize_social_links(settings.social_links),
     }
 
 

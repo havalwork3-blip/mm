@@ -10,9 +10,7 @@ import {
   StorefrontFaqPage,
   StorefrontLocationPage,
 } from './StorefrontInfoPages'
-import { StorefrontLayout } from './StorefrontLayout'
-import { StorefrontPriceProvider } from './storefrontPriceContext'
-import { StorefrontShopProvider } from './StorefrontShopContext'
+import { StorefrontAppShell } from './StorefrontAppShell'
 
 /** Public customer storefront — no login required. */
 export function StorefrontRoutes() {
@@ -20,15 +18,7 @@ export function StorefrontRoutes() {
   return (
     <Routes>
       <Route
-        element={
-          <StorefrontShopProvider>
-            <StorefrontPriceProvider>
-              <StorefrontCatalogProvider>
-                <StorefrontLayout />
-              </StorefrontCatalogProvider>
-            </StorefrontPriceProvider>
-          </StorefrontShopProvider>
-        }
+        element={<StorefrontAppShell />}
       >
         <Route index element={<StorefrontCatalog />} />
         <Route path="contact" element={<StorefrontContactPage />} />

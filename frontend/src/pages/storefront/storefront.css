@@ -286,6 +286,168 @@ html.sf-mode body {
   outline-offset: 3px;
 }
 
+/* Header / control surfaces */
+.sf-surface-btn {
+  background: rgba(255, 255, 255, 0.95);
+  color: #475569;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.sf-surface-pill {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.sf-sidebar-panel {
+  background: #ffffff;
+  border-color: rgba(226, 232, 240, 0.9);
+}
+
+.sf-sidebar-muted {
+  color: #64748b;
+}
+
+.sf-sidebar-title {
+  color: #0f172a;
+}
+
+.sf-sidebar-nav {
+  color: #475569;
+}
+
+.sf-sidebar-nav:hover {
+  background: #f8fafc;
+}
+
+.sf-sidebar-social-chip {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+}
+
+.sf-sidebar-social-chip:hover {
+  background: #ffffff;
+}
+
+.sf-sidebar-social-icon {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* Dark mode */
+.sf-root.sf-dark {
+  color: #e2e8f0;
+  background-color: #0f172a;
+  background-image:
+    radial-gradient(ellipse 120% 80% at 100% -20%, rgba(var(--sf-accent-rgb, 255, 90, 0), 0.12), transparent 50%),
+    radial-gradient(ellipse 90% 60% at -10% 30%, rgba(var(--sf-accent-rgb, 255, 90, 0), 0.08), transparent 45%),
+    linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+}
+
+.sf-root.sf-dark::before {
+  opacity: 0.15;
+}
+
+.sf-root.sf-dark .sf-glass {
+  background: rgba(15, 23, 42, 0.82);
+}
+
+.sf-root.sf-dark .sf-glass-strong {
+  background: rgba(15, 23, 42, 0.94);
+  border-color: rgba(51, 65, 85, 0.6) !important;
+}
+
+.sf-root.sf-dark .sf-surface-btn {
+  background: rgba(30, 41, 59, 0.95);
+  color: #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.sf-root.sf-dark .sf-surface-pill {
+  background: rgba(30, 41, 59, 0.95);
+}
+
+.sf-root.sf-dark .sf-sidebar-panel {
+  background: #0f172a;
+  border-color: rgba(51, 65, 85, 0.8);
+}
+
+.sf-root.sf-dark .sf-sidebar-title {
+  color: #f1f5f9;
+}
+
+.sf-root.sf-dark .sf-sidebar-muted {
+  color: #94a3b8;
+}
+
+.sf-root.sf-dark .sf-sidebar-nav {
+  color: #cbd5e1;
+}
+
+.sf-root.sf-dark .sf-sidebar-nav:hover {
+  background: #1e293b;
+}
+
+.sf-root.sf-dark .sf-sidebar-social-chip {
+  border-color: #334155;
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.sf-root.sf-dark .sf-sidebar-social-chip:hover {
+  background: #334155;
+}
+
+.sf-root.sf-dark .sf-sidebar-social-icon {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.sf-root.sf-dark .text-slate-900 {
+  color: #f1f5f9;
+}
+
+.sf-root.sf-dark .text-slate-800 {
+  color: #e2e8f0;
+}
+
+.sf-root.sf-dark .text-slate-700 {
+  color: #cbd5e1;
+}
+
+.sf-root.sf-dark .text-slate-600 {
+  color: #94a3b8;
+}
+
+.sf-root.sf-dark .text-slate-500 {
+  color: #94a3b8;
+}
+
+.sf-root.sf-dark .bg-white {
+  background-color: #1e293b;
+}
+
+.sf-root.sf-dark .ring-slate-200\/80,
+.sf-root.sf-dark .ring-slate-100 {
+  --tw-ring-color: rgb(51 65 85 / 0.8);
+}
+
+.sf-root.sf-dark .border-slate-100,
+.sf-root.sf-dark .border-slate-200\/80,
+.sf-root.sf-dark .border-white\/60 {
+  border-color: rgb(51 65 85 / 0.6);
+}
+
+.sf-root.sf-dark .sf-product-card {
+  background: #1e293b;
+  ring-color: rgb(51 65 85 / 0.5);
+}
+
+.sf-root.sf-dark .sf-product-sheet {
+  background: #0f172a;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sf-view-panel,
   .sf-product-sheet,

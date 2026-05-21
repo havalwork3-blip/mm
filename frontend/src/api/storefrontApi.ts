@@ -11,6 +11,11 @@ export type StorefrontFaqItem = {
   answer: string
 }
 
+export type StorefrontSocialLink = {
+  platform: string
+  url: string
+}
+
 export type PublicStorefrontAppearance = {
   catalog_title: string
   catalog_subtitle: string
@@ -28,6 +33,7 @@ export type PublicStorefrontAppearance = {
   shop_address?: string
   location_url?: string
   location_image_url?: string | null
+  social_links?: StorefrontSocialLink[]
 }
 
 export type PublicStorefrontBanner = {

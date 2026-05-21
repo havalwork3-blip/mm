@@ -1,4 +1,41 @@
 import type { Lang } from '../../i18n/strings'
+import type { StorefrontSocialPlatform } from '../../lib/storefrontSocial'
+
+const SOCIAL_KU: Record<StorefrontSocialPlatform, string> = {
+  facebook: 'فەیسبووک',
+  instagram: 'ئینستاگرام',
+  tiktok: 'تیکتۆک',
+  youtube: 'یوتیوب',
+  twitter: 'ئێکس',
+  telegram: 'تێلێگرام',
+  whatsapp: 'واتسئاپ',
+  snapchat: 'سناپچات',
+  website: 'ماڵپەڕ',
+}
+
+const SOCIAL_AR: Record<StorefrontSocialPlatform, string> = {
+  facebook: 'فيسبوك',
+  instagram: 'إنستغرام',
+  tiktok: 'تيك توك',
+  youtube: 'يوتيوب',
+  twitter: 'إكس',
+  telegram: 'تيليغرام',
+  whatsapp: 'واتساب',
+  snapchat: 'سناب شات',
+  website: 'الموقع',
+}
+
+const SOCIAL_EN: Record<StorefrontSocialPlatform, string> = {
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  tiktok: 'TikTok',
+  youtube: 'YouTube',
+  twitter: 'X',
+  telegram: 'Telegram',
+  whatsapp: 'WhatsApp',
+  snapchat: 'Snapchat',
+  website: 'Website',
+}
 
 const STRINGS = {
   ku: {
@@ -30,6 +67,10 @@ const STRINGS = {
     iqd: 'دینار',
     currencyLabel: 'دراو',
     language: 'زمان',
+    lightMode: 'دۆخی ڕووناک',
+    darkMode: 'دۆخی تاریک',
+    followUs: 'شوێنمان بکەوە',
+    socialPlatforms: SOCIAL_KU,
     scrollToProducts: 'بەرهەمەکان',
     categoriesCount: '{n} پۆل',
     productCount: '{n} بەرهەم',
@@ -108,6 +149,10 @@ const STRINGS = {
     iqd: 'دينار',
     currencyLabel: 'العملة',
     language: 'اللغة',
+    lightMode: 'الوضع الفاتح',
+    darkMode: 'الوضع الداكن',
+    followUs: 'تابعنا',
+    socialPlatforms: SOCIAL_AR,
     scrollToProducts: 'المنتجات',
     categoriesCount: '{n} أقسام',
     productCount: '{n} منتج',
@@ -186,6 +231,10 @@ const STRINGS = {
     iqd: 'IQD',
     currencyLabel: 'Currency',
     language: 'Language',
+    lightMode: 'Light mode',
+    darkMode: 'Dark mode',
+    followUs: 'Follow us',
+    socialPlatforms: SOCIAL_EN,
     scrollToProducts: 'Products',
     categoriesCount: '{n} categories',
     productCount: '{n} products',
@@ -263,6 +312,10 @@ export type StorefrontStrings = {
   iqd: string
   currencyLabel: string
   language: string
+  lightMode: string
+  darkMode: string
+  followUs: string
+  socialPlatforms: Record<StorefrontSocialPlatform, string>
   scrollToProducts: string
   shopTagline: string
   catalogTitle: string

@@ -201,6 +201,7 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
             "location_url",
             "location_image",
             "location_image_url",
+            "social_links",
             "storefront_host",
             "storefront_url",
             "updated_at",
@@ -243,6 +244,11 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
         from shops.storefront_settings_utils import _normalize_faq_items
 
         return _normalize_faq_items(value)
+
+    def validate_social_links(self, value: object) -> list:
+        from shops.storefront_settings_utils import _normalize_social_links
+
+        return _normalize_social_links(value)
 
     def get_storefront_host(self, obj: StorefrontSettings) -> str:
         return (obj.shop.storefront_host or "").strip()

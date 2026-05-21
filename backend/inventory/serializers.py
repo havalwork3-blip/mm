@@ -370,9 +370,12 @@ class OnlineProductPricingSerializer(serializers.ModelSerializer):
             return None
 
     def get_effective_price(self, obj: Product) -> str:
+        from decimal import ROUND_HALF_UP, Decimal
+
         from inventory.online_pricing import effective_online_unit_price
 
-        return str(effective_online_unit_price(obj, 1))
+        price = effective_online_unit_price(obj, 1)
+        return str(price.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
     def validate_online_discount_percent(self, value: Decimal) -> Decimal:
         pct = Decimal(value)

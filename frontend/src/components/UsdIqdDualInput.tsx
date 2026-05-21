@@ -1,6 +1,12 @@
 import { Lock, Unlock } from 'lucide-react'
 
-import { iqdToUsdString, normalizeMoneyInput, parseDec, usdToIqdString } from '../lib/moneyInput'
+import {
+  formatMoney2,
+  iqdToUsdString,
+  normalizeMoneyInput,
+  parseDec,
+  usdToIqdString,
+} from '../lib/moneyInput'
 
 type Props = {
   usdLabel: string
@@ -53,15 +59,15 @@ export function UsdIqdDualInput({
       return
     }
     if (!cleaned) {
-      onUsdChange(raw, '')
+      onUsdChange('', '')
       return
     }
     const usd = parseDec(cleaned)
     if (usd <= 0) {
-      onUsdChange(raw, '')
+      onUsdChange('', '')
       return
     }
-    onUsdChange(raw, usdToIqdString(usd, rate))
+    onUsdChange(formatMoney2(usd), usdToIqdString(usd, rate))
   }
 
   function handleIqd(raw: string) {
@@ -71,15 +77,15 @@ export function UsdIqdDualInput({
       return
     }
     if (!cleaned) {
-      onIqdChange(raw, '')
+      onIqdChange('', '')
       return
     }
     const iqd = parseDec(cleaned)
     if (iqd <= 0) {
-      onIqdChange(raw, '')
+      onIqdChange('', '')
       return
     }
-    onIqdChange(raw, iqdToUsdString(iqd, rate))
+    onIqdChange(String(Math.round(iqd)), iqdToUsdString(iqd, rate))
   }
 
   const gap = compact ? 'gap-2' : 'gap-3'

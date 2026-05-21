@@ -11,6 +11,7 @@ import {
   Phone,
   Plus,
   Save,
+  Share2,
   ShoppingBag,
   Sparkles,
   Trash2,
@@ -28,8 +29,9 @@ import {
   uploadMerchantStorefrontLocationImage,
   uploadMerchantStorefrontLogo,
 } from '../../lib/merchantStorefrontSettingsApi'
-import type { StorefrontFaqItem } from '../../api/storefrontApi'
+import type { StorefrontFaqItem, StorefrontSocialLink } from '../../api/storefrontApi'
 import { resolveMediaUrl } from '../../lib/api'
+import { STOREFRONT_SOCIAL_PLATFORMS } from '../../lib/storefrontSocial'
 import { StorefrontPreview } from '../storefront/StorefrontPreview'
 import { storefrontStrings } from '../storefront/storefrontStrings'
 import { MerchantStorefrontBannersSection } from './MerchantStorefrontBannersSection'
@@ -99,6 +101,7 @@ export function MerchantOnlineShopPage() {
   const [locationUrl, setLocationUrl] = useState('')
   const [locationImageUrl, setLocationImageUrl] = useState<string | null>(null)
   const [locationUploading, setLocationUploading] = useState(false)
+  const [socialLinks, setSocialLinks] = useState<StorefrontSocialLink[]>([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -122,6 +125,7 @@ export function MerchantOnlineShopPage() {
       setShopAddress(row.shop_address ?? '')
       setLocationUrl(row.location_url ?? '')
       setLocationImageUrl(row.location_image_url ?? null)
+      setSocialLinks(Array.isArray(row.social_links) ? row.social_links : [])
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
@@ -160,6 +164,7 @@ export function MerchantOnlineShopPage() {
         faq_items: faqItems.filter((f) => f.question.trim() || f.answer.trim()),
         shop_address: shopAddress.trim(),
         location_url: locationUrl.trim(),
+        social_links: socialLinks.filter((l) => l.platform && l.url.trim()),
       })
       setSaved(true)
       await load()
@@ -565,6 +570,67 @@ export function MerchantOnlineShopPage() {
                   </label>
                 </div>
               </div>
+            </SectionCard>
+
+            <SectionCard title={t('onlineShop.socialSection')} icon={Share2}>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('onlineShop.socialHint')}</p>
+              <div className="mb-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSocialLinks((prev) => [...prev, { platform: 'facebook', url: '' }])
+                  }
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-violet-700 hover:bg-violet-50 dark:border-slate-600"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {t('onlineShop.socialAdd')}
+                </button>
+              </div>
+              <ul className="space-y-3">
+                {socialLinks.map((link, idx) => (
+                  <li
+                    key={idx}
+                    className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50/50 p-3 sm:grid-cols-[10rem_1fr_auto] dark:border-slate-700 dark:bg-slate-800/40"
+                  >
+                    <select
+                      value={link.platform}
+                      onChange={(e) =>
+                        setSocialLinks((prev) =>
+                          prev.map((l, i) =>
+                            i === idx ? { ...l, platform: e.target.value } : l,
+                          ),
+                        )
+                      }
+                      className={inputClass}
+                    >
+                      {STOREFRONT_SOCIAL_PLATFORMS.map((p) => (
+                        <option key={p} value={p}>
+                          {sf.socialPlatforms[p]}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      value={link.url}
+                      onChange={(e) =>
+                        setSocialLinks((prev) =>
+                          prev.map((l, i) => (i === idx ? { ...l, url: e.target.value } : l)),
+                        )
+                      }
+                      placeholder="https://"
+                      className={inputClass}
+                      dir="ltr"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSocialLinks((prev) => prev.filter((_, i) => i !== idx))}
+                      className="flex h-10 w-10 items-center justify-center self-end text-red-500 hover:text-red-600 sm:self-center"
+                      aria-label={t('common.delete')}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </SectionCard>
 
             <SectionCard title={t('onlineShop.themeSection')} icon={Palette}>

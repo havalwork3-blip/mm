@@ -29,6 +29,7 @@ const DEFAULT_APPEARANCE: PublicStorefrontAppearance = {
   shop_address: '',
   location_url: '',
   location_image_url: null,
+  social_links: [],
 }
 
 type Ctx = {

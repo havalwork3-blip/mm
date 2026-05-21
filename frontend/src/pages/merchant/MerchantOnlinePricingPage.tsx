@@ -8,7 +8,7 @@ import { useLocale } from '../../context/LocaleContext'
 import { useShopExchangeRate } from '../../hooks/useShopExchangeRate'
 import { useSyncedSession } from '../../hooks/useSyncedSession'
 import { resolveMediaUrl } from '../../lib/api'
-import { parseDec, usdToIqdString } from '../../lib/moneyInput'
+import { formatMoney2, parseDec, usdToIqdString } from '../../lib/moneyInput'
 import {
   fetchOnlineProductPricing,
   patchOnlineProductPricing,
@@ -23,19 +23,25 @@ type RowDraft = {
 }
 
 function draftFromRow(row: OnlineProductPricingRow, rate: number | null): RowDraft {
-  const usd =
+  const usdRaw =
     row.online_sale_price != null && String(row.online_sale_price).trim() !== ''
       ? String(row.online_sale_price)
       : ''
+  const usd = usdRaw ? formatMoney2(usdRaw) : ''
   const usdNum = parseDec(usd)
   const iqd =
     usd && rate != null && rate > 0 && usdNum > 0 ? usdToIqdString(usdNum, rate) : ''
   return {
     online_sale_price: usd,
     online_sale_price_iqd: iqd,
-    online_discount_percent: String(row.online_discount_percent ?? '0'),
+    online_discount_percent: formatMoney2(row.online_discount_percent ?? '0') || '0',
     online_discount_min_quantity: String(row.online_discount_min_quantity ?? 1),
   }
+}
+
+function displayUsdPrice(raw: string | null | undefined): string {
+  const s = formatMoney2(raw)
+  return s === '' ? '0' : s
 }
 
 export function MerchantOnlinePricingPage() {
@@ -140,8 +146,9 @@ export function MerchantOnlinePricingPage() {
         const d = drafts[r.id] ?? draftFromRow(r, rate)
         return {
           id: r.id,
-          online_sale_price: d.online_sale_price.trim() === '' ? null : d.online_sale_price.trim(),
-          online_discount_percent: d.online_discount_percent.trim() || '0',
+          online_sale_price:
+            d.online_sale_price.trim() === '' ? null : formatMoney2(d.online_sale_price.trim()),
+          online_discount_percent: formatMoney2(d.online_discount_percent.trim() || '0') || '0',
           online_discount_min_quantity: Math.max(
             1,
             Number.parseInt(d.online_discount_min_quantity, 10) || 1,
@@ -348,7 +355,9 @@ export function MerchantOnlinePricingPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 tabular-nums text-slate-500">${row.sale_price_retail}</td>
+                      <td className="px-4 py-3 tabular-nums text-slate-500">
+                        ${displayUsdPrice(row.sale_price_retail)}
+                      </td>
                       <td className="min-w-[280px] px-4 py-3">
                         <UsdIqdDualInput
                           compact
@@ -363,7 +372,7 @@ export function MerchantOnlinePricingPage() {
                           onToggleUsdLink={() => setUsdLinked((v) => !v)}
                           onToggleIqdLink={() => setIqdLinked((v) => !v)}
                           rate={rate}
-                          usdPlaceholder={row.sale_price_retail}
+                          usdPlaceholder={displayUsdPrice(row.sale_price_retail)}
                           linkActiveTitle={linkTitles.active}
                           linkInactiveTitle={linkTitles.inactive}
                         />
@@ -393,7 +402,7 @@ export function MerchantOnlinePricingPage() {
                         />
                       </td>
                       <td className="px-4 py-3 font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
-                        ${row.effective_price}
+                        ${displayUsdPrice(row.effective_price)}
                       </td>
                     </tr>
                   )
@@ -409,7 +418,7 @@ export function MerchantOnlinePricingPage() {
                 <li key={row.id} className="space-y-3 p-4">
                   <p className="font-bold text-slate-900 dark:text-white">{row.name}</p>
                   <p className="text-xs text-slate-500">
-                    {t('onlinePricing.colRetail')}: ${row.sale_price_retail}
+                    {t('onlinePricing.colRetail')}: ${displayUsdPrice(row.sale_price_retail)}
                   </p>
                   <div>
                     <p className="mb-1 text-xs font-medium text-slate-500">
@@ -427,7 +436,7 @@ export function MerchantOnlinePricingPage() {
                       onToggleUsdLink={() => setUsdLinked((v) => !v)}
                       onToggleIqdLink={() => setIqdLinked((v) => !v)}
                       rate={rate}
-                      usdPlaceholder={row.sale_price_retail}
+                      usdPlaceholder={displayUsdPrice(row.sale_price_retail)}
                       linkActiveTitle={linkTitles.active}
                       linkInactiveTitle={linkTitles.inactive}
                     />

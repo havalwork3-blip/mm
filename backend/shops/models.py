@@ -147,6 +147,7 @@ class StorefrontSettings(ShopScopedModel):
         blank=True,
         null=True,
     )
+    social_links = models.JSONField(default=list, blank=True)
 
     updated_at = models.DateTimeField(auto_now=True)
 

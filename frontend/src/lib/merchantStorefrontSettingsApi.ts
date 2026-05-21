@@ -1,3 +1,4 @@
+import type { StorefrontSocialLink } from '../api/storefrontApi'
 import { apiJson } from './api'
 import type { StorefrontFaqItem } from '../api/storefrontApi'
 
@@ -20,6 +21,7 @@ export type MerchantStorefrontSettings = {
   shop_address: string
   location_url: string
   location_image_url: string | null
+  social_links: StorefrontSocialLink[]
   storefront_host: string
   storefront_url: string
   updated_at: string
@@ -70,6 +72,7 @@ export type MerchantStorefrontSettingsPatch = Partial<
     | 'faq_items'
     | 'shop_address'
     | 'location_url'
+    | 'social_links'
   >
 >
 
