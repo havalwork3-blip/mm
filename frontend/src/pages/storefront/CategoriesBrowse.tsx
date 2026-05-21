@@ -1,14 +1,15 @@
 import { ChevronLeft, Sparkles } from 'lucide-react'
 
-import type { PublicStorefrontCategory, StorefrontProductCollection } from '../../api/storefrontApi'
+import type {
+  PublicStorefrontCategory,
+  PublicStorefrontProduct,
+  StorefrontProductCollection,
+} from '../../api/storefrontApi'
 import { useLocale } from '../../context/LocaleContext'
 import { categoryDisplayName } from '../../lib/categoryNames'
 import { resolveMediaUrl } from '../../lib/api'
-import {
-  COLLECTION_ICONS,
-  StorefrontCollectionsGrid,
-  type CollectionTile,
-} from './StorefrontCollectionsGrid'
+import { StorefrontCollectionSections } from './StorefrontCollectionSections'
+import type { CatalogProductRow } from './storefrontCollections'
 import { accentAlpha, SF_INSET_X } from './storefrontTheme'
 
 const GRADIENTS = [
@@ -21,10 +22,14 @@ const GRADIENTS = [
 ]
 
 type Props = {
+  shopId: number
+  catalogRows: CatalogProductRow[]
+  favoriteIds: number[]
   categories: PublicStorefrontCategory[]
   accent: string
   labels: {
     pickCategoryHint: string
+    viewAll: string
     viewAllProducts: string
     productCount: string
     categories: string
@@ -40,66 +45,37 @@ type Props = {
     availableNowHint: string
     myFavorites: string
     myFavoritesHint: string
+    favoritesEmpty: string
+    favoritesEmptyHint: string
+    addToFavorites: string
+    removeFromFavorites: string
   }
   onSelectCategory: (id: number) => void
   onSelectCollection: (id: StorefrontProductCollection) => void
+  onOpenProduct: (product: PublicStorefrontProduct, categoryName: string) => void
   onViewAllProducts: () => void
 }
 
 export function CategoriesBrowse({
+  shopId,
+  catalogRows,
+  favoriteIds,
   categories,
   accent,
   labels,
   onSelectCategory,
   onSelectCollection,
+  onOpenProduct,
   onViewAllProducts,
 }: Props) {
   const { lang } = useLocale()
 
-  const collectionTiles: CollectionTile[] = [
-    {
-      id: 'bestsellers',
-      title: labels.bestsellers,
-      hint: labels.bestsellersHint,
-      icon: COLLECTION_ICONS.bestsellers,
-      gradient: 'linear-gradient(145deg, #f97316 0%, #ea580c 55%, #9a3412 100%)',
-    },
-    {
-      id: 'new_arrivals',
-      title: labels.newArrivals,
-      hint: labels.newArrivalsHint,
-      icon: COLLECTION_ICONS.new_arrivals,
-      gradient: 'linear-gradient(145deg, #8b5cf6 0%, #7c3aed 55%, #4c1d95 100%)',
-    },
-    {
-      id: 'on_sale',
-      title: labels.onSale,
-      hint: labels.onSaleHint,
-      icon: COLLECTION_ICONS.on_sale,
-      gradient: 'linear-gradient(145deg, #10b981 0%, #059669 55%, #065f46 100%)',
-    },
-    {
-      id: 'available_now',
-      title: labels.availableNow,
-      hint: labels.availableNowHint,
-      icon: COLLECTION_ICONS.available_now,
-      gradient: 'linear-gradient(145deg, #3b82f6 0%, #2563eb 55%, #1e3a8a 100%)',
-    },
-    {
-      id: 'favorites',
-      title: labels.myFavorites,
-      hint: labels.myFavoritesHint,
-      icon: COLLECTION_ICONS.favorites,
-      gradient: 'linear-gradient(145deg, #ec4899 0%, #db2777 55%, #9d174d 100%)',
-    },
-  ]
-
   return (
     <section className={`${SF_INSET_X} sf-view-panel mt-2 sm:mt-4`}>
       <div
-        className="mb-6 overflow-hidden rounded-3xl p-5 text-white sm:p-7"
+        className="sf-hero-panel mb-6 overflow-hidden rounded-3xl p-5 text-white sm:p-7"
         style={{
-          background: `linear-gradient(135deg, ${accent} 0%, ${accent}bb 50%, #1e293b 100%)`,
+          background: `linear-gradient(135deg, ${accent} 0%, ${accent}bb 45%, #1e293b 100%)`,
           boxShadow: `0 16px 48px ${accentAlpha(accent, 0.28)}`,
         }}
       >
@@ -180,14 +156,14 @@ export function CategoriesBrowse({
         })}
       </div>
 
-      <p className="sf-sidebar-muted mt-8 mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-        {labels.shopHighlights}
-      </p>
-      <StorefrontCollectionsGrid
+      <StorefrontCollectionSections
+        shopId={shopId}
         accent={accent}
-        tiles={collectionTiles}
-        viewAllLabel={labels.viewAllProducts}
+        catalogRows={catalogRows}
+        favoriteIds={favoriteIds}
+        labels={labels}
         onSelectCollection={onSelectCollection}
+        onOpenProduct={onOpenProduct}
         onViewAllProducts={onViewAllProducts}
       />
     </section>

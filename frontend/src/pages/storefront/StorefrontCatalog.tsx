@@ -23,7 +23,11 @@ import { useStorefrontCatalog } from './storefrontCatalogContext'
 import { storefrontStrings } from './storefrontStrings'
 import { categoryDisplayName } from '../../lib/categoryNames'
 import { sortProductsAvailableFirst } from './productAvailability'
-import { collectionTitle, filterCatalogByCollection } from './storefrontCollections'
+import {
+  buildCatalogRows,
+  collectionTitle,
+  filterCatalogByCollection,
+} from './storefrontCollections'
 import { accentAlpha, resolveAccent, SF_INSET_X, SF_PRODUCT_GRID } from './storefrontTheme'
 
 export function StorefrontCatalog() {
@@ -119,16 +123,24 @@ export function StorefrontCatalog() {
     }))
   }, [categories, search, selectedCategoryId, showProductsView])
 
+  const allCatalogRows = useMemo(
+    () => sortProductsAvailableFirst(buildCatalogRows(categories, lang)),
+    [categories, lang],
+  )
+
   const flatProducts = useMemo(() => {
-    const rows = filteredCategories.flatMap((c) =>
-      c.products.map((p) => ({
-        product: p,
-        categoryName: categoryDisplayName(c, lang),
-      })),
-    )
+    const rows =
+      productCollection != null
+        ? allCatalogRows
+        : filteredCategories.flatMap((c) =>
+            c.products.map((p) => ({
+              product: p,
+              categoryName: categoryDisplayName(c, lang),
+            })),
+          )
     const filtered = filterCatalogByCollection(rows, productCollection, favoriteIds)
     return sortProductsAvailableFirst(filtered)
-  }, [filteredCategories, lang, productCollection, favoriteIds])
+  }, [filteredCategories, lang, productCollection, favoriteIds, allCatalogRows])
 
   const selectedCategory =
     selectedCategoryId != null ? categories.find((c) => c.id === selectedCategoryId) : null
@@ -220,31 +232,42 @@ export function StorefrontCatalog() {
             ].join(' ')}
             aria-hidden={view !== 'categories' || showProductsView}
           >
-            <CategoriesBrowse
-              categories={categories.filter((c) => c.products.length > 0)}
-              accent={accent}
-              labels={{
-                pickCategoryHint: s.pickCategoryHint,
-                viewAllProducts: s.viewAllProducts,
-                productCount: s.productCount,
-                categories: s.categories,
-                shopCategories: s.shopCategories,
-                shopHighlights: s.shopHighlights,
-                bestsellers: s.bestsellers,
-                bestsellersHint: s.bestsellersHint,
-                newArrivals: s.newArrivals,
-                newArrivalsHint: s.newArrivalsHint,
-                onSale: s.onSale,
-                onSaleHint: s.onSaleHint,
-                availableNow: s.availableNow,
-                availableNowHint: s.availableNowHint,
-                myFavorites: s.myFavorites,
-                myFavoritesHint: s.myFavoritesHint,
-              }}
-              onSelectCategory={selectCategory}
-              onSelectCollection={showCollection}
-              onViewAllProducts={showAllProducts}
-            />
+            {shopId != null ? (
+              <CategoriesBrowse
+                shopId={shopId}
+                catalogRows={allCatalogRows}
+                favoriteIds={favoriteIds}
+                categories={categories.filter((c) => c.products.length > 0)}
+                accent={accent}
+                labels={{
+                  pickCategoryHint: s.pickCategoryHint,
+                  viewAll: s.viewAll,
+                  viewAllProducts: s.viewAllProducts,
+                  productCount: s.productCount,
+                  categories: s.categories,
+                  shopCategories: s.shopCategories,
+                  shopHighlights: s.shopHighlights,
+                  bestsellers: s.bestsellers,
+                  bestsellersHint: s.bestsellersHint,
+                  newArrivals: s.newArrivals,
+                  newArrivalsHint: s.newArrivalsHint,
+                  onSale: s.onSale,
+                  onSaleHint: s.onSaleHint,
+                  availableNow: s.availableNow,
+                  availableNowHint: s.availableNowHint,
+                  myFavorites: s.myFavorites,
+                  myFavoritesHint: s.myFavoritesHint,
+                  favoritesEmpty: s.favoritesEmpty,
+                  favoritesEmptyHint: s.favoritesEmptyHint,
+                  addToFavorites: s.addToFavorites,
+                  removeFromFavorites: s.removeFromFavorites,
+                }}
+                onSelectCategory={selectCategory}
+                onSelectCollection={showCollection}
+                onOpenProduct={handleOpenProduct}
+                onViewAllProducts={showAllProducts}
+              />
+            ) : null}
           </div>
 
           <div
@@ -275,7 +298,7 @@ export function StorefrontCatalog() {
 
             <section className={`${SF_INSET_X} pb-6 pt-2 sm:pt-4`}>
               <div className="mb-5 flex items-center justify-between gap-3">
-                <h2 className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">
+                <h2 className="sf-heading text-lg font-extrabold tracking-tight sm:text-xl">
                   {productsHeading
                     ? productsHeading
                     : selectedCategory
@@ -328,7 +351,7 @@ export function StorefrontCatalog() {
               <button
                 type="button"
                 onClick={backToCategories}
-                className="mt-6 w-full rounded-2xl bg-white py-3.5 text-sm font-bold text-slate-600 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50"
+                className="sf-back-btn mt-6 w-full rounded-2xl py-3.5 text-sm font-bold shadow-sm ring-1 transition active:scale-[0.99]"
               >
                 {s.backToCategories}
               </button>

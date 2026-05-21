@@ -1,6 +1,22 @@
-import type { PublicStorefrontProduct, StorefrontProductCollection } from '../../api/storefrontApi'
+import type {
+  PublicStorefrontCategory,
+  PublicStorefrontProduct,
+  StorefrontProductCollection,
+} from '../../api/storefrontApi'
+import { categoryDisplayName } from '../../lib/categoryNames'
+import type { Lang } from '../../i18n/strings'
 import { isProductAvailable } from './productAvailability'
 import type { StorefrontStrings } from './storefrontStrings'
+
+export const COLLECTION_PREVIEW_COUNT = 4
+
+export const STOREFRONT_COLLECTION_ORDER: StorefrontProductCollection[] = [
+  'bestsellers',
+  'new_arrivals',
+  'on_sale',
+  'available_now',
+  'favorites',
+]
 
 export type CatalogProductRow = {
   product: PublicStorefrontProduct
@@ -21,6 +37,18 @@ function createdAtMs(product: PublicStorefrontProduct): number {
   if (!product.created_at) return 0
   const t = Date.parse(product.created_at)
   return Number.isFinite(t) ? t : 0
+}
+
+export function buildCatalogRows(
+  categories: PublicStorefrontCategory[],
+  lang: Lang,
+): CatalogProductRow[] {
+  return categories.flatMap((c) =>
+    c.products.map((p) => ({
+      product: p,
+      categoryName: categoryDisplayName(c, lang),
+    })),
+  )
 }
 
 export function filterCatalogByCollection(
@@ -49,6 +77,15 @@ export function filterCatalogByCollection(
     default:
       return rows
   }
+}
+
+export function previewCollectionProducts(
+  rows: CatalogProductRow[],
+  collection: StorefrontProductCollection,
+  favoriteIds: number[],
+  limit = COLLECTION_PREVIEW_COUNT,
+): CatalogProductRow[] {
+  return filterCatalogByCollection(rows, collection, favoriteIds).slice(0, limit)
 }
 
 export function collectionTitle(

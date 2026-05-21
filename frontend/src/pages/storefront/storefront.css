@@ -448,8 +448,66 @@ html.sf-mode select {
   color: #f1f5f9;
 }
 
-.sf-collection-tile {
-  -webkit-tap-highlight-color: transparent;
+.sf-heading {
+  color: #0f172a;
+}
+
+.sf-collection-section {
+  background: #ffffff;
+  border-color: rgba(226, 232, 240, 0.85);
+}
+
+.sf-product-card-compact {
+  background: #ffffff;
+}
+
+.sf-back-btn {
+  background: #ffffff;
+  color: #475569;
+  border-color: rgba(226, 232, 240, 0.85);
+}
+
+.sf-back-btn:hover {
+  background: #f8fafc;
+}
+
+.sf-view-all-link:hover {
+  filter: brightness(0.97);
+}
+
+.sf-root.sf-dark .sf-collection-section {
+  background: #1e293b;
+  border-color: rgba(51, 65, 85, 0.75);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.sf-root.sf-dark .sf-product-card,
+.sf-root.sf-dark .sf-product-card-compact {
+  background: #1e293b;
+  --tw-ring-color: rgba(51, 65, 85, 0.7);
+}
+
+.sf-root.sf-dark .sf-product-card h3,
+.sf-root.sf-dark .sf-product-card-compact p {
+  color: #e2e8f0;
+}
+
+.sf-root.sf-dark .sf-product-card-compact p {
+  color: #e2e8f0;
+}
+
+.sf-root.sf-dark .sf-back-btn {
+  background: #1e293b;
+  color: #cbd5e1;
+  border-color: rgba(51, 65, 85, 0.8);
+}
+
+.sf-root.sf-dark .sf-back-btn:hover {
+  background: #334155;
+}
+
+.sf-root.sf-dark .sf-collection-section .bg-slate-50 {
+  background: #0f172a;
 }
 
 .sf-root.sf-dark .sf-social-icon-circle {
