@@ -28,6 +28,11 @@ import {
   collectionTitle,
   filterCatalogByCollection,
 } from './storefrontCollections'
+import {
+  storefrontCollectionLabel,
+  storefrontHomeCategoriesTitle,
+  storefrontHomeHighlightsTitle,
+} from './storefrontDisplay'
 import { accentAlpha, resolveAccent, SF_INSET_X, SF_PRODUCT_GRID } from './storefrontTheme'
 
 export function StorefrontCatalog() {
@@ -158,7 +163,31 @@ export function StorefrontCatalog() {
 
   const totalProducts = categories.reduce((n, c) => n + c.products.length, 0)
 
-  const productsHeading = collectionTitle(s, productCollection)
+  const homeBrowseLabels = useMemo(
+    () => ({
+      pickCategoryHint: s.pickCategoryHint,
+      viewAll: s.viewAll,
+      viewAllProducts: s.viewAllProducts,
+      productCount: s.productCount,
+      categories: s.categories,
+      shopCategories: storefrontHomeCategoriesTitle(appearance, s.shopCategories),
+      shopHighlights: storefrontHomeHighlightsTitle(appearance, s.shopHighlights),
+      bestsellers: storefrontCollectionLabel(appearance, s, 'bestsellers'),
+      bestsellersHint: s.bestsellersHint,
+      newArrivals: storefrontCollectionLabel(appearance, s, 'new_arrivals'),
+      newArrivalsHint: s.newArrivalsHint,
+      onSale: storefrontCollectionLabel(appearance, s, 'on_sale'),
+      onSaleHint: s.onSaleHint,
+      availableNow: storefrontCollectionLabel(appearance, s, 'available_now'),
+      availableNowHint: s.availableNowHint,
+      addToCart: s.addToCart,
+      addToFavorites: s.addToFavorites,
+      removeFromFavorites: s.removeFromFavorites,
+    }),
+    [appearance, s],
+  )
+
+  const productsHeading = collectionTitle(s, productCollection, appearance.home_collection_titles)
 
   const cardLabels = {
     viewProduct: s.viewProduct,
@@ -258,26 +287,7 @@ export function StorefrontCatalog() {
                 onAddToCart={handleAddToCart}
                 categories={categories.filter((c) => c.products.length > 0)}
                 accent={accent}
-                labels={{
-                  pickCategoryHint: s.pickCategoryHint,
-                  viewAll: s.viewAll,
-                  viewAllProducts: s.viewAllProducts,
-                  productCount: s.productCount,
-                  categories: s.categories,
-                  shopCategories: s.shopCategories,
-                  shopHighlights: s.shopHighlights,
-                  bestsellers: s.bestsellers,
-                  bestsellersHint: s.bestsellersHint,
-                  newArrivals: s.newArrivals,
-                  newArrivalsHint: s.newArrivalsHint,
-                  onSale: s.onSale,
-                  onSaleHint: s.onSaleHint,
-                  availableNow: s.availableNow,
-                  availableNowHint: s.availableNowHint,
-                  addToCart: s.addToCart,
-                  addToFavorites: s.addToFavorites,
-                  removeFromFavorites: s.removeFromFavorites,
-                }}
+                labels={homeBrowseLabels}
                 onSelectCategory={selectCategory}
                 onSelectCollection={showCollection}
                 onOpenProduct={handleOpenProduct}

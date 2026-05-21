@@ -133,16 +133,24 @@ const SHOP_NAV: ShopNavEntry[] = [
         icon: ClipboardList,
         anyPermission: ['view_sale', 'add_sale'],
       },
-      {
-        to: '/online-shop',
-        labelKey: 'nav.onlineShop',
-        icon: Globe,
-        requiresOnlineStorefront: true,
-      },
+    ],
+  },
+  {
+    type: 'group',
+    id: 'online',
+    labelKey: 'nav.onlineSection',
+    icon: Globe,
+    items: [
       {
         to: '/online-pricing',
         labelKey: 'nav.onlinePricing',
         icon: DollarSign,
+        requiresOnlineStorefront: true,
+      },
+      {
+        to: '/online-shop',
+        labelKey: 'nav.onlineShop',
+        icon: Globe,
         requiresOnlineStorefront: true,
       },
       {

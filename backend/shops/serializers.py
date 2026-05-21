@@ -190,6 +190,10 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
             "shop",
             "catalog_title",
             "catalog_subtitle",
+            "header_show_shop_name",
+            "home_categories_title",
+            "home_highlights_title",
+            "home_collection_titles",
             "welcome_message",
             "logo",
             "logo_url",
@@ -242,6 +246,11 @@ class StorefrontSettingsSerializer(serializers.ModelSerializer):
         from shops.telegram_notify import normalize_recipients
 
         return normalize_recipients(value)
+
+    def validate_home_collection_titles(self, value: object) -> dict:
+        from shops.storefront_settings_utils import _normalize_collection_titles
+
+        return _normalize_collection_titles(value)
 
     def update(self, instance, validated_data):
         from shops.telegram_notify import (

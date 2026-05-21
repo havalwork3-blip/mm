@@ -120,6 +120,13 @@ class StorefrontSettings(ShopScopedModel):
 
     catalog_title = models.CharField(max_length=255, blank=True, default="")
     catalog_subtitle = models.CharField(max_length=500, blank=True, default="")
+    header_show_shop_name = models.BooleanField(
+        default=False,
+        help_text="If catalog title is empty, show shop legal name in the storefront header.",
+    )
+    home_categories_title = models.CharField(max_length=200, blank=True, default="")
+    home_highlights_title = models.CharField(max_length=200, blank=True, default="")
+    home_collection_titles = models.JSONField(default=dict, blank=True)
     welcome_message = models.CharField(max_length=1000, blank=True, default="")
     logo = models.ImageField(upload_to="storefront-logos/%Y/%m/", blank=True, null=True)
     accent_color = models.CharField(max_length=32, default="#fbbf24")

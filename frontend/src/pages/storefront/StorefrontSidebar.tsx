@@ -21,6 +21,7 @@ import { socialPlatformLabel } from '../../lib/storefrontSocial'
 import { useStorefrontFavoritesStore } from '../../store/storefrontFavoritesStore'
 import { useStorefrontCatalog } from './storefrontCatalogContext'
 import { storefrontStrings } from './storefrontStrings'
+import { storefrontHeaderSubtitle, storefrontHeaderTitle } from './storefrontDisplay'
 import { useStorefrontShop } from './StorefrontShopContext'
 import { useStorefrontPrice } from './storefrontPriceContext'
 import { useStorefrontTheme } from './storefrontThemeContext'
@@ -52,6 +53,8 @@ export function StorefrontSidebar({
   const { setLang } = useLocale()
   const s = storefrontStrings(lang)
   const { shopName, appearance } = useStorefrontShop()
+  const sidebarTitle = storefrontHeaderTitle(appearance, shopName)
+  const sidebarSubtitle = storefrontHeaderSubtitle(appearance)
   const { currency, setCurrency } = useStorefrontPrice()
   const { theme, setTheme } = useStorefrontTheme()
   const { backToCategories, showAllProducts, showCollection } = useStorefrontCatalog()
@@ -99,10 +102,12 @@ export function StorefrontSidebar({
       <aside className="sf-sidebar-panel fixed inset-y-0 start-0 z-[60] flex w-[min(18rem,88vw)] flex-col border-e shadow-2xl sm:w-72">
         <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-4">
           <div className="min-w-0">
-            <p className="sf-sidebar-title truncate text-sm font-extrabold">{shopName}</p>
-            <p className="sf-sidebar-muted truncate text-[11px]">
-              {appearance.catalog_subtitle || s.shopTagline}
+            <p className="sf-sidebar-title truncate text-sm font-extrabold">
+              {sidebarTitle || shopName}
             </p>
+            {sidebarSubtitle ? (
+              <p className="sf-sidebar-muted truncate text-[11px]">{sidebarSubtitle}</p>
+            ) : null}
           </div>
           <button
             type="button"

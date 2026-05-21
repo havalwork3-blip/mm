@@ -16,6 +16,10 @@ import {
 const DEFAULT_APPEARANCE: PublicStorefrontAppearance = {
   catalog_title: '',
   catalog_subtitle: '',
+  header_show_shop_name: false,
+  home_categories_title: '',
+  home_highlights_title: '',
+  home_collection_titles: {},
   welcome_message: '',
   logo_url: null,
   accent_color: '#fbbf24',
@@ -35,6 +39,7 @@ const DEFAULT_APPEARANCE: PublicStorefrontAppearance = {
 
 type Ctx = {
   shopId: number | null
+  /** Shop legal name from system (not necessarily shown in header). */
   shopName: string
   appearance: PublicStorefrontAppearance
   deliveryZones: StorefrontDeliveryZone[]
@@ -76,8 +81,8 @@ export function StorefrontShopProvider({ children }: { children: React.ReactNode
     try {
       const row = await resolvePublicStorefront()
       setShopId(row.shop_id)
-      setShopName(row.storefront?.catalog_title || row.name)
-      setAppearance(row.storefront ?? { ...DEFAULT_APPEARANCE, catalog_title: row.name })
+      setShopName(row.name)
+      setAppearance(row.storefront ?? DEFAULT_APPEARANCE)
       setExchangeRateState(row.exchange_rate_usd_to_iqd ?? null)
     } catch (e) {
       setShopId(null)

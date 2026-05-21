@@ -5,6 +5,7 @@ import { PageAuthLoading } from '../components/PageAuthLoading'
 import { useLocale } from '../context/LocaleContext'
 import { useSyncedSession } from '../hooks/useSyncedSession'
 import { apiJson } from '../lib/api'
+import { SaleLossBadge } from '../components/sales/SaleLossBadge'
 import { formatDecimalTrim, formatMoneyCompact } from '../lib/formatMoney'
 import { hasPerm } from '../lib/permissions'
 import type { ProfitReportResponse } from '../types/api'
@@ -284,8 +285,17 @@ export function ProfitReportPage() {
                           {row.shop_name ?? '—'}
                         </td>
                       ) : null}
-                      <td className="px-4 py-3 font-medium text-slate-900">
-                        {row.product_name}
+                      <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span>{row.product_name}</span>
+                          {row.has_loss_sales ? (
+                            <SaleLossBadge
+                              soldAtZero={Number(row.quantity_sold_at_zero ?? '0') > 0}
+                              soldAtLoss
+                              compact
+                            />
+                          ) : null}
+                        </div>
                       </td>
                       <td className="px-4 py-3 tabular-nums" dir="ltr">
                         {formatDecimalTrim(row.quantity_sold, 2)}

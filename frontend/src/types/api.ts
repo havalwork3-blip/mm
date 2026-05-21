@@ -355,6 +355,10 @@ export type SaleLineRow = {
   unit_price_usd: string
   unit_buy_price_usd: string
   returned_quantity?: number
+  /** Sold at $0 (often full cost loss when buy price > 0). */
+  sold_at_zero?: boolean
+  sold_at_loss?: boolean
+  line_loss_usd?: string
 }
 
 /** Sale row from GET /api/sales/ */
@@ -376,6 +380,7 @@ export type SaleListRow = {
   has_returns?: boolean
   returned_total_usd?: string
   return_lines_summary?: string
+  has_loss_sale?: boolean
   lines: SaleLineRow[]
   created_at: string
 }
@@ -475,6 +480,9 @@ export type ProfitReportResponse = {
     product_id: number
     product_name: string
     quantity_sold: string
+    quantity_sold_at_zero?: string
+    has_loss_sales?: boolean
+    total_loss_usd?: string
     unit_buy_price_usd: string
     total_buy_price_usd: string
     unit_sale_price_usd: string

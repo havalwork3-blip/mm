@@ -3,6 +3,7 @@ import { apiJson } from './api'
 export type OnlineProductPricingRow = {
   id: number
   name: string
+  category_id: number
   category_name: string
   sale_price_retail: string
   online_sale_price: string | null

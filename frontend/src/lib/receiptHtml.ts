@@ -1,6 +1,7 @@
 import QRCode from 'qrcode'
 
 import { formatDecimalTrim } from './formatMoney'
+import { saleLineFlagsFromRow } from './saleLineFlags'
 import { formatSaleReceiptNumber } from './shopReceiptNumbers'
 import type { ReceiptSettingsRow, SaleListRow } from '../types/api'
 
@@ -178,9 +179,22 @@ export async function buildReceiptHtml(args: {
         const total = fmtUsd(qty * parseDec(price))
         const retQty = Number(ln.returned_quantity ?? 0)
         const returnedHint = retQty > 0 ? `<br/><small style="color:#047857;font-weight:700">گەڕاوە: ${retQty}</small>` : ''
+        const flags = blankMode
+          ? { soldAtZero: false, soldAtLoss: false }
+          : saleLineFlagsFromRow({
+              unit_price_usd: String(ln.unit_price_usd ?? '0'),
+              unit_buy_price_usd: String(ln.unit_buy_price_usd ?? '0'),
+              sold_at_zero: ln.sold_at_zero as boolean | undefined,
+              sold_at_loss: ln.sold_at_loss as boolean | undefined,
+            })
+        const lossHint = flags.soldAtLoss
+          ? flags.soldAtZero
+            ? '<br/><small style="color:#b45309;font-weight:700">فرۆش بە نرخی ٠ (زەرەر)</small>'
+            : '<br/><small style="color:#be123c;font-weight:700">فرۆش بە زەرەر</small>'
+          : ''
         return `<tr>
         <td class="cell-idx"><span class="cell-pad">${idx + 1}</span></td>
-        <td class="col-name"><span class="cell-pad cell-name-text">${name}${returnedHint}</span></td>
+        <td class="col-name"><span class="cell-pad cell-name-text">${name}${lossHint}${returnedHint}</span></td>
         <td class="num cell-qty"><span class="cell-pad">${blankMode ? '' : qty}</span></td>
         <td class="num cell-price"><span class="cell-pad">${blankMode ? '' : escapeHtml(priceDisplay)}</span></td>
         <td class="num cell-line-total"><span class="cell-pad">${blankMode ? '' : total}</span></td>

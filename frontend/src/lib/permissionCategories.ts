@@ -4,6 +4,7 @@ import type { PermissionRow } from '../types/api'
 export type PermissionCategoryId =
   | 'dashboard'
   | 'sales'
+  | 'online_storefront'
   | 'inventory'
   | 'purchasing'
   | 'customers'
@@ -26,6 +27,7 @@ export type PermissionCategoryDef = {
 export const PERMISSION_CATEGORY_ORDER: PermissionCategoryDef[] = [
   { id: 'dashboard', labelKey: 'nav.dashboard' },
   { id: 'sales', labelKey: 'nav.salesSection' },
+  { id: 'online_storefront', labelKey: 'nav.onlineSection' },
   { id: 'inventory', labelKey: 'nav.inventorySection' },
   { id: 'purchasing', labelKey: 'nav.purchasingSection' },
   { id: 'customers', labelKey: 'nav.customersSection' },
@@ -55,6 +57,11 @@ const MODEL_CATEGORY = new Map<string, PermissionCategoryId>([
   [`${INVENTORY}.saleline`, 'sales'],
   [`${INVENTORY}.salereturn`, 'sales'],
   [`${INVENTORY}.salereturnline`, 'sales'],
+  [`${INVENTORY}.storefrontorder`, 'online_storefront'],
+  [`${INVENTORY}.storefrontorderitem`, 'online_storefront'],
+  [`${SHOPS}.storefrontsettings`, 'online_storefront'],
+  [`${SHOPS}.storefrontbanner`, 'online_storefront'],
+  [`${SHOPS}.storefrontdeliveryzone`, 'online_storefront'],
   [`${INVENTORY}.product`, 'inventory'],
   [`${INVENTORY}.category`, 'inventory'],
   [`${INVENTORY}.company`, 'purchasing'],

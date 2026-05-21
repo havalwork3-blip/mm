@@ -77,6 +77,25 @@ def _normalize_social_links(raw: object) -> list[dict[str, str]]:
     return out
 
 
+_COLLECTION_TITLE_KEYS = frozenset(
+    {"bestsellers", "new_arrivals", "on_sale", "available_now", "favorites"},
+)
+
+
+def _normalize_collection_titles(raw: object) -> dict[str, str]:
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key, val in raw.items():
+        k = str(key).strip().lower()[:32]
+        if k not in _COLLECTION_TITLE_KEYS:
+            continue
+        text = str(val or "").strip()[:200]
+        if text:
+            out[k] = text
+    return out
+
+
 def _normalize_faq_items(raw: object) -> list[dict[str, str]]:
     if not isinstance(raw, list):
         return []
@@ -138,8 +157,12 @@ def storefront_settings_public_dict(
     if default_currency not in ("usd", "iqd", "both"):
         default_currency = "usd"
     return {
-        "catalog_title": title or shop.name,
+        "catalog_title": title,
         "catalog_subtitle": (settings.catalog_subtitle or "").strip(),
+        "header_show_shop_name": bool(settings.header_show_shop_name),
+        "home_categories_title": (settings.home_categories_title or "").strip(),
+        "home_highlights_title": (settings.home_highlights_title or "").strip(),
+        "home_collection_titles": _normalize_collection_titles(settings.home_collection_titles),
         "welcome_message": (settings.welcome_message or "").strip(),
         "logo_url": _storefront_logo_url(settings, request),
         "accent_color": (settings.accent_color or "").strip() or "#fbbf24",

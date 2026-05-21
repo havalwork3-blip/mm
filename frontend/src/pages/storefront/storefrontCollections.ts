@@ -165,8 +165,11 @@ export function previewCollectionProducts(
 export function collectionTitle(
   s: StorefrontStrings,
   collection: StorefrontProductCollection | null,
+  customTitles?: Partial<Record<StorefrontProductCollection, string>>,
 ): string | null {
   if (!collection) return null
+  const custom = customTitles?.[collection]?.trim()
+  if (custom) return custom
   switch (collection) {
     case 'bestsellers':
       return s.bestsellers

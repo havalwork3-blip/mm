@@ -4,11 +4,14 @@
   Banknote,
   ChevronLeft,
   Coins,
+  DollarSign,
+  Globe,
   LayoutDashboard,
   Package,
   PieChart as PieChartIcon,
   RotateCcw,
   ScanBarcode,
+  ShoppingCart,
   Store,
   TrendingDown,
   TrendingUp,
@@ -354,8 +357,25 @@ export function HomePage() {
       },
       { to: '/debts', label: t('nav.debts'), icon: Users, perms: ['view_employeedebt'] },
     ] as const
-    return items.filter((item) => !('perms' in item) || hasPerm(me, ...item.perms))
+    const visible = items.filter((item) => !('perms' in item) || hasPerm(me, ...item.perms))
+    if (me?.online_storefront_enabled) {
+      return [
+        ...visible,
+        { to: '/online-pricing', label: t('nav.onlinePricing'), icon: DollarSign },
+        { to: '/online-shop', label: t('nav.onlineShop'), icon: Globe },
+      ]
+    }
+    return visible
   }, [me, t])
+
+  const onlineQuickLinks = useMemo(() => {
+    if (!me?.online_storefront_enabled) return []
+    return [
+      { to: '/online-pricing', label: t('dash.onlinePricingCard'), hint: t('dash.onlinePricingCardHint'), icon: DollarSign },
+      { to: '/online-shop', label: t('nav.onlineShop'), hint: t('onlineShop.subtitle'), icon: Globe },
+      { to: '/online-orders', label: t('nav.onlineOrders'), hint: '', icon: ShoppingCart },
+    ]
+  }, [me?.online_storefront_enabled, t])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -834,6 +854,61 @@ export function HomePage() {
             </button>
           </div>
         </section>
+
+        {onlineQuickLinks.length > 0 ? (
+          <section className="mb-6 rounded-2xl border border-teal-200/80 bg-gradient-to-br from-teal-50/90 to-white p-4 shadow-sm dark:border-teal-900/50 dark:from-teal-950/30 dark:to-slate-900/80">
+            <h2 className="text-start text-sm font-semibold uppercase tracking-wide text-teal-800 dark:text-teal-200">
+              {t('nav.onlineSection')}
+            </h2>
+            <p className="mt-1 text-start text-xs text-slate-600 dark:text-slate-400">
+              {t('dash.quickAccess')}
+            </p>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {onlineQuickLinks.map((item) => {
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className="flex items-start gap-3 rounded-xl border border-teal-200/60 bg-white p-4 transition hover:border-teal-400 hover:shadow-md dark:border-teal-800/50 dark:bg-slate-900/60 dark:hover:border-teal-600"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-200">
+                      <Icon className="h-5 w-5" aria-hidden />
+                    </span>
+                    <span className="min-w-0 text-start">
+                      <span className="block font-semibold text-slate-900 dark:text-slate-100">
+                        {item.label}
+                      </span>
+                      {item.hint ? (
+                        <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
+                          {item.hint}
+                        </span>
+                      ) : null}
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        {me?.is_superuser && globalAdminStats ? (
+          <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <h2 className="text-start text-sm font-semibold text-slate-800 dark:text-slate-100">
+              {t('dash.onlineShopsManage')}
+            </h2>
+            <p className="mt-1 text-start text-xs text-slate-500 dark:text-slate-400">
+              {t('admin.globalReportsDesc')}
+            </p>
+            <Link
+              to="/system/shops"
+              className="mt-3 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+            >
+              <Store className="h-4 w-4" aria-hidden />
+              {t('admin.shops')}
+            </Link>
+          </section>
+        ) : null}
 
         {error && (
           <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">

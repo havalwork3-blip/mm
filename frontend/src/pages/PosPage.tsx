@@ -13,6 +13,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageAuthLoading } from '../components/PageAuthLoading'
+import { SaleLossBadge } from '../components/sales/SaleLossBadge'
 import { useLocale } from '../context/LocaleContext'
 import { useSubmitLock } from '../hooks/useSubmitLock'
 import { useSyncedSession } from '../hooks/useSyncedSession'
@@ -24,6 +25,7 @@ import {
 } from '../lib/receiptHtml'
 import { withReceiptPrefs } from '../lib/receiptPrefs'
 import { hasPerm } from '../lib/permissions'
+import { saleHasLossLines, saleLineFlagsFromRow } from '../lib/saleLineFlags'
 import { formatSaleReceiptNumber } from '../lib/shopReceiptNumbers'
 import type {
   CurrencyRow,
@@ -1886,6 +1888,12 @@ export function PosPage() {
                           {t('pos.manualLineTag')}
                         </p>
                       ) : null}
+                      {parsePosUnitPriceUsd(l.unitPriceUsd).ok &&
+                      parsePosUnitPriceUsd(l.unitPriceUsd).value === 0 ? (
+                        <p className="mt-0.5">
+                          <SaleLossBadge soldAtZero soldAtLoss compact />
+                        </p>
+                      ) : null}
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <input
                           ref={setCartQtyRef(l.lineId)}
@@ -2667,6 +2675,18 @@ export function PosPage() {
             <p className="mt-2 text-center text-sm text-slate-500">
               #{formatSaleReceiptNumber(lastReceipt?.receipt_number) || '—'}
             </p>
+            {lastReceipt &&
+            (Boolean(lastReceipt.has_loss_sale) ||
+              saleHasLossLines(lastReceipt.lines ?? [])) ? (
+              <p className="mt-2 flex justify-center">
+                <SaleLossBadge
+                  soldAtLoss
+                  soldAtZero={(lastReceipt.lines ?? []).some(
+                    (ln) => saleLineFlagsFromRow(ln).soldAtZero,
+                  )}
+                />
+              </p>
+            ) : null}
             <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
                 type="button"

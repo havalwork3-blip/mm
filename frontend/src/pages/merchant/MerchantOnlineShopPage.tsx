@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   Sparkles,
   Trash2,
+  Type,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -82,6 +83,13 @@ export function MerchantOnlineShopPage() {
 
   const [catalogTitle, setCatalogTitle] = useState('')
   const [catalogSubtitle, setCatalogSubtitle] = useState('')
+  const [headerShowShopName, setHeaderShowShopName] = useState(false)
+  const [homeCategoriesTitle, setHomeCategoriesTitle] = useState('')
+  const [homeHighlightsTitle, setHomeHighlightsTitle] = useState('')
+  const [collBestsellers, setCollBestsellers] = useState('')
+  const [collNewArrivals, setCollNewArrivals] = useState('')
+  const [collOnSale, setCollOnSale] = useState('')
+  const [collAvailableNow, setCollAvailableNow] = useState('')
   const [welcomeMessage, setWelcomeMessage] = useState('')
   const [accentColor, setAccentColor] = useState('#FF5A00')
   const [bannerRotateSeconds, setBannerRotateSeconds] = useState(5)
@@ -120,6 +128,14 @@ export function MerchantOnlineShopPage() {
       const row = await fetchMerchantStorefrontSettings()
       setCatalogTitle(row.catalog_title || '')
       setCatalogSubtitle(row.catalog_subtitle || '')
+      setHeaderShowShopName(Boolean(row.header_show_shop_name))
+      setHomeCategoriesTitle(row.home_categories_title ?? '')
+      setHomeHighlightsTitle(row.home_highlights_title ?? '')
+      const ct = row.home_collection_titles ?? {}
+      setCollBestsellers(ct.bestsellers ?? '')
+      setCollNewArrivals(ct.new_arrivals ?? '')
+      setCollOnSale(ct.on_sale ?? '')
+      setCollAvailableNow(ct.available_now ?? '')
       setWelcomeMessage(row.welcome_message || '')
       setAccentColor(row.accent_color || '#FF5A00')
       setBannerRotateSeconds(row.banner_rotate_seconds ?? 5)
@@ -168,6 +184,15 @@ export function MerchantOnlineShopPage() {
       await patchMerchantStorefrontSettings({
         catalog_title: catalogTitle.trim(),
         catalog_subtitle: catalogSubtitle.trim(),
+        header_show_shop_name: headerShowShopName,
+        home_categories_title: homeCategoriesTitle.trim(),
+        home_highlights_title: homeHighlightsTitle.trim(),
+        home_collection_titles: {
+          ...(collBestsellers.trim() ? { bestsellers: collBestsellers.trim() } : {}),
+          ...(collNewArrivals.trim() ? { new_arrivals: collNewArrivals.trim() } : {}),
+          ...(collOnSale.trim() ? { on_sale: collOnSale.trim() } : {}),
+          ...(collAvailableNow.trim() ? { available_now: collAvailableNow.trim() } : {}),
+        },
         welcome_message: welcomeMessage.trim(),
         accent_color: accentColor.trim() || '#FF5A00',
         banner_rotate_seconds: Math.max(2, Math.min(60, bannerRotateSeconds)),
@@ -343,6 +368,120 @@ export function MerchantOnlineShopPage() {
             />
 
             <form onSubmit={(e) => void save(e)} className="space-y-5">
+            <SectionCard title={t('onlineShop.copySection')} icon={Type}>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('onlineShop.copySectionHint')}</p>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                  {t('onlineShop.headerTitle')}
+                </label>
+                <input
+                  value={catalogTitle}
+                  onChange={(e) => setCatalogTitle(e.target.value)}
+                  placeholder={shopDisplayName}
+                  className={inputClass}
+                />
+                <p className="mt-1 text-[11px] text-slate-400">{t('onlineShop.headerTitleHint')}</p>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                  {t('onlineShop.headerSubtitle')}
+                </label>
+                <input
+                  value={catalogSubtitle}
+                  onChange={(e) => setCatalogSubtitle(e.target.value)}
+                  className={inputClass}
+                />
+                <p className="mt-1 text-[11px] text-slate-400">{t('onlineShop.headerSubtitleHint')}</p>
+              </div>
+              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-3 dark:border-slate-600 dark:bg-slate-800/50">
+                <input
+                  type="checkbox"
+                  checked={headerShowShopName}
+                  onChange={(e) => setHeaderShowShopName(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-violet-600"
+                />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {t('onlineShop.headerShowShopName')}
+                </span>
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                    {t('onlineShop.homeCategoriesTitle')}
+                  </label>
+                  <input
+                    value={homeCategoriesTitle}
+                    onChange={(e) => setHomeCategoriesTitle(e.target.value)}
+                    placeholder={sf.shopCategories}
+                    className={inputClass}
+                  />
+                  <p className="mt-1 text-[11px] text-slate-400">{t('onlineShop.homeCategoriesTitleHint')}</p>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                    {t('onlineShop.homeHighlightsTitle')}
+                  </label>
+                  <input
+                    value={homeHighlightsTitle}
+                    onChange={(e) => setHomeHighlightsTitle(e.target.value)}
+                    placeholder={sf.shopHighlights}
+                    className={inputClass}
+                  />
+                  <p className="mt-1 text-[11px] text-slate-400">{t('onlineShop.homeHighlightsTitleHint')}</p>
+                </div>
+              </div>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                {sf.shopHighlights}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
+                    {t('onlineShop.collBestsellers')}
+                  </label>
+                  <input
+                    value={collBestsellers}
+                    onChange={(e) => setCollBestsellers(e.target.value)}
+                    placeholder={sf.bestsellers}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
+                    {t('onlineShop.collNewArrivals')}
+                  </label>
+                  <input
+                    value={collNewArrivals}
+                    onChange={(e) => setCollNewArrivals(e.target.value)}
+                    placeholder={sf.newArrivals}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
+                    {t('onlineShop.collOnSale')}
+                  </label>
+                  <input
+                    value={collOnSale}
+                    onChange={(e) => setCollOnSale(e.target.value)}
+                    placeholder={sf.onSale}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
+                    {t('onlineShop.collAvailableNow')}
+                  </label>
+                  <input
+                    value={collAvailableNow}
+                    onChange={(e) => setCollAvailableNow(e.target.value)}
+                    placeholder={sf.availableNow}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400">{t('onlineShop.collTitleHint')}</p>
+            </SectionCard>
+
             <SectionCard title={t('onlineShop.brandingSection')} icon={Globe}>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -397,28 +536,6 @@ export function MerchantOnlineShopPage() {
                   </label>
                 </div>
                 <p className="mt-1 text-[11px] text-slate-400">{t('onlineShop.storeLogoHint')}</p>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
-                  {t('onlineShop.catalogTitle')}
-                </label>
-                <input
-                  value={catalogTitle}
-                  onChange={(e) => setCatalogTitle(e.target.value)}
-                  placeholder={t('onlineShop.catalogTitleHint')}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">
-                  {t('onlineShop.catalogSubtitle')}
-                </label>
-                <input
-                  value={catalogSubtitle}
-                  onChange={(e) => setCatalogSubtitle(e.target.value)}
-                  placeholder={t('onlineShop.catalogSubtitleHint')}
-                  className={inputClass}
-                />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">

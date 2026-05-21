@@ -13,6 +13,7 @@ from django.utils import timezone
 from shops.models import Shop
 
 from .models import Expense, Purchase, Sale, SaleLine, Shareholder
+from .sale_line_flags import sale_line_flags
 from .serializers import latest_usd_to_iqd_for_shop
 
 INVENTORY_LOSS_NOTE_MARKERS = (
@@ -76,18 +77,29 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
         product_id = ln.product_id
         display_name = (ln.product.name if ln.product_id and ln.product is not None else ln.manual_name or "Manual line")
         key = (product_id, display_name)
+        flags = sale_line_flags(ln.unit_price_usd, ln.unit_buy_price_usd, net_qty)
         if key not in per_product:
             per_product[key] = {
                 "product_id": product_id,
                 "product_name": display_name,
                 "quantity_sold": 0,
+                "quantity_sold_at_zero": 0,
                 "total_buy": Decimal("0"),
                 "total_sale": Decimal("0"),
+                "total_loss_usd": Decimal("0"),
+                "has_loss_sales": False,
             }
         row = per_product[key]
         row["quantity_sold"] = int(row["quantity_sold"]) + net_qty
         row["total_buy"] = Decimal(row["total_buy"]) + line_buy
         row["total_sale"] = Decimal(row["total_sale"]) + line_sale
+        if flags["sold_at_zero"]:
+            row["quantity_sold_at_zero"] = int(row["quantity_sold_at_zero"]) + net_qty
+        if flags["sold_at_loss"]:
+            row["has_loss_sales"] = True
+            row["total_loss_usd"] = Decimal(row["total_loss_usd"]) + Decimal(
+                str(flags["line_loss_usd"]),
+            )
 
     sale_qs = Sale.objects.filter(
         shop_id=shop_id,
@@ -153,6 +165,12 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
                 "product_id": r["product_id"],
                 "product_name": r["product_name"],
                 "quantity_sold": str(qty),
+                "quantity_sold_at_zero": str(int(r.get("quantity_sold_at_zero") or 0)),
+                "has_loss_sales": bool(r.get("has_loss_sales")),
+                "total_loss_usd": format(
+                    Decimal(r.get("total_loss_usd") or Decimal("0")).quantize(Decimal("0.0001")),
+                    "f",
+                ),
                 "unit_buy_price_usd": format(ub, "f"),
                 "total_buy_price_usd": format(tb, "f"),
                 "unit_sale_price_usd": format(us, "f"),

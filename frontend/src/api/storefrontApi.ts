@@ -22,9 +22,17 @@ export type StorefrontDeliveryZone = {
   delivery_fee_usd: string
 }
 
+export type StorefrontHomeCollectionTitles = Partial<
+  Record<'bestsellers' | 'new_arrivals' | 'on_sale' | 'available_now' | 'favorites', string>
+>
+
 export type PublicStorefrontAppearance = {
   catalog_title: string
   catalog_subtitle: string
+  header_show_shop_name?: boolean
+  home_categories_title?: string
+  home_highlights_title?: string
+  home_collection_titles?: StorefrontHomeCollectionTitles
   welcome_message: string
   logo_url: string | null
   accent_color: string

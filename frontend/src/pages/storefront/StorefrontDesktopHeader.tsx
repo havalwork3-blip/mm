@@ -7,6 +7,7 @@ import { categoryDisplayName } from '../../lib/categoryNames'
 import { useStorefrontCatalog } from './storefrontCatalogContext'
 import { useStorefrontShop } from './StorefrontShopContext'
 import { storefrontStrings } from './storefrontStrings'
+import { storefrontHeaderSubtitle, storefrontHeaderTitle } from './storefrontDisplay'
 import { accentAlpha, SF_DESKTOP_SHELL } from './storefrontTheme'
 
 type Props = {
@@ -66,6 +67,8 @@ export function StorefrontDesktopHeader({
   const [query, setQuery] = useState(search)
   const logoSrc = resolveMediaUrl(appearance.logo_url ?? null)
   const navDark = darkenHex(accent, 0.72)
+  const headerTitle = storefrontHeaderTitle(appearance, shopName)
+  const headerSubtitle = storefrontHeaderSubtitle(appearance)
 
   useEffect(() => {
     setQuery(search)
@@ -102,12 +105,16 @@ export function StorefrontDesktopHeader({
                 shopName.charAt(0) || 'M'
               )}
             </span>
-            <div className="min-w-0 max-w-[12rem]">
-              <p className="truncate text-[15px] font-extrabold">{shopName}</p>
-              <p className="truncate text-[11px] text-white/75">
-                {appearance.catalog_subtitle || s.shopTagline}
-              </p>
-            </div>
+            {(headerTitle || headerSubtitle) ? (
+              <div className="min-w-0 max-w-[12rem]">
+                {headerTitle ? (
+                  <p className="truncate text-[15px] font-extrabold">{headerTitle}</p>
+                ) : null}
+                {headerSubtitle ? (
+                  <p className="truncate text-[11px] text-white/75">{headerSubtitle}</p>
+                ) : null}
+              </div>
+            ) : null}
           </button>
 
           <form

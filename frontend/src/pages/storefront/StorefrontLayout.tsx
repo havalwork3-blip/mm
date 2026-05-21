@@ -17,6 +17,10 @@ import { StorefrontSearchOverlay } from './StorefrontSearchOverlay'
 import { StorefrontSidebar } from './StorefrontSidebar'
 import { storefrontStrings } from './storefrontStrings'
 import {
+  storefrontHeaderSubtitle,
+  storefrontHeaderTitle,
+} from './storefrontDisplay'
+import {
   accentAlpha,
   resolveAccent,
   SF_INSET_X,
@@ -64,6 +68,8 @@ export function StorefrontLayout() {
 
   const accent = resolveAccent(appearance.accent_color)
   const logoSrc = resolveMediaUrl(appearance.logo_url ?? null)
+  const headerTitle = storefrontHeaderTitle(appearance, shopName)
+  const headerSubtitle = storefrontHeaderSubtitle(appearance)
   const lines = useCartStore((st) => st.lines)
   const count = cartItemCount(lines)
 
@@ -168,14 +174,18 @@ export function StorefrontLayout() {
                     shopName.charAt(0) || 'M'
                   )}
                 </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-extrabold tracking-tight text-slate-900">
-                    {shopName}
-                  </p>
-                  <p className="truncate text-[10px] font-medium text-slate-500">
-                    {appearance.catalog_subtitle || s.shopTagline}
-                  </p>
-                </div>
+                {(headerTitle || headerSubtitle) ? (
+                  <div className="min-w-0 flex-1">
+                    {headerTitle ? (
+                      <p className="truncate text-[13px] font-extrabold tracking-tight text-slate-900">
+                        {headerTitle}
+                      </p>
+                    ) : null}
+                    {headerSubtitle ? (
+                      <p className="truncate text-[10px] font-medium text-slate-500">{headerSubtitle}</p>
+                    ) : null}
+                  </div>
+                ) : null}
               </button>
 
               <div className="flex shrink-0 items-center gap-1.5">

@@ -7,7 +7,8 @@ import { UsdIqdDualInput } from '../../components/UsdIqdDualInput'
 import { useLocale } from '../../context/LocaleContext'
 import { useShopExchangeRate } from '../../hooks/useShopExchangeRate'
 import { useSyncedSession } from '../../hooks/useSyncedSession'
-import { resolveMediaUrl } from '../../lib/api'
+import { apiJson, resolveMediaUrl } from '../../lib/api'
+import { categoryDisplayName } from '../../lib/categoryNames'
 import { formatMoney2, parseDec, usdToIqdString } from '../../lib/moneyInput'
 import {
   fetchStorefrontDeliveryZones,
@@ -71,8 +72,16 @@ function zoneUiFromDraft(d: DeliveryZoneDraft, key: string): ZoneUiRow {
   return { ...d, key }
 }
 
+type CategoryOption = {
+  id: number
+  name_ku: string
+  name_ar: string
+  name_en: string
+  name: string
+}
+
 export function MerchantOnlinePricingPage() {
-  const { t } = useLocale()
+  const { t, lang } = useLocale()
   const { me, authPending, showLogin, canAccessShopData, needsShop } = useSyncedSession()
 
   const [rows, setRows] = useState<OnlineProductPricingRow[]>([])
@@ -82,6 +91,10 @@ export function MerchantOnlinePricingPage() {
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [search, setSearch] = useState('')
+  const [categoryFilterId, setCategoryFilterId] = useState<number | null>(null)
+  const [categories, setCategories] = useState<
+    Array<{ id: number; name_ku: string; name_ar: string; name_en: string; name: string }>
+  >([])
 
   const [bulkPercent, setBulkPercent] = useState('')
   const [bulkMinQty, setBulkMinQty] = useState('1')
@@ -137,9 +150,26 @@ export function MerchantOnlinePricingPage() {
     }
   }, [rate])
 
+  const loadCategories = useCallback(async () => {
+    try {
+      const data = await apiJson<CategoryOption[] | { results: CategoryOption[] }>(
+        '/api/categories/',
+        { shopScoped: true },
+      )
+      const list = Array.isArray(data) ? data : (data.results ?? [])
+      setCategories(list)
+    } catch {
+      setCategories([])
+    }
+  }, [])
+
   useEffect(() => {
     if (canAccessShopData) void load()
   }, [canAccessShopData, load])
+
+  useEffect(() => {
+    if (canAccessShopData) void loadCategories()
+  }, [canAccessShopData, loadCategories])
 
   useEffect(() => {
     if (canAccessShopData) void loadZones()
@@ -152,14 +182,18 @@ export function MerchantOnlinePricingPage() {
   }, [saved])
 
   const filtered = useMemo(() => {
+    let list = rows
+    if (categoryFilterId != null) {
+      list = list.filter((r) => r.category_id === categoryFilterId)
+    }
     const q = search.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter(
+    if (!q) return list
+    return list.filter(
       (r) =>
         r.name.toLowerCase().includes(q) ||
         r.category_name.toLowerCase().includes(q),
     )
-  }, [rows, search])
+  }, [rows, search, categoryFilterId])
 
   function setDraft(id: number, patch: Partial<RowDraft>) {
     setDrafts((prev) => ({
@@ -529,6 +563,43 @@ export function MerchantOnlinePricingPage() {
           </button>
         </div>
       </section>
+
+      <div className="space-y-3">
+        {categories.length > 0 ? (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {t('onlinePricing.filterCategory')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setCategoryFilterId(null)}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  categoryFilterId === null
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'border border-slate-200 bg-white text-slate-700 hover:border-emerald-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200'
+                }`}
+              >
+                {t('onlinePricing.allCategories')}
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setCategoryFilterId(cat.id)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    categoryFilterId === cat.id
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'border border-slate-200 bg-white text-slate-700 hover:border-emerald-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200'
+                  }`}
+                >
+                  {categoryDisplayName(cat, lang)}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <input

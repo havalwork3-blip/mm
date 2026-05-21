@@ -1,4 +1,4 @@
-import type { StorefrontSocialLink } from '../api/storefrontApi'
+import type { StorefrontHomeCollectionTitles, StorefrontSocialLink } from '../api/storefrontApi'
 import { apiJson } from './api'
 import type { StorefrontFaqItem } from '../api/storefrontApi'
 
@@ -13,6 +13,10 @@ export type MerchantStorefrontSettings = {
   shop: number
   catalog_title: string
   catalog_subtitle: string
+  header_show_shop_name: boolean
+  home_categories_title: string
+  home_highlights_title: string
+  home_collection_titles: StorefrontHomeCollectionTitles
   welcome_message: string
   logo_url: string | null
   accent_color: string
@@ -71,6 +75,10 @@ export type MerchantStorefrontSettingsPatch = Partial<
     MerchantStorefrontSettings,
     | 'catalog_title'
     | 'catalog_subtitle'
+    | 'header_show_shop_name'
+    | 'home_categories_title'
+    | 'home_highlights_title'
+    | 'home_collection_titles'
     | 'welcome_message'
     | 'accent_color'
     | 'banner_rotate_seconds'

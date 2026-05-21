@@ -13,6 +13,8 @@ from shops.scoping import require_shop_id
 
 from shops.models import Shop
 
+from .sale_line_flags import sale_line_flags
+
 from .models import (
     Category,
     Company,
@@ -401,6 +403,7 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
 class OnlineProductPricingSerializer(serializers.ModelSerializer):
     """Merchant online storefront price + discount per product."""
 
+    category_id = serializers.IntegerField(source="category_id", read_only=True)
     category_name = serializers.CharField(source="category.name", read_only=True)
     sale_price_retail = serializers.DecimalField(
         max_digits=18,
@@ -415,6 +418,7 @@ class OnlineProductPricingSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "category_id",
             "category_name",
             "sale_price_retail",
             "online_sale_price",
@@ -428,6 +432,7 @@ class OnlineProductPricingSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "name",
+            "category_id",
             "category_name",
             "sale_price_retail",
             "current_stock_quantity",
@@ -1270,6 +1275,9 @@ class SaleLineNestedSerializer(serializers.ModelSerializer):
     )
     product_name = serializers.SerializerMethodField(read_only=True)
     returned_quantity = serializers.SerializerMethodField(read_only=True)
+    sold_at_zero = serializers.SerializerMethodField(read_only=True)
+    sold_at_loss = serializers.SerializerMethodField(read_only=True)
+    line_loss_usd = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = SaleLine
@@ -1282,8 +1290,19 @@ class SaleLineNestedSerializer(serializers.ModelSerializer):
             "unit_price_usd",
             "unit_buy_price_usd",
             "returned_quantity",
+            "sold_at_zero",
+            "sold_at_loss",
+            "line_loss_usd",
         ]
-        read_only_fields = ["id", "unit_buy_price_usd", "product_name", "returned_quantity"]
+        read_only_fields = [
+            "id",
+            "unit_buy_price_usd",
+            "product_name",
+            "returned_quantity",
+            "sold_at_zero",
+            "sold_at_loss",
+            "line_loss_usd",
+        ]
 
     def get_product_name(self, obj: SaleLine) -> str:
         if obj.product_id and obj.product is not None:
@@ -1314,9 +1333,26 @@ class SaleLineNestedSerializer(serializers.ModelSerializer):
         # Uses prefetched return_lines from SaleViewSet queryset when available.
         return sum(int(row.quantity) for row in obj.return_lines.all())
 
+    def _flags(self, obj: SaleLine) -> dict:
+        return sale_line_flags(
+            obj.unit_price_usd,
+            obj.unit_buy_price_usd,
+            obj.quantity,
+        )
+
+    def get_sold_at_zero(self, obj: SaleLine) -> bool:
+        return bool(self._flags(obj)["sold_at_zero"])
+
+    def get_sold_at_loss(self, obj: SaleLine) -> bool:
+        return bool(self._flags(obj)["sold_at_loss"])
+
+    def get_line_loss_usd(self, obj: SaleLine) -> str:
+        return str(self._flags(obj)["line_loss_usd"])
+
 
 class SaleSerializer(serializers.ModelSerializer):
     lines = SaleLineNestedSerializer(many=True)
+    has_loss_sale = serializers.SerializerMethodField(read_only=True)
     customer_phone = serializers.SerializerMethodField(read_only=True)
     customer_name = serializers.SerializerMethodField(read_only=True)
     customer_address = serializers.SerializerMethodField(read_only=True)
@@ -1345,10 +1381,17 @@ class SaleSerializer(serializers.ModelSerializer):
             "has_returns",
             "returned_total_usd",
             "return_lines_summary",
+            "has_loss_sale",
             "lines",
             "created_at",
         ]
-        read_only_fields = ["id", "shop", "receipt_number", "created_at"]
+        read_only_fields = ["id", "shop", "receipt_number", "created_at", "has_loss_sale"]
+
+    def get_has_loss_sale(self, obj: Sale) -> bool:
+        for ln in obj.lines.all():
+            if sale_line_flags(ln.unit_price_usd, ln.unit_buy_price_usd, ln.quantity)["sold_at_loss"]:
+                return True
+        return False
 
     def get_customer_phone(self, obj: Sale) -> str:
         c = obj.customer

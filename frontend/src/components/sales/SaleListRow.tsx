@@ -2,11 +2,13 @@ import { Pencil, Printer } from 'lucide-react'
 import { memo, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 
+import { SaleLossBadge } from './SaleLossBadge'
 import {
   buildReceiptHtml,
   computeReceiptSummaryFromSale,
   printReceiptHtml,
 } from '../../lib/receiptHtml'
+import { saleHasLossLines, saleLineFlagsFromRow } from '../../lib/saleLineFlags'
 import { formatSaleReceiptNumber } from '../../lib/shopReceiptNumbers'
 import type { ReceiptSettingsRow, SaleListRow as SaleRow } from '../../types/api'
 import { formatMoney } from '../../utils/inventoryFormat'
@@ -57,6 +59,8 @@ export const SaleListRow = memo(function SaleListRowCard({
   const customerPhone = sale.customer_phone?.trim() || ''
   const customerAddress = sale.customer_address?.trim() || ''
   const hasReturns = Boolean(sale.has_returns)
+  const hasLossSale = Boolean(sale.has_loss_sale) || saleHasLossLines(saleLines)
+  const anySoldAtZero = saleLines.some((ln) => saleLineFlagsFromRow(ln).soldAtZero)
   const returnedTotalUsd = parseFloat(String(sale.returned_total_usd ?? '0')) || 0
   const receiptNo = formatSaleReceiptNumber(sale.receipt_number)
 
@@ -95,6 +99,11 @@ export const SaleListRow = memo(function SaleListRowCard({
           </p>
           {customerAddress ? (
             <p className="text-xs text-slate-500 dark:text-slate-400">{customerAddress}</p>
+          ) : null}
+          {hasLossSale ? (
+            <p className="mt-1">
+              <SaleLossBadge soldAtLoss soldAtZero={anySoldAtZero} compact />
+            </p>
           ) : null}
           {hasReturns ? (
             <p className="mt-1 inline-flex rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:border-emerald-700/40 dark:bg-emerald-900/30 dark:text-emerald-200">
@@ -221,10 +230,20 @@ export const SaleListRow = memo(function SaleListRowCard({
             <tbody>
               {saleLines.map((ln) => {
                 const lineTot = Number(ln.quantity) * parseFloat(String(ln.unit_price_usd))
+                const flags = saleLineFlagsFromRow(ln)
                 return (
                   <tr key={ln.id} className="odd:bg-white even:bg-slate-50/70 dark:odd:bg-slate-800 dark:even:bg-slate-800/60">
                     <td className="border-b border-e border-slate-200 px-2 py-2 text-sm dark:border-slate-700">
-                      <div>{ln.product_name}</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span>{ln.product_name}</span>
+                        {flags.soldAtLoss ? (
+                          <SaleLossBadge
+                            soldAtZero={flags.soldAtZero}
+                            soldAtLoss={flags.soldAtLoss}
+                            compact
+                          />
+                        ) : null}
+                      </div>
                       {(ln.returned_quantity ?? 0) > 0 ? (
                         <div className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
                           {t('sales.returnedQty').replace('{qty}', String(ln.returned_quantity ?? 0))}
