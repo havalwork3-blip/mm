@@ -22,19 +22,23 @@ import { PageAuthLoading } from '../../components/PageAuthLoading'
 import { useLocale } from '../../context/LocaleContext'
 import { notifyOnlineOrdersChanged } from '../../hooks/useOnlineOrdersPendingCount'
 import { useSyncedSession } from '../../hooks/useSyncedSession'
+import { apiJson } from '../../lib/api'
 import {
   fetchMerchantStorefrontOrders,
   patchMerchantStorefrontOrderStatus,
 } from '../../lib/merchantStorefrontApi'
+import { fetchMerchantStorefrontSettings } from '../../lib/merchantStorefrontSettingsApi'
 import {
   buildStorefrontOrderReceiptHtml,
   downloadStorefrontOrderReceiptPdf,
   printStorefrontOrderReceipt,
+  stripMapsUrlFromAddress,
   type StorefrontOrderReceiptLabels,
 } from '../../lib/storefrontOrderReceipt'
 import { buildWhatsAppUrl } from '../../lib/whatsappUrl'
 import type {
   MerchantStorefrontOrderRow,
+  ReceiptSettingsRow,
   StorefrontOrderStatus,
 } from '../../types/api'
 
@@ -131,10 +135,28 @@ export function MerchantOnlineOrdersPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [detailOrder, setDetailOrder] = useState<MerchantStorefrontOrderRow | null>(null)
   const [updatingId, setUpdatingId] = useState<number | null>(null)
+  const [receiptLogoUrl, setReceiptLogoUrl] = useState<string | null>(null)
 
   useEffect(() => {
     setShopOverride(shopImpersonation ?? '')
   }, [shopImpersonation])
+
+  useEffect(() => {
+    if (!me || !canAccessShopData) return
+    void (async () => {
+      try {
+        const [storefront, receipt] = await Promise.all([
+          fetchMerchantStorefrontSettings().catch(() => null),
+          apiJson<ReceiptSettingsRow>('/api/receipt-settings/', { shopScoped: true }).catch(
+            () => null
+          ),
+        ])
+        setReceiptLogoUrl(storefront?.logo_url ?? receipt?.logo_url ?? null)
+      } catch {
+        setReceiptLogoUrl(null)
+      }
+    })()
+  }, [me, canAccessShopData])
 
   const loadOrders = useCallback(async () => {
     setLoading(true)
@@ -459,6 +481,7 @@ export function MerchantOnlineOrdersPage() {
               t={t}
               statusLabel={statusLabel}
               receiptLabels={receiptLabels}
+              receiptLogoUrl={receiptLogoUrl}
               onToggleExpand={() =>
                 setExpandedId((id) => (id === order.id ? null : order.id))
               }
@@ -477,6 +500,7 @@ export function MerchantOnlineOrdersPage() {
           t={t}
           statusLabel={statusLabel}
           receiptLabels={receiptLabels}
+          receiptLogoUrl={receiptLogoUrl}
           onClose={() => setDetailOrder(null)}
           onStatusChange={(s) => void handleStatusChange(detailOrder.id, s)}
         />
@@ -538,6 +562,7 @@ function receiptHtmlForOrder(
   order: MerchantStorefrontOrderRow,
   args: {
     shopName?: string
+    logoUrl?: string | null
     labels: StorefrontOrderReceiptLabels
     statusLabel: (s: StorefrontOrderStatus) => string
   }
@@ -547,6 +572,7 @@ function receiptHtmlForOrder(
   return buildStorefrontOrderReceiptHtml({
     order,
     shopName: args.shopName,
+    logoUrl: args.logoUrl,
     labels: args.labels,
     dateFormatted: formatDateTime(order.created_at),
     statusText: args.statusLabel(order.status),
@@ -588,25 +614,10 @@ function WhatsAppPhoneLink({
 }
 
 function AddressText({ address }: { address: string }) {
-  const urlMatch = address.match(/https?:\/\/\S+/i)
-  const mapUrl = urlMatch?.[0] ?? null
-  const text = mapUrl ? address.replace(mapUrl, '').trim() : address
+  const text = stripMapsUrlFromAddress(address)
+  if (!text) return null
   return (
-    <div className="min-w-0 text-sm text-slate-600 dark:text-slate-400">
-      {text ? <p className="leading-relaxed">{text}</p> : null}
-      {mapUrl ? (
-        <a
-          href={mapUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:underline dark:text-violet-400"
-        >
-          <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          Google Maps
-          <ExternalLink className="h-3 w-3 shrink-0 opacity-60" aria-hidden />
-        </a>
-      ) : null}
-    </div>
+    <p className="min-w-0 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{text}</p>
   )
 }
 
@@ -663,6 +674,7 @@ function OrderTotalsPanel({
 function OrderReceiptActions({
   order,
   shopName,
+  logoUrl,
   labels,
   statusLabel,
   t,
@@ -670,12 +682,13 @@ function OrderReceiptActions({
 }: {
   order: MerchantStorefrontOrderRow
   shopName?: string
+  logoUrl?: string | null
   labels: StorefrontOrderReceiptLabels
   statusLabel: (s: StorefrontOrderStatus) => string
   t: (k: string) => string
   compact?: boolean
 }) {
-  const html = receiptHtmlForOrder(order, { shopName, labels, statusLabel })
+  const html = receiptHtmlForOrder(order, { shopName, logoUrl, labels, statusLabel })
   const btn =
     'inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition'
   return (
@@ -745,6 +758,7 @@ function OrderCard({
   t,
   statusLabel,
   receiptLabels,
+  receiptLogoUrl,
   onToggleExpand,
   onStatusChange,
   onOpenDetail,
@@ -756,6 +770,7 @@ function OrderCard({
   t: (k: string) => string
   statusLabel: (s: StorefrontOrderStatus) => string
   receiptLabels: StorefrontOrderReceiptLabels
+  receiptLogoUrl?: string | null
   onToggleExpand: () => void
   onStatusChange: (s: StorefrontOrderStatus) => void
   onOpenDetail: () => void
@@ -820,6 +835,7 @@ function OrderCard({
         <OrderReceiptActions
           order={order}
           shopName={shopName}
+          logoUrl={receiptLogoUrl}
           labels={receiptLabels}
           statusLabel={statusLabel}
           t={t}
@@ -868,6 +884,7 @@ function OrderDetailModal({
   t,
   statusLabel,
   receiptLabels,
+  receiptLogoUrl,
   onClose,
   onStatusChange,
 }: {
@@ -877,6 +894,7 @@ function OrderDetailModal({
   t: (k: string) => string
   statusLabel: (s: StorefrontOrderStatus) => string
   receiptLabels: StorefrontOrderReceiptLabels
+  receiptLogoUrl?: string | null
   onClose: () => void
   onStatusChange: (s: StorefrontOrderStatus) => void
 }) {
@@ -980,6 +998,7 @@ function OrderDetailModal({
           <OrderReceiptActions
             order={order}
             shopName={shopName}
+            logoUrl={receiptLogoUrl}
             labels={receiptLabels}
             statusLabel={statusLabel}
             t={t}
