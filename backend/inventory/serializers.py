@@ -459,8 +459,8 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
 class OnlineProductPricingSerializer(serializers.ModelSerializer):
     """Merchant online storefront price + discount per product."""
 
-    category_id = serializers.IntegerField(source="category_id", read_only=True)
-    category_name = serializers.CharField(source="category.name", read_only=True)
+    category_id = serializers.IntegerField(read_only=True)
+    category_name = serializers.SerializerMethodField(read_only=True)
     sale_price_retail = serializers.DecimalField(
         max_digits=18,
         decimal_places=4,
@@ -501,6 +501,10 @@ class OnlineProductPricingSerializer(serializers.ModelSerializer):
             "gallery_images",
             "effective_price",
         ]
+
+    def get_category_name(self, obj: Product) -> str:
+        cat = getattr(obj, "category", None)
+        return getattr(cat, "name", "") or ""
 
     def get_image_url(self, obj: Product) -> str | None:
         if not obj.image:
