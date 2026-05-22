@@ -1,5 +1,6 @@
 import { Heart, Loader2, PackageOpen, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import {
   fetchPublicCatalog,
@@ -230,7 +231,33 @@ export function StorefrontCatalog() {
 
   const showBrowseChrome = view !== 'product' && !loading && !error && totalProducts > 0
 
+  const productOverlay =
+    selectedProduct && view === 'product' && shopId != null ? (
+      <StorefrontProductDetail
+        shopId={shopId}
+        product={selectedProduct}
+        categoryName={productCategoryName}
+        accent={accent}
+        inCart={qtyInCart(selectedProduct.id)}
+        labels={{
+          back: s.backToProducts,
+          orderNow: s.orderNow,
+          productDetails: s.productDetails,
+          added: s.addedToCart,
+          quantity: s.quantity,
+          usd: s.usd,
+          inCart: s.inCart,
+          addToFavorites: s.addToFavorites,
+          removeFromFavorites: s.removeFromFavorites,
+          ...availabilityLabels,
+        }}
+        onBack={backFromProduct}
+        onAdd={handleAddFromDetail}
+      />
+    ) : null
+
   return (
+    <>
     <div className="sf-catalog w-full pb-4 sm:pb-6">
       {showBrowseChrome ? (
         <StorefrontHeroCarousel
@@ -391,29 +418,10 @@ export function StorefrontCatalog() {
         </div>
       )}
 
-      {selectedProduct && view === 'product' && shopId != null ? (
-        <StorefrontProductDetail
-          shopId={shopId}
-          product={selectedProduct}
-          categoryName={productCategoryName}
-          accent={accent}
-          inCart={qtyInCart(selectedProduct.id)}
-          labels={{
-            back: s.backToProducts,
-            orderNow: s.orderNow,
-            productDetails: s.productDetails,
-            added: s.addedToCart,
-            quantity: s.quantity,
-            usd: s.usd,
-            inCart: s.inCart,
-            addToFavorites: s.addToFavorites,
-            removeFromFavorites: s.removeFromFavorites,
-            ...availabilityLabels,
-          }}
-          onBack={backFromProduct}
-          onAdd={handleAddFromDetail}
-        />
-      ) : null}
     </div>
+    {typeof document !== 'undefined' && productOverlay
+      ? createPortal(productOverlay, document.body)
+      : null}
+    </>
   )
 }

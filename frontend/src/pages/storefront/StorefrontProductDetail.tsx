@@ -101,20 +101,20 @@ export function StorefrontProductDetail({
 
   return (
     <div
-      className="sf-product-sheet fixed inset-0 z-[100] flex flex-col bg-[#fafbfc]"
+      className="sf-product-sheet fixed inset-0 z-[110] flex flex-col bg-[#fafbfc]"
       role="dialog"
       aria-modal="true"
       aria-label={product.name}
     >
       <header
-        className="sf-glass-strong flex shrink-0 items-center gap-3 border-b border-white/60 px-4 py-3.5 pt-[max(0.75rem,env(safe-area-inset-top))]"
+        className="sf-product-sheet-header sf-glass-strong relative z-20 flex shrink-0 items-center gap-3 border-b border-white/60 px-4 py-3.5 pt-[max(0.75rem,env(safe-area-inset-top))]"
       >
         <StorefrontBackButton
           label={labels.back}
           onClick={onBack}
           variant="accent"
           accent={accent}
-          showLabel={false}
+          showLabel
         />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-slate-900">{product.name}</p>
