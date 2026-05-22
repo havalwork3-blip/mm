@@ -253,39 +253,18 @@ class QrLandingManagerTelegramSendNowView(APIView):
     permission_classes = [IsAuthenticated, IsSuperuser]
 
     def post(self, request):
-        import logging
-        import threading
-
         from shops.manager_daily_telegram import send_manager_daily_digest
-        from shops.models import Shop
 
-        logger = logging.getLogger(__name__)
         s = QrLandingSettings.load()
-        shop_count = Shop.objects.count()
-        if shop_count == 0:
-            return Response(
-                {"ok": False, "detail": "No shops in system.", "shops": 0},
-                status=400,
-            )
-
-        def _run_digest() -> None:
-            try:
-                fresh = QrLandingSettings.load()
-                send_manager_daily_digest(fresh, force=True)
-            except Exception:
-                logger.exception("Manager Telegram background digest failed")
-
-        threading.Thread(target=_run_digest, daemon=True).start()
+        result = send_manager_daily_digest(s, force=True)
         return Response(
             {
-                "ok": True,
-                "status": "sending",
-                "shops": shop_count,
-                "sent": 0,
-                "message": (
-                    f"Digest started for {shop_count} shop(s). "
-                    "Each shop arrives in a separate Telegram message."
-                ),
+                "ok": result.get("shop_ok", 0) > 0 or result.get("sent", 0) > 0,
+                "sent": result.get("sent", 0),
+                "shops": result.get("shops", 0),
+                "shop_ok": result.get("shop_ok", 0),
+                "messages": result.get("messages", 0),
+                "failed": result.get("failed", []),
             },
         )
 

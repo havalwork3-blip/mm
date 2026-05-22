@@ -4,6 +4,8 @@ import {
   ChevronUp,
   Clock,
   ExternalLink,
+  Copy,
+  Check,
   FileDown,
   Loader2,
   MapPin,
@@ -32,10 +34,10 @@ import {
   buildStorefrontOrderReceiptHtml,
   downloadStorefrontOrderReceiptPdf,
   printStorefrontOrderReceipt,
-  stripMapsUrlFromAddress,
   type StorefrontOrderReceiptLabels,
   type StorefrontOrderReceiptShopInfo,
 } from '../../lib/storefrontOrderReceipt'
+import { parseOrderAddressLocation } from '../../lib/orderAddressLocation'
 import { buildWhatsAppUrl } from '../../lib/whatsappUrl'
 import type {
   MerchantStorefrontOrderRow,
@@ -619,11 +621,75 @@ function WhatsAppPhoneLink({
   )
 }
 
-function AddressText({ address }: { address: string }) {
-  const text = stripMapsUrlFromAddress(address)
-  if (!text) return null
+function OrderAddressBlock({
+  address,
+  t,
+}: {
+  address: string
+  t: (k: string) => string
+}) {
+  const parsed = useMemo(() => parseOrderAddressLocation(address), [address])
+  const [copied, setCopied] = useState(false)
+
+  if (!parsed.displayText && !parsed.copyText) return null
+
+  async function copyLocation() {
+    const text = parsed.copyText
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 2000)
+  }
+
+  const hasLocation = Boolean(parsed.mapsUrl || parsed.coordsText)
+
   return (
-    <p className="min-w-0 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{text}</p>
+    <div className="min-w-0 flex-1">
+      {parsed.displayText ? (
+        <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+          {parsed.displayText}
+        </p>
+      ) : null}
+      {hasLocation ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void copyLocation()}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 ring-1 ring-violet-200/80 transition hover:bg-violet-100 dark:bg-violet-950/50 dark:text-violet-300 dark:ring-violet-800/50 dark:hover:bg-violet-950"
+          >
+            {copied ? (
+              <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
+            ) : (
+              <Copy className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            )}
+            <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {copied ? t('onlineOrders.locationCopied') : t('onlineOrders.copyLocation')}
+          </button>
+          {parsed.mapsUrl ? (
+            <a
+              href={parsed.mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50 dark:text-slate-300 dark:ring-slate-600 dark:hover:bg-slate-800"
+            >
+              {t('onlineOrders.openMaps')}
+              <ExternalLink className="h-3 w-3 shrink-0 opacity-60" aria-hidden />
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -808,7 +874,7 @@ function OrderCard({
             <WhatsAppPhoneLink phone={order.customer_phone} t={t} />
             <div className="mt-3 flex items-start gap-2 border-t border-slate-100 pt-3 dark:border-slate-700">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" aria-hidden />
-              <AddressText address={order.customer_address} />
+              <OrderAddressBlock address={order.customer_address} t={t} />
             </div>
           </div>
 
@@ -977,7 +1043,7 @@ function OrderDetailModal({
                 {t('onlineOrders.colAddress')}
               </dt>
               <dd className="mt-1">
-                <AddressText address={order.customer_address} />
+                <OrderAddressBlock address={order.customer_address} t={t} />
               </dd>
             </div>
           </dl>

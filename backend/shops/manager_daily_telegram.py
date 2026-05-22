@@ -1,4 +1,4 @@
-"""Daily manager digest — all shops' jard + dashboard stats via Telegram."""
+"""Daily manager digest — all shops in one Telegram message (clear sections per shop)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import html
 import logging
 import os
 import time
-from datetime import date, datetime, time as dt_time
+from datetime import date
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -15,9 +15,9 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 TELEGRAM_MSG_LIMIT = 4090
-MAX_PRODUCT_LINES_PER_CATEGORY = 8
-MAX_TOTAL_PRODUCT_LINES = 22
-TELEGRAM_SEND_DELAY_SEC = 0.45
+TELEGRAM_SEND_DELAY_SEC = 0.35
+# Per shop inside combined message (keep compact so 3+ shops fit one message)
+MAX_PRODUCT_LINES_PER_SHOP = 5
 
 
 def _business_tz():
@@ -74,32 +74,7 @@ def shop_daily_stats(shop_id: int, d: date) -> dict:
     }
 
 
-def format_intro_message(report_date: date, shops: list) -> str:
-    active_count = sum(1 for s in shops if s.is_active)
-    lines = [
-        f"<b>📊 ڕاپۆرتی ڕۆژانەی بەڕێوەبەر</b>",
-        f"📅 <code>{report_date.isoformat()}</code>",
-        "",
-        f"ژمارەی فرۆشگا: <b>{len(shops)}</b> (چالاک: {active_count})",
-        "",
-        "<b>📋 لیستی فرۆشگاکان</b>",
-    ]
-    for idx, shop in enumerate(shops, start=1):
-        status = "✅" if shop.is_active else "⏸"
-        lines.append(f"  <b>{idx}.</b> {status} {_esc(shop.name)}")
-    lines.extend(
-        [
-            "",
-            "⬇️ <i>لە خوارەوە هەر فرۆشگایەک لە پەیامێکی جیادا — بەبێ تێکەڵبوون.</i>",
-        ],
-    )
-    text = "\n".join(lines)
-    if len(text) > TELEGRAM_MSG_LIMIT:
-        text = text[: TELEGRAM_MSG_LIMIT - 20] + "\n<i>…</i>"
-    return text
-
-
-def format_shop_jard_message(
+def format_shop_section(
     *,
     shop_name: str,
     shop_index: int,
@@ -109,72 +84,74 @@ def format_shop_jard_message(
     stats: dict,
     jard: dict,
 ) -> str:
+    """One shop block inside the combined daily list."""
     status = "✅ چالاک" if is_active else "⏸ ناچالاک"
     lines = [
-        "━━━━━━━━━━━━━━━━━━━━",
-        f"<b>[{shop_index}/{shop_total}] 🏪 {_esc(shop_name)}</b>",
-        f"<i>{status}</i>",
-        "",
-        f"<b>📊 ئامارەکانی ڕۆژ</b> — <code>{report_date.isoformat()}</code>",
-        f"• فرۆشتن: <b>${_usd(stats['sales_usd'])}</b>",
-        f"• خەرجی: ${_usd(stats['expenses_usd'])}",
-        f"• قازانج: <b>${_usd(stats['profit_usd'])}</b>",
-        f"• داشکاندن: ${_usd(stats['discounts_usd'])}",
-        f"• گەڕاوە: ${_usd(stats['returned_usd'])}",
-        f"• قەرزی کڕیار: ${_usd(stats['receivables_usd'])}",
-        f"• بەهای کۆگا: <b>${_usd(stats['stock_usd'])}</b>",
-        f"• قاسە: ${_usd(stats['cash_drawer_usd'])}",
-        "",
-        "<b>📋 جەرد — کورتە</b>",
-        f"• بەرهەم: {jard['product_count']}",
-        f"• ماوە: <b>{jard['total_remaining_qty']}</b> دانە | ${_usd(jard['total_remaining_value_usd'])}",
-        f"• فرۆشراو ئەمڕۆ: <b>{jard['total_sold_qty']}</b> دانە | ${_usd(jard['total_sold_value_usd'])}",
-        "",
+        "────────────────────",
+        f"<b>{shop_index}. 🏪 {_esc(shop_name)}</b>  <i>{status}</i>",
+        f"📊 فرۆشتن <b>${_usd(stats['sales_usd'])}</b> | قازانج <b>${_usd(stats['profit_usd'])}</b> | خەرجی ${_usd(stats['expenses_usd'])}",
+        f"📦 کۆگا ${_usd(stats['stock_usd'])} | قاسە ${_usd(stats['cash_drawer_usd'])} | قەرز ${_usd(stats['receivables_usd'])}",
+        (
+            f"📋 جەرد: {jard['product_count']} بەرهەم | ماوە {jard['total_remaining_qty']} دانە "
+            f"(${_usd(jard['total_remaining_value_usd'])}) | ئەمڕۆ فرۆش {jard['total_sold_qty']} "
+            f"(${_usd(jard['total_sold_value_usd'])})"
+        ),
     ]
 
-    categories = sorted(
-        jard["by_category"].items(),
-        key=lambda item: item[0].casefold(),
-    )
-    shown_total = 0
-    truncated = False
-    for cat_name, products in categories:
-        if truncated:
-            break
-        lines.append(f"<b>📂 {_esc(cat_name)}</b>")
-        shown_in_cat = 0
-        for p in products:
-            if shown_total >= MAX_TOTAL_PRODUCT_LINES:
-                truncated = True
-                extra = jard["product_count"] - shown_total
-                if extra > 0:
-                    lines.append(f"  <i>… +{extra} بەرهەم زیاتر</i>")
-                break
-            if shown_in_cat >= MAX_PRODUCT_LINES_PER_CATEGORY:
-                extra_cat = len(products) - MAX_PRODUCT_LINES_PER_CATEGORY
-                if extra_cat > 0:
-                    lines.append(f"  <i>… +{extra_cat} لەم پۆلە</i>")
-                break
-            rem = int(p["remaining_qty"])
-            sold = int(p.get("sold_qty", 0))
-            rv = _usd(p.get("remaining_value_usd", 0))
-            sv = _usd(p.get("sold_value_usd", 0))
-            lines.append(
-                f"  • {_esc(p['product_name'])}\n"
-                f"    ماوە: {rem} | فرۆش: {sold} | ${_sv} | کۆگا: ${_rv}",
-            )
-            shown_in_cat += 1
-            shown_total += 1
-        lines.append("")
+    # Top sold / remaining products (compact)
+    rows = jard.get("rows") or []
+    if rows:
+        by_sold = sorted(rows, key=lambda r: int(r.get("sold_qty") or 0), reverse=True)
+        top = [r for r in by_sold if int(r.get("sold_qty") or 0) > 0][:MAX_PRODUCT_LINES_PER_SHOP]
+        if not top:
+            by_rem = sorted(rows, key=lambda r: int(r.get("remaining_qty") or 0), reverse=True)
+            top = by_rem[:MAX_PRODUCT_LINES_PER_SHOP]
+        if top:
+            lines.append("<i>بەرهەم:</i>")
+            for p in top:
+                sold = int(p.get("sold_qty") or 0)
+                rem = int(p.get("remaining_qty") or 0)
+                lines.append(f"  • {_esc(p['product_name'])} — فرۆش {sold} | ماوە {rem}")
+            extra = jard["product_count"] - len(top)
+            if extra > 0:
+                lines.append(f"  <i>… +{extra} بەرهەم</i>")
 
-    text = "\n".join(lines).strip()
-    if len(text) > TELEGRAM_MSG_LIMIT:
-        text = text[: TELEGRAM_MSG_LIMIT - 20] + "\n<i>…</i>"
-    return text
+    return "\n".join(lines)
 
 
-def _telegram_pause() -> None:
-    time.sleep(TELEGRAM_SEND_DELAY_SEC)
+def build_combined_digest_messages(
+    report_date: date,
+    shop_blocks: list[str],
+) -> list[str]:
+    """Merge all shops into as few Telegram messages as possible (split only if > limit)."""
+    active_note = ""
+    header = [
+        f"<b>📊 ڕاپۆرتی ڕۆژانەی بەڕێوەبەر</b>",
+        f"📅 <code>{report_date.isoformat()}</code>",
+        f"🏪 <b>{len(shop_blocks)}</b> فرۆشگا لە یەک لیست — هەر یەکە جیاکراوەتەوە:",
+        "",
+    ]
+    parts: list[str] = ["\n".join(header)]
+    parts.extend(shop_blocks)
+
+    messages: list[str] = []
+    current = ""
+    for part in parts:
+        chunk = part if not current else f"\n\n{part}"
+        if len(current) + len(chunk) <= TELEGRAM_MSG_LIMIT:
+            current += chunk
+            continue
+        if current.strip():
+            messages.append(current.strip())
+        # Part alone may still be too long — hard truncate shop block
+        if len(part) > TELEGRAM_MSG_LIMIT:
+            part = part[: TELEGRAM_MSG_LIMIT - 24] + "\n<i>…</i>"
+        current = part
+
+    if current.strip():
+        messages.append(current.strip())
+
+    return messages or ["<b>📊 ڕاپۆرت</b>\n<i>هیچ داتایەک نییە.</i>"]
 
 
 def send_manager_daily_digest(
@@ -184,17 +161,18 @@ def send_manager_daily_digest(
     force: bool = False,
 ) -> dict:
     """
-    Send intro + one Telegram message per shop (separate, numbered).
-    Returns {sent, shops, shop_ok, failed: [{id, name, error}]}.
+    Send one combined Telegram message (or 2+ only if text exceeds limit).
+    Returns {sent, shops, shop_ok, failed, messages}.
     """
     from shops.models import Shop
     from shops.telegram_notify import send_message
 
-    result = {
+    result: dict = {
         "sent": 0,
         "shops": 0,
         "shop_ok": 0,
         "failed": [],
+        "messages": 0,
     }
 
     if not settings.manager_telegram_notify_enabled and not force:
@@ -219,39 +197,40 @@ def send_manager_daily_digest(
         return result
 
     shop_total = len(shops)
-    sent = 0
-
-    intro = format_intro_message(d, shops)
-    if send_message(token, chat_id, intro):
-        sent += 1
-    _telegram_pause()
+    blocks: list[str] = []
 
     for idx, shop in enumerate(shops, start=1):
         try:
             stats = shop_daily_stats(shop.pk, d)
             jard = jard_summary_for_shop(shop.pk, d_from=d, d_to=d)
-            body = format_shop_jard_message(
-                shop_name=shop.name,
-                shop_index=idx,
-                shop_total=shop_total,
-                is_active=shop.is_active,
-                report_date=d,
-                stats=stats,
-                jard=jard,
+            blocks.append(
+                format_shop_section(
+                    shop_name=shop.name,
+                    shop_index=idx,
+                    shop_total=shop_total,
+                    is_active=shop.is_active,
+                    report_date=d,
+                    stats=stats,
+                    jard=jard,
+                ),
             )
-            if send_message(token, chat_id, body):
-                sent += 1
-                result["shop_ok"] += 1
-            else:
-                result["failed"].append(
-                    {"id": shop.pk, "name": shop.name, "error": "telegram_send_failed"},
-                )
+            result["shop_ok"] += 1
         except Exception as exc:
             logger.exception("Manager daily digest failed for shop %s", shop.pk)
             result["failed"].append(
                 {"id": shop.pk, "name": shop.name, "error": str(exc)[:200]},
             )
-        _telegram_pause()
+
+    if not blocks:
+        return result
+
+    payloads = build_combined_digest_messages(d, blocks)
+    result["messages"] = len(payloads)
+    sent = 0
+    for text in payloads:
+        if send_message(token, chat_id, text):
+            sent += 1
+        time.sleep(TELEGRAM_SEND_DELAY_SEC)
 
     result["sent"] = sent
     settings.manager_telegram_last_sent_date = d
@@ -271,13 +250,15 @@ def send_manager_test_message(settings) -> bool:
         f"✅ <b>پەیامی تاقیکردنەوە</b>\n"
         f"بەستەرەکە کار دەکات.\n"
         f"📅 ڕۆژ: <code>{d.isoformat()}</code>\n\n"
-        f"ڕۆژانە ڕاپۆرتی جەرد و ئامار بۆ <b>هەر فرۆشگایەک</b> "
-        f"لە پەیامێکی جیا دەنێردرێت (لیستی سەرەوە + پەیامی جیا بۆ هەر دووکان)."
+        f"ڕاپۆرتی ڕۆژانە بۆ <b>هەموو فرۆشگاکان</b> لە "
+        f"<b>یەک پەیام</b> دەنێردرێت — هەر فرۆشگا بەشێکی جیا لەناو لیستەکە."
     )
     return send_message(token, chat_id, text)
 
 
 def should_run_scheduled_send(settings) -> bool:
+    from datetime import time as dt_time
+
     if not settings.manager_telegram_notify_enabled:
         return False
     if not (settings.manager_telegram_bot_token or "").strip():

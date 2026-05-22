@@ -241,11 +241,7 @@ export function AdminQrSocialPage() {
         method: 'POST',
         omitShopScope: true,
       })
-      if (res.status === 'sending') {
-        setManagerTelegramMsg(
-          t('qrAdmin.managerTelegramSendStarted').replace('{shops}', String(res.shops)),
-        )
-      } else if (res.failed?.length) {
+      if (res.failed?.length) {
         const names = res.failed.map((f) => f.name).join(', ')
         setManagerTelegramMsg(
           t('qrAdmin.managerTelegramSendPartial')
