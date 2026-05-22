@@ -53,8 +53,13 @@ export function cartLineTotal(line: CartLine): number {
   return cartLineUnitPrice(line) * line.quantity
 }
 
+/** Lines with quantity > 0 — used for totals, badge, and checkout. */
+export function cartActiveLines(lines: CartLine[]): CartLine[] {
+  return lines.filter((l) => l.quantity > 0)
+}
+
 export function cartSubtotal(lines: CartLine[]): number {
-  return lines.reduce((sum, line) => sum + cartLineTotal(line), 0)
+  return cartActiveLines(lines).reduce((sum, line) => sum + cartLineTotal(line), 0)
 }
 
 /** @deprecated use cartSubtotal */
@@ -94,7 +99,7 @@ export function cartGrandTotal(
 }
 
 export function cartItemCount(lines: CartLine[]): number {
-  return lines.reduce((sum, line) => sum + line.quantity, 0)
+  return cartActiveLines(lines).reduce((sum, line) => sum + line.quantity, 0)
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -134,16 +139,14 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   setQuantity: (productId, quantity) => {
-    const qty = Math.floor(quantity)
-    if (qty < 1) {
-      get().removeItem(productId)
-      return
-    }
-    set((state) => ({
-      lines: state.lines.map((l) =>
-        l.productId === productId ? { ...l, quantity: qty } : l,
-      ),
-    }))
+    const qty = Math.max(0, Math.floor(quantity))
+    set((state) => {
+      const idx = state.lines.findIndex((l) => l.productId === productId)
+      if (idx < 0) return state
+      const next = [...state.lines]
+      next[idx] = { ...next[idx], quantity: qty }
+      return { lines: next }
+    })
   },
 
   setDeliveryZoneId: (zoneId) => set({ deliveryZoneId: zoneId }),

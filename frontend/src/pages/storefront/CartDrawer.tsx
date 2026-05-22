@@ -42,6 +42,7 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
   const remainingFree =
     freeMin != null && subtotal < freeMin ? Math.max(0, freeMin - subtotal) : 0
   const count = cartItemCount(lines)
+  const hasActiveItems = count > 0
   const hasZones = deliveryZones.length > 0
 
   useEffect(() => {
@@ -56,6 +57,7 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
   if (!open) return null
 
   function handleCheckout() {
+    if (!hasActiveItems) return
     if (hasZones && deliveryZoneId == null) return
     onCheckout()
   }
@@ -114,10 +116,14 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
             <ul className="flex flex-col gap-3">
               {lines.map((line) => {
                 const img = resolveMediaUrl(line.imageUrl)
+                const inactive = line.quantity === 0
                 return (
                   <li
                     key={line.productId}
-                    className="flex gap-3 rounded-2xl bg-white p-3 shadow-[0_2px_12px_rgba(0,0,0,0.05)] ring-1 ring-slate-100"
+                    className={[
+                      'flex gap-3 rounded-2xl bg-white p-3 shadow-[0_2px_12px_rgba(0,0,0,0.05)] ring-1 ring-slate-100',
+                      inactive ? 'opacity-60' : '',
+                    ].join(' ')}
                   >
                     <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-100">
                       {img ? (
@@ -176,7 +182,7 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
         </div>
 
         <div className="border-t border-slate-200 bg-white p-4">
-          {hasZones && lines.length > 0 ? (
+          {hasZones && hasActiveItems ? (
             <label className="mb-3 block">
               <span className="mb-1.5 block text-xs font-semibold text-slate-600">
                 {s.deliveryArea}
@@ -200,7 +206,7 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
             </label>
           ) : null}
 
-          {lines.length > 0 ? (
+          {hasActiveItems ? (
             <div className="mb-3 space-y-1.5 text-sm">
               <div className="flex items-center justify-between text-slate-500">
                 <span>{s.subtotal}</span>
@@ -218,14 +224,14 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
                   </span>
                 </div>
               ) : null}
-              {freeMin != null && lines.length > 0 ? (
+              {freeMin != null && hasActiveItems ? (
                 <p className="text-xs text-slate-500">
                   {qualifiesFree
                     ? s.deliveryFree
                     : s.deliveryFreeRemaining.replace('{amount}', formatPrice(remainingFree))}
                 </p>
               ) : null}
-              {freeMin != null && !hasZones && lines.length > 0 ? (
+              {freeMin != null && !hasZones && hasActiveItems ? (
                 <p className="text-xs text-slate-500">
                   {s.deliveryFreeHint.replace('{amount}', formatPrice(freeMin))}
                 </p>
@@ -236,22 +242,22 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
           <div className="mb-4 flex items-center justify-between">
             <span className="text-sm text-slate-500">{s.total}</span>
             <span className="text-xl font-bold" style={{ color: accent }}>
-              {formatPrice(lines.length > 0 ? grandTotal : 0)}
+              {formatPrice(hasActiveItems ? grandTotal : 0)}
             </span>
           </div>
 
-          {hasZones && deliveryZoneId == null && lines.length > 0 ? (
+          {hasZones && deliveryZoneId == null && hasActiveItems ? (
             <p className="mb-3 text-center text-xs text-amber-700">{s.deliveryAreaRequired}</p>
           ) : null}
 
           <button
             type="button"
-            disabled={lines.length === 0 || (hasZones && deliveryZoneId == null)}
+            disabled={!hasActiveItems || (hasZones && deliveryZoneId == null)}
             onClick={handleCheckout}
             className="w-full rounded-2xl py-3.5 text-base font-bold text-white shadow-lg transition enabled:hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
             style={{
               backgroundColor: accent,
-              boxShadow: lines.length > 0 ? `0 8px 24px ${accentAlpha(accent, 0.35)}` : undefined,
+              boxShadow: hasActiveItems ? `0 8px 24px ${accentAlpha(accent, 0.35)}` : undefined,
             }}
           >
             {s.proceedCheckout}

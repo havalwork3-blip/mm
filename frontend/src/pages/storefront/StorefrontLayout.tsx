@@ -158,18 +158,14 @@ export function StorefrontLayout() {
                 className="flex min-w-0 flex-1 items-center gap-2 text-start transition active:scale-[0.98]"
               >
                 <span
-                  className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl text-sm font-bold text-white shadow-md ring-2 ring-white"
-                  style={
-                    logoSrc
-                      ? { boxShadow: `0 4px 14px ${accentAlpha(accent, 0.25)}` }
-                      : {
-                          background: `linear-gradient(135deg, ${accent}, ${accent}cc)`,
-                          boxShadow: `0 4px 14px ${accentAlpha(accent, 0.35)}`,
-                        }
-                  }
+                  className={[
+                    'relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg',
+                    logoSrc ? 'bg-transparent' : 'sf-surface-btn text-base font-bold',
+                  ].join(' ')}
+                  style={logoSrc ? undefined : { color: accent }}
                 >
                   {logoSrc ? (
-                    <img src={logoSrc} alt="" className="h-full w-full object-cover" />
+                    <img src={logoSrc} alt="" className="h-full w-full object-contain p-0.5" />
                   ) : (
                     shopName.charAt(0) || 'M'
                   )}
@@ -241,17 +237,18 @@ export function StorefrontLayout() {
                   type="button"
                   onClick={() => setCartOpen(true)}
                   className={[
-                    'relative flex h-9 items-center gap-1 rounded-xl px-2.5 text-xs font-bold text-white shadow-md transition active:scale-95 sm:h-10 sm:gap-1.5 sm:rounded-xl sm:px-3 sm:text-sm',
+                    'relative sf-surface-btn flex h-10 items-center gap-1.5 rounded-xl px-2.5 transition hover:opacity-90 active:scale-95 sm:h-11 sm:px-3',
                     cartPulse ? 'sf-cart-pulse' : '',
                   ].join(' ')}
-                  style={{
-                    background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
-                    boxShadow: `0 6px 20px ${accentAlpha(accent, 0.4)}`,
-                  }}
+                  style={{ color: accent }}
+                  aria-label={s.cart}
                 >
-                  <ShoppingBag className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
+                  <ShoppingBag className="h-[22px] w-[22px]" strokeWidth={2.25} aria-hidden />
                   {count > 0 ? (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/25 px-1 text-[10px] font-extrabold">
+                    <span
+                      className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-extrabold text-white"
+                      style={{ backgroundColor: accent }}
+                    >
                       {count > 99 ? '99+' : count}
                     </span>
                   ) : null}

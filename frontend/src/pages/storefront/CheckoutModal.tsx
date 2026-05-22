@@ -6,6 +6,7 @@ import { ApiError } from '../../lib/api'
 import { googleMapsUrl, resolveAddressFromDevice } from '../../lib/geolocation'
 import { useLocale } from '../../context/LocaleContext'
 import {
+  cartActiveLines,
   cartDeliveryFee,
   cartGrandTotal,
   cartSubtotal,
@@ -30,6 +31,7 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
   const { shopId, deliveryZones, appearance } = useStorefrontShop()
   const freeMin = parseDeliveryFreeMinUsd(appearance.delivery_free_min_usd)
   const lines = useCartStore((st) => st.lines)
+  const orderLines = cartActiveLines(lines)
   const deliveryZoneId = useCartStore((st) => st.deliveryZoneId)
   const setDeliveryZoneId = useCartStore((st) => st.setDeliveryZoneId)
   const clearCart = useCartStore((st) => st.clearCart)
@@ -90,7 +92,11 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
       setError(s.deliveryAreaRequired)
       return
     }
-    if (lines.length === 0 || shopId == null) {
+    if (orderLines.length === 0) {
+      setError(s.cartEmpty)
+      return
+    }
+    if (shopId == null) {
       onClose()
       return
     }
@@ -103,7 +109,7 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
         customer_phone: trimmedPhone,
         customer_address: trimmedAddress,
         delivery_zone_id: hasZones ? deliveryZoneId : undefined,
-        items: lines.map((l) => ({ product: l.productId, quantity: l.quantity })),
+        items: orderLines.map((l) => ({ product: l.productId, quantity: l.quantity })),
       })
       clearCart()
       setName('')
@@ -333,7 +339,7 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
                   disabled={
                     submitting ||
                     locating ||
-                    lines.length === 0 ||
+                    orderLines.length === 0 ||
                     (hasZones && deliveryZoneId == null)
                   }
                   className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 font-bold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-50"

@@ -205,6 +205,7 @@ class StorefrontProductGalleryImageSerializer(serializers.ModelSerializer):
 
 class StorefrontOrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
+    quantity = serializers.IntegerField(min_value=0)
 
     class Meta:
         model = StorefrontOrderItem
@@ -253,9 +254,15 @@ class StorefrontOrderSerializer(serializers.ModelSerializer):
         return shop
 
     def validate(self, attrs: dict) -> dict:
-        items = attrs.get("items")
+        raw_items = attrs.get("items") or []
+        items = [
+            row
+            for row in raw_items
+            if int(row.get("quantity") or 0) > 0
+        ]
         if not items:
             raise serializers.ValidationError({"items": "At least one line item is required."})
+        attrs["items"] = items
         shop = attrs.get("shop")
         if shop is not None:
             from shops.models import StorefrontDeliveryZone
@@ -291,6 +298,8 @@ class StorefrontOrderSerializer(serializers.ModelSerializer):
             for row in items_data:
                 product = row["product"]
                 qty = int(row["quantity"])
+                if qty <= 0:
+                    continue
                 if product.shop_id != shop_id:
                     raise serializers.ValidationError(
                         {"items": "Each product must belong to the selected shop."},

@@ -39,15 +39,14 @@ export function StorefrontPreview({
           <div className="flex items-center justify-between bg-white px-3 py-2.5">
             <div className="flex min-w-0 items-center gap-2">
               <span
-                className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl text-xs font-bold text-white"
-                style={
-                  logoSrc
-                    ? undefined
-                    : { backgroundColor: accent }
-                }
+                className={[
+                  'flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg text-xs font-bold',
+                  logoSrc ? 'bg-transparent' : 'bg-slate-100',
+                ].join(' ')}
+                style={logoSrc ? undefined : { color: accent }}
               >
                 {logoSrc ? (
-                  <img src={logoSrc} alt="" className="h-full w-full object-cover" />
+                  <img src={logoSrc} alt="" className="h-full w-full object-contain p-0.5" />
                 ) : (
                   title.charAt(0) || 'M'
                 )}
@@ -64,10 +63,10 @@ export function StorefrontPreview({
                 <Search className="h-3 w-3" aria-hidden />
               </span>
               <span
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-white"
-                style={{ backgroundColor: accent }}
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100"
+                style={{ color: accent }}
               >
-                <ShoppingBag className="h-3.5 w-3.5" aria-hidden />
+                <ShoppingBag className="h-4 w-4" aria-hidden />
               </span>
             </div>
           </div>
