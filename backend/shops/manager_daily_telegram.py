@@ -18,6 +18,7 @@ TELEGRAM_MSG_LIMIT = 4090
 TELEGRAM_SEND_DELAY_SEC = 0.35
 # Per shop inside combined message (keep compact so 3+ shops fit one message)
 MAX_PRODUCT_LINES_PER_SHOP = 5
+SECTION_RULE = "━━━━━━━━━━━━━━━━━━━━"
 
 
 def _business_tz():
@@ -74,6 +75,11 @@ def shop_daily_stats(shop_id: int, d: date) -> dict:
     }
 
 
+def _stat_row(label: str, value: str, *, bold: bool = False) -> str:
+    val = f"<b>{value}</b>" if bold else value
+    return f"  • {label}: {val}"
+
+
 def format_shop_section(
     *,
     shop_name: str,
@@ -84,37 +90,57 @@ def format_shop_section(
     stats: dict,
     jard: dict,
 ) -> str:
-    """One shop block inside the combined daily list."""
+    """One shop block — vertical rows, easy to scan in Telegram."""
     status = "✅ چالاک" if is_active else "⏸ ناچالاک"
     lines = [
-        "────────────────────",
-        f"<b>{shop_index}. 🏪 {_esc(shop_name)}</b>  <i>{status}</i>",
-        f"📊 فرۆشتن <b>${_usd(stats['sales_usd'])}</b> | قازانج <b>${_usd(stats['profit_usd'])}</b> | خەرجی ${_usd(stats['expenses_usd'])}",
-        f"📦 کۆگا ${_usd(stats['stock_usd'])} | قاسە ${_usd(stats['cash_drawer_usd'])} | قەرز ${_usd(stats['receivables_usd'])}",
-        (
-            f"📋 جەرد: {jard['product_count']} بەرهەم | ماوە {jard['total_remaining_qty']} دانە "
-            f"(${_usd(jard['total_remaining_value_usd'])}) | ئەمڕۆ فرۆش {jard['total_sold_qty']} "
-            f"(${_usd(jard['total_sold_value_usd'])})"
+        SECTION_RULE,
+        f"<b>[{shop_index}/{shop_total}] 🏪 {_esc(shop_name)}</b>",
+        f"<i>{status}</i>",
+        "",
+        f"<b>💰 ئاماری ڕۆژ</b>  <code>{report_date.isoformat()}</code>",
+        _stat_row("فرۆشتن", f"${_usd(stats['sales_usd'])}", bold=True),
+        _stat_row("قازانج", f"${_usd(stats['profit_usd'])}", bold=True),
+        _stat_row("خەرجی", f"${_usd(stats['expenses_usd'])}"),
+        _stat_row("داشکاندن", f"${_usd(stats['discounts_usd'])}"),
+        _stat_row("گەڕاوە", f"${_usd(stats['returned_usd'])}"),
+        _stat_row("قەرزی کڕیار", f"${_usd(stats['receivables_usd'])}"),
+        _stat_row("قاسە", f"${_usd(stats['cash_drawer_usd'])}"),
+        "",
+        "<b>📦 کۆگا و جەرد</b>",
+        _stat_row("بەهای کۆگا", f"${_usd(stats['stock_usd'])}", bold=True),
+        _stat_row("ژمارەی بەرهەم", str(jard["product_count"])),
+        _stat_row(
+            "ماوە",
+            f"{jard['total_remaining_qty']} دانە · ${_usd(jard['total_remaining_value_usd'])}",
+        ),
+        _stat_row(
+            "فرۆشراو ئەمڕۆ",
+            f"{jard['total_sold_qty']} دانە · ${_usd(jard['total_sold_value_usd'])}",
+            bold=True,
         ),
     ]
 
-    # Top sold / remaining products (compact)
     rows = jard.get("rows") or []
-    if rows:
-        by_sold = sorted(rows, key=lambda r: int(r.get("sold_qty") or 0), reverse=True)
-        top = [r for r in by_sold if int(r.get("sold_qty") or 0) > 0][:MAX_PRODUCT_LINES_PER_SHOP]
-        if not top:
-            by_rem = sorted(rows, key=lambda r: int(r.get("remaining_qty") or 0), reverse=True)
-            top = by_rem[:MAX_PRODUCT_LINES_PER_SHOP]
-        if top:
-            lines.append("<i>بەرهەم:</i>")
-            for p in top:
-                sold = int(p.get("sold_qty") or 0)
-                rem = int(p.get("remaining_qty") or 0)
-                lines.append(f"  • {_esc(p['product_name'])} — فرۆش {sold} | ماوە {rem}")
-            extra = jard["product_count"] - len(top)
-            if extra > 0:
-                lines.append(f"  <i>… +{extra} بەرهەم</i>")
+    sold_today = sorted(
+        [r for r in rows if int(r.get("sold_qty") or 0) > 0],
+        key=lambda r: int(r.get("sold_qty") or 0),
+        reverse=True,
+    )
+    if sold_today:
+        lines.append("")
+        lines.append("<b>🛒 وردەکاری فرۆشتن</b>")
+        shown = sold_today[:MAX_PRODUCT_LINES_PER_SHOP]
+        for p in shown:
+            sold = int(p.get("sold_qty") or 0)
+            sv = _usd(p.get("sold_value_usd", 0))
+            lines.append(f"  ▸ {_esc(p['product_name'])}")
+            lines.append(f"     {sold} دانە · ${sv}")
+        extra = len(sold_today) - len(shown)
+        if extra > 0:
+            lines.append(f"  <i>… +{extra} بەرهەمی تر</i>")
+    elif int(jard.get("total_sold_qty") or 0) == 0:
+        lines.append("")
+        lines.append("<i>🛒 ئەمڕۆ هیچ فرۆشتنێک نییە</i>")
 
     return "\n".join(lines)
 
@@ -124,12 +150,11 @@ def build_combined_digest_messages(
     shop_blocks: list[str],
 ) -> list[str]:
     """Merge all shops into as few Telegram messages as possible (split only if > limit)."""
-    active_note = ""
     header = [
         f"<b>📊 ڕاپۆرتی ڕۆژانەی بەڕێوەبەر</b>",
         f"📅 <code>{report_date.isoformat()}</code>",
-        f"🏪 <b>{len(shop_blocks)}</b> فرۆشگا لە یەک لیست — هەر یەکە جیاکراوەتەوە:",
-        "",
+        f"🏪 <b>{len(shop_blocks)}</b> فرۆشگا · هەر یەکە بەشی جیا لە خوارەوە",
+        SECTION_RULE,
     ]
     parts: list[str] = ["\n".join(header)]
     parts.extend(shop_blocks)
@@ -137,7 +162,7 @@ def build_combined_digest_messages(
     messages: list[str] = []
     current = ""
     for part in parts:
-        chunk = part if not current else f"\n\n{part}"
+        chunk = part if not current else f"\n{part}"
         if len(current) + len(chunk) <= TELEGRAM_MSG_LIMIT:
             current += chunk
             continue

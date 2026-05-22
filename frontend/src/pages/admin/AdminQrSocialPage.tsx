@@ -764,7 +764,6 @@ export function AdminQrSocialPage() {
                         {t('qrAdmin.managerTelegramLastSent')}: {cfg.manager_telegram_last_sent_date}
                       </p>
                     ) : null}
-                    <p className="mt-2 text-[11px] text-slate-400">{t('qrAdmin.managerTelegramCronHint')}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
