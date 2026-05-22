@@ -19,7 +19,7 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+    <div className="mx-auto w-full min-w-0 max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
       <Outlet />
     </div>
   )

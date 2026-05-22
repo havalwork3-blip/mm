@@ -483,27 +483,29 @@ export function AdminQrSocialPage() {
   }, [primaryLogoPreviewUrl, cfg?.primary_logo_url])
 
   return (
-    <div className="space-y-8 text-start">
-      <div>
+    <div className="min-w-0 max-w-full space-y-6 text-start sm:space-y-8">
+      <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <Share2 className="h-7 w-7 text-amber-700 dark:text-amber-400" aria-hidden />
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('admin.qrSocial')}</h1>
+          <Share2 className="h-6 w-6 shrink-0 text-amber-700 sm:h-7 sm:w-7 dark:text-amber-400" aria-hidden />
+          <h1 className="min-w-0 text-xl font-bold text-slate-900 sm:text-2xl dark:text-slate-100">
+            {t('admin.qrSocial')}
+          </h1>
         </div>
       </div>
 
       {error && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
+        <p className="break-words rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200">
           {error}
         </p>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
+      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,17.5rem)] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_20rem]">
         {loading || !cfg ? (
           <p className="text-slate-500">{t('common.loading')}</p>
         ) : (
-          <div className="space-y-6">
+          <div className="order-2 min-w-0 space-y-6 lg:order-1">
             <form onSubmit={saveMain} className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-700 dark:bg-slate-800">
                 <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t('qrAdmin.pageCopy')}</h2>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <div className="sm:col-span-2">
@@ -513,7 +515,7 @@ export function AdminQrSocialPage() {
                     <input
                       value={cfg.headline}
                       onChange={(e) => setCfg((c) => (c ? { ...c, headline: e.target.value } : c))}
-                      className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+                      className="mt-1 min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
                     />
                     <p className="mt-1 text-xs text-slate-500">{t('qrAdmin.headlineHint')}</p>
                   </div>
@@ -524,7 +526,7 @@ export function AdminQrSocialPage() {
                     <input
                       value={cfg.tagline}
                       onChange={(e) => setCfg((c) => (c ? { ...c, tagline: e.target.value } : c))}
-                      className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+                      className="mt-1 min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
                     />
                   </div>
                   <div>
@@ -536,7 +538,7 @@ export function AdminQrSocialPage() {
                       value={cfg.phone}
                       onChange={(e) => setCfg((c) => (c ? { ...c, phone: e.target.value } : c))}
                       placeholder="+964 ..."
-                      className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-900"
+                      className="mt-1 min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-900"
                     />
                     <p className="mt-1 text-xs text-slate-500">{t('qrAdmin.phoneHint')}</p>
                   </div>
@@ -544,18 +546,18 @@ export function AdminQrSocialPage() {
                     <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
                       {t('qrAdmin.accent')}
                     </label>
-                    <div className="mt-1 flex flex-wrap items-center gap-3">
+                    <div className="mt-1 flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                       <input
                         type="color"
                         value={cfg.accent_color?.trim() || '#c9a962'}
                         onChange={(e) => setCfg((c) => (c ? { ...c, accent_color: e.target.value } : c))}
-                        className="h-11 w-16 cursor-pointer rounded border border-slate-200 bg-white p-1 dark:border-slate-600"
+                        className="h-11 w-full max-w-[5rem] shrink-0 cursor-pointer rounded border border-slate-200 bg-white p-1 sm:w-16 dark:border-slate-600"
                       />
                       <input
                         value={cfg.accent_color}
                         onChange={(e) => setCfg((c) => (c ? { ...c, accent_color: e.target.value } : c))}
                         placeholder="#c9a962"
-                        className="min-w-[10rem] flex-1 rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-900"
+                        className="min-h-11 w-full min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-900"
                       />
                     </div>
                     <p className="mt-1 text-xs text-slate-500">{t('qrAdmin.accentHint')}</p>
@@ -563,9 +565,9 @@ export function AdminQrSocialPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-700 dark:bg-slate-800">
                 <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t('qrAdmin.primaryLogo')}</h2>
-                <div className="mt-3 flex flex-wrap items-start gap-4">
+                <div className="mt-3 flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap">
                   <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-900">
                     <SafeLogoPreview
                       src={primaryLogoResolved}
@@ -603,16 +605,16 @@ export function AdminQrSocialPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-700 dark:bg-slate-800">
                 <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t('qrAdmin.linksTitle')}</h2>
                 <p className="mt-1 text-xs text-slate-500">{t('qrAdmin.linksHint')}</p>
                 <ul className="mt-4 space-y-4">
                   {cfg.preset_links.map((link) => (
                     <li
                       key={link.id}
-                      className="flex flex-col gap-2 rounded-xl border border-slate-100 bg-slate-50/80 p-3 sm:flex-row sm:items-center dark:border-slate-600 dark:bg-slate-900/50"
+                      className="flex flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3 sm:flex-row sm:items-center dark:border-slate-600 dark:bg-slate-900/50"
                     >
-                      <label className="flex shrink-0 items-center gap-2 sm:w-40">
+                      <label className="flex w-full min-w-0 shrink-0 items-center gap-2 sm:w-36 md:w-40">
                         <input
                           type="checkbox"
                           checked={link.enabled}
@@ -630,7 +632,7 @@ export function AdminQrSocialPage() {
                         onChange={(e) => updatePreset(link.id, { url: e.target.value })}
                         placeholder="https://"
                         disabled={!link.enabled}
-                        className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-sm disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
+                        className="min-h-11 min-w-0 w-full flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-sm disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
                       />
                     </li>
                   ))}
@@ -640,7 +642,7 @@ export function AdminQrSocialPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-lg bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-60 dark:bg-amber-600 dark:hover:bg-amber-500"
+                className="min-h-11 w-full rounded-lg bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-60 sm:w-auto dark:bg-amber-600 dark:hover:bg-amber-500"
               >
                 {saving ? t('common.loading') : t('settings.save')}
               </button>
@@ -648,7 +650,7 @@ export function AdminQrSocialPage() {
 
             <form
               onSubmit={saveManagerTelegram}
-              className="rounded-2xl border border-violet-200/80 bg-gradient-to-br from-violet-50/80 to-white p-5 shadow-sm dark:border-violet-900/40 dark:from-violet-950/25 dark:to-slate-800"
+              className="rounded-2xl border border-violet-200/80 bg-gradient-to-br from-violet-50/80 to-white p-4 shadow-sm sm:p-5 dark:border-violet-900/40 dark:from-violet-950/25 dark:to-slate-800"
             >
               <h2 className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-100">
                 <MessageCircle className="h-5 w-5 text-violet-600 dark:text-violet-400" aria-hidden />
@@ -687,7 +689,7 @@ export function AdminQrSocialPage() {
                         cfg.manager_telegram_bot_token_masked ||
                         '123456789:ABCdefGHIjklMNOpqrsTUVwxyz'
                       }
-                      className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-900"
+                      className="mt-1 min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-900"
                     />
                     <p className="mt-1 text-xs text-slate-500">{t('qrAdmin.managerTelegramBotTokenHint')}</p>
                     {cfg.manager_telegram_bot_token_masked && !managerTokenInput ? (
@@ -708,7 +710,7 @@ export function AdminQrSocialPage() {
                         setCfg((c) => (c ? { ...c, manager_telegram_chat_id: e.target.value } : c))
                       }
                       placeholder="123456789"
-                      className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-900"
+                      className="mt-1 min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-900"
                     />
                     <p className="mt-1 text-xs text-slate-500">{t('qrAdmin.managerTelegramChatIdHint')}</p>
                   </div>
@@ -735,7 +737,7 @@ export function AdminQrSocialPage() {
                               : c,
                           )
                         }
-                        className="w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+                        className="min-h-11 w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
                       />
                       <span className="text-slate-500">:</span>
                       <input
@@ -756,7 +758,7 @@ export function AdminQrSocialPage() {
                               : c,
                           )
                         }
-                        className="w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+                        className="min-h-11 w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
                       />
                     </div>
                     {cfg.manager_telegram_last_sent_date ? (
@@ -765,11 +767,11 @@ export function AdminQrSocialPage() {
                       </p>
                     ) : null}
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     <button
                       type="submit"
                       disabled={saving}
-                      className="rounded-lg bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-800 disabled:opacity-60"
+                      className="min-h-11 w-full rounded-lg bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-800 disabled:opacity-60 sm:col-span-2 lg:col-span-1"
                     >
                       {saving ? t('common.loading') : t('settings.save')}
                     </button>
@@ -777,7 +779,7 @@ export function AdminQrSocialPage() {
                       type="button"
                       disabled={managerTelegramTesting}
                       onClick={() => void testManagerTelegram()}
-                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                     >
                       {managerTelegramTesting ? (
                         <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -790,7 +792,7 @@ export function AdminQrSocialPage() {
                       type="button"
                       disabled={managerTelegramSending}
                       onClick={() => void sendManagerTelegramNow()}
-                      className="inline-flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-900 hover:bg-violet-200 disabled:opacity-50 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-200"
+                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-violet-300 bg-violet-100 px-4 py-2.5 text-sm font-semibold text-violet-900 hover:bg-violet-200 disabled:opacity-50 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-200 sm:col-span-2 lg:col-span-1"
                     >
                       {managerTelegramSending ? (
                         <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -807,7 +809,7 @@ export function AdminQrSocialPage() {
               ) : null}
             </form>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-700 dark:bg-slate-800">
               <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t('qrAdmin.customLinksTitle')}</h2>
               <p className="mt-1 text-xs text-slate-500">{t('qrAdmin.customLinksHint')}</p>
 
@@ -823,9 +825,9 @@ export function AdminQrSocialPage() {
                 ))}
               </ul>
 
-              <form onSubmit={addCustomLink} className="mt-6 space-y-3 rounded-xl border border-dashed border-slate-300 p-4 dark:border-slate-600">
+              <form onSubmit={addCustomLink} className="mt-6 space-y-3 rounded-xl border border-dashed border-slate-300 p-3 sm:p-4 dark:border-slate-600">
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('qrAdmin.addCustomLink')}</p>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <input
                     value={newCustom.label}
                     onChange={(e) => setNewCustom((s) => ({ ...s, label: e.target.value }))}
@@ -839,21 +841,21 @@ export function AdminQrSocialPage() {
                     placeholder="https://"
                     className="rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-900"
                   />
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 sm:flex-row sm:flex-wrap sm:items-center">
                     <label className="text-xs text-slate-500">{t('qrAdmin.linkBg')}</label>
                     <input
                       type="color"
                       value={newCustom.bg_color}
                       onChange={(e) => setNewCustom((s) => ({ ...s, bg_color: e.target.value }))}
-                      className="h-9 w-14 cursor-pointer rounded border border-slate-200 p-0.5 dark:border-slate-600"
+                      className="h-11 w-14 shrink-0 cursor-pointer rounded border border-slate-200 p-0.5 dark:border-slate-600"
                     />
                     <input
                       value={newCustom.bg_color}
                       onChange={(e) => setNewCustom((s) => ({ ...s, bg_color: e.target.value }))}
-                      className="w-28 rounded border border-slate-200 px-2 py-1 font-mono text-xs dark:border-slate-600 dark:bg-slate-900"
+                      className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-2 font-mono text-xs dark:border-slate-600 dark:bg-slate-900"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                     <label className="text-xs text-slate-500">{t('qrAdmin.sortOrder')}</label>
                     <input
                       type="number"
@@ -862,15 +864,16 @@ export function AdminQrSocialPage() {
                       onChange={(e) =>
                         setNewCustom((s) => ({ ...s, sort_order: Number(e.target.value) || 0 }))
                       }
-                      className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900"
+                      className="min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm sm:w-28 dark:border-slate-600 dark:bg-slate-900"
                     />
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <label className="text-sm text-slate-600 dark:text-slate-400">{t('qrAdmin.rowLogo')}</label>
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">{t('qrAdmin.rowLogo')}</span>
                   <input
                     type="file"
                     accept="image/*"
+                    className="min-w-0 max-w-full text-sm file:me-2 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm dark:file:bg-slate-800"
                     onChange={(e) =>
                       setNewCustom((s) => ({ ...s, logoFile: e.target.files?.[0] ?? null }))
                     }
@@ -879,7 +882,7 @@ export function AdminQrSocialPage() {
                 <button
                   type="submit"
                   disabled={addingCustomLink}
-                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 sm:w-auto dark:bg-slate-100 dark:text-slate-900"
                 >
                   <Plus className="h-4 w-4" aria-hidden />
                   {addingCustomLink ? t('common.loading') : t('qrAdmin.addCustomLink')}
@@ -889,8 +892,8 @@ export function AdminQrSocialPage() {
           </div>
         )}
 
-        <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-          <div className="rounded-2xl border border-amber-200 bg-gradient-to-b from-amber-50 to-white p-5 shadow-sm dark:border-amber-900/40 dark:from-amber-950/30 dark:to-slate-800">
+        <aside className="order-1 min-w-0 space-y-4 lg:order-2 lg:sticky lg:top-4 lg:self-start xl:top-6">
+          <div className="rounded-2xl border border-amber-200 bg-gradient-to-b from-amber-50 to-white p-4 shadow-sm sm:p-5 dark:border-amber-900/40 dark:from-amber-950/30 dark:to-slate-800">
             <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
               <QrCode className="h-5 w-5" aria-hidden />
               <h3 className="font-semibold">{t('qrAdmin.publicUrl')}</h3>
@@ -914,13 +917,19 @@ export function AdminQrSocialPage() {
                 }
               >
                 {qrDataUrl ? (
-                  <div className="flex flex-col items-center">
-                    <img src={qrDataUrl} alt="" width={220} height={220} className="rounded-xl border border-white shadow-md" />
-                    <div className="mt-3 flex w-full flex-wrap gap-2">
+                  <div className="flex w-full min-w-0 flex-col items-center">
+                    <img
+                      src={qrDataUrl}
+                      alt=""
+                      width={220}
+                      height={220}
+                      className="h-auto w-full max-w-[220px] rounded-xl border border-white shadow-md"
+                    />
+                    <div className="mt-3 grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
                   <button
                     type="button"
                     onClick={downloadQrPng}
-                    className="inline-flex flex-1 min-w-[7.5rem] items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-2 py-2 text-xs font-medium text-amber-950 hover:bg-amber-50 dark:border-amber-800 dark:bg-slate-900 dark:text-amber-100 dark:hover:bg-slate-800"
+                    className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-2 py-2.5 text-xs font-medium text-amber-950 hover:bg-amber-50 dark:border-amber-800 dark:bg-slate-900 dark:text-amber-100 dark:hover:bg-slate-800"
                   >
                     <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     {t('qrAdmin.downloadPng')}
@@ -928,7 +937,7 @@ export function AdminQrSocialPage() {
                   <button
                     type="button"
                     onClick={() => void downloadQrJpg()}
-                    className="inline-flex flex-1 min-w-[7.5rem] items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-2 py-2 text-xs font-medium text-amber-950 hover:bg-amber-50 dark:border-amber-800 dark:bg-slate-900 dark:text-amber-100 dark:hover:bg-slate-800"
+                    className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-white px-2 py-2.5 text-xs font-medium text-amber-950 hover:bg-amber-50 dark:border-amber-800 dark:bg-slate-900 dark:text-amber-100 dark:hover:bg-slate-800"
                   >
                     <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
                     {t('qrAdmin.downloadJpg')}
@@ -984,69 +993,78 @@ function CustomLinkEditor({
   const thumb = resolveMediaUrl(row.logo_url)
 
   return (
-    <li className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-600 dark:bg-slate-900/40">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <li className="min-w-0 space-y-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3 sm:p-4 dark:border-slate-600 dark:bg-slate-900/40">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-xs font-medium uppercase tracking-wide text-slate-500">#{row.id}</span>
         <button
           type="button"
           onClick={onDelete}
-          className="inline-flex items-center gap-1 text-sm text-rose-600 hover:underline dark:text-rose-400"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 sm:w-auto sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:hover:underline dark:border-rose-900/50 dark:bg-slate-900 dark:text-rose-400 dark:hover:bg-rose-950/30"
         >
           <Trash2 className="h-4 w-4" aria-hidden />
           {t('qrAdmin.deleteCustomLink')}
         </button>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          className="rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+          className="min-h-11 w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
         />
         <input
           dir="ltr"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          className="rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-900"
+          className="min-h-11 w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-900"
         />
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+        <label className="flex min-h-11 items-center gap-2 text-sm sm:col-span-2">
+          <input
+            type="checkbox"
+            className="h-4 w-4 shrink-0"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+          />
           <span className="text-slate-600 dark:text-slate-400">{t('admin.colActive')}</span>
         </label>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
           <span className="text-xs text-slate-500">{t('qrAdmin.sortOrder')}</span>
           <input
             type="number"
             min={0}
             value={sort_order}
             onChange={(e) => setSortOrder(Number(e.target.value) || 0)}
-            className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900"
+            className="min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm sm:w-28 dark:border-slate-600 dark:bg-slate-900"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+        <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 sm:flex-row sm:flex-wrap sm:items-center">
           <span className="text-xs text-slate-500">{t('qrAdmin.linkBg')}</span>
           <input
             type="color"
             value={bg_color}
             onChange={(e) => setBgColor(e.target.value)}
-            className="h-9 w-14 cursor-pointer rounded border border-slate-200 p-0.5 dark:border-slate-600"
+            className="h-11 w-14 shrink-0 cursor-pointer rounded border border-slate-200 p-0.5 dark:border-slate-600"
           />
           <input
             value={bg_color}
             onChange={(e) => setBgColor(e.target.value)}
-            className="w-32 rounded border border-slate-200 px-2 py-1 font-mono text-xs dark:border-slate-600 dark:bg-slate-900"
+            className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-2 font-mono text-xs dark:border-slate-600 dark:bg-slate-900"
           />
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
         {thumb ? (
-          <img src={thumb} alt="" className="h-12 w-12 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-600" />
+          <img
+            src={thumb}
+            alt=""
+            className="h-14 w-14 shrink-0 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-600"
+          />
         ) : null}
-        <label className="text-sm text-slate-600 dark:text-slate-400">
-          {t('qrAdmin.rowLogo')}
+        <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm text-slate-600 dark:text-slate-400">
+          <span>{t('qrAdmin.rowLogo')}</span>
           <input
             type="file"
             accept="image/*"
-            className="ms-2 mt-1 max-w-full text-xs"
+            className="min-w-0 max-w-full text-sm file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm dark:file:bg-slate-800"
             onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
           />
         </label>
@@ -1063,7 +1081,7 @@ function CustomLinkEditor({
             logoFile: logoFile ?? undefined,
           })
         }
-        className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white dark:bg-slate-200 dark:text-slate-900"
+        className="min-h-11 w-full rounded-lg bg-slate-800 px-4 py-2.5 text-sm font-medium text-white sm:w-auto dark:bg-slate-200 dark:text-slate-900"
       >
         {t('qrAdmin.saveCustomLink')}
       </button>
