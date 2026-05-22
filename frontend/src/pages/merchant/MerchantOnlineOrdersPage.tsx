@@ -4,10 +4,12 @@ import {
   ChevronUp,
   Clock,
   ExternalLink,
+  FileDown,
   Loader2,
   MapPin,
+  MessageCircle,
   Package,
-  Phone,
+  Printer,
   RefreshCw,
   ShoppingBag,
   Sparkles,
@@ -24,6 +26,13 @@ import {
   fetchMerchantStorefrontOrders,
   patchMerchantStorefrontOrderStatus,
 } from '../../lib/merchantStorefrontApi'
+import {
+  buildStorefrontOrderReceiptHtml,
+  downloadStorefrontOrderReceiptPdf,
+  printStorefrontOrderReceipt,
+  type StorefrontOrderReceiptLabels,
+} from '../../lib/storefrontOrderReceipt'
+import { buildWhatsAppUrl } from '../../lib/whatsappUrl'
 import type {
   MerchantStorefrontOrderRow,
   StorefrontOrderStatus,
@@ -182,6 +191,28 @@ export function MerchantOnlineOrdersPage() {
   function statusLabel(status: StorefrontOrderStatus): string {
     return t(`onlineOrders.status.${status}`)
   }
+
+  const receiptLabels = useMemo<StorefrontOrderReceiptLabels>(
+    () => ({
+      title: t('onlineOrders.receiptTitle'),
+      orderNo: t('onlineOrders.colId'),
+      date: t('onlineOrders.colDate'),
+      customer: t('onlineOrders.colCustomer'),
+      phone: t('onlineOrders.colPhone'),
+      address: t('onlineOrders.colAddress'),
+      status: t('onlineOrders.colStatus'),
+      deliveryArea: t('onlineOrders.deliveryArea'),
+      subtotal: t('onlineOrders.colSubtotal'),
+      delivery: t('onlineOrders.colDelivery'),
+      total: t('onlineOrders.colTotal'),
+      product: t('onlineOrders.colProduct'),
+      qty: t('onlineOrders.colQty'),
+      unitPrice: t('onlineOrders.colUnitPrice'),
+      lineTotal: t('onlineOrders.colLineTotal'),
+      items: t('onlineOrders.lineItems'),
+    }),
+    [t]
+  )
 
   if (authPending) return <PageAuthLoading />
 
@@ -422,10 +453,12 @@ export function MerchantOnlineOrdersPage() {
             <OrderCard
               key={order.id}
               order={order}
+              shopName={me?.shop_name}
               busy={updatingId === order.id}
               expanded={expandedId === order.id}
               t={t}
               statusLabel={statusLabel}
+              receiptLabels={receiptLabels}
               onToggleExpand={() =>
                 setExpandedId((id) => (id === order.id ? null : order.id))
               }
@@ -439,9 +472,11 @@ export function MerchantOnlineOrdersPage() {
       {detailOrder ? (
         <OrderDetailModal
           order={detailOrder}
+          shopName={me?.shop_name}
           busy={updatingId === detailOrder.id}
           t={t}
           statusLabel={statusLabel}
+          receiptLabels={receiptLabels}
           onClose={() => setDetailOrder(null)}
           onStatusChange={(s) => void handleStatusChange(detailOrder.id, s)}
         />
@@ -499,6 +534,173 @@ function StatusSelect({
   )
 }
 
+function receiptHtmlForOrder(
+  order: MerchantStorefrontOrderRow,
+  args: {
+    shopName?: string
+    labels: StorefrontOrderReceiptLabels
+    statusLabel: (s: StorefrontOrderStatus) => string
+  }
+): string {
+  const dir =
+    document.documentElement.dir === 'ltr' ? ('ltr' as const) : ('rtl' as const)
+  return buildStorefrontOrderReceiptHtml({
+    order,
+    shopName: args.shopName,
+    labels: args.labels,
+    dateFormatted: formatDateTime(order.created_at),
+    statusText: args.statusLabel(order.status),
+    dir,
+  })
+}
+
+function WhatsAppPhoneLink({
+  phone,
+  t,
+  className = '',
+}: {
+  phone: string
+  t: (k: string) => string
+  className?: string
+}) {
+  const url = buildWhatsAppUrl(phone)
+  if (!url) {
+    return (
+      <span className={`text-sm text-slate-600 dark:text-slate-300 ${className}`} dir="ltr">
+        {phone}
+      </span>
+    )
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`inline-flex items-center gap-2 rounded-xl bg-[#25D366]/10 px-3 py-2 text-sm font-bold text-[#128C7E] ring-1 ring-[#25D366]/30 transition hover:bg-[#25D366]/20 dark:text-[#5fe89e] ${className}`}
+      dir="ltr"
+    >
+      <MessageCircle className="h-4 w-4 shrink-0" aria-hidden />
+      <span>{phone}</span>
+      <span className="text-[11px] font-semibold opacity-80">{t('onlineOrders.openWhatsApp')}</span>
+      <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
+    </a>
+  )
+}
+
+function AddressText({ address }: { address: string }) {
+  const urlMatch = address.match(/https?:\/\/\S+/i)
+  const mapUrl = urlMatch?.[0] ?? null
+  const text = mapUrl ? address.replace(mapUrl, '').trim() : address
+  return (
+    <div className="min-w-0 text-sm text-slate-600 dark:text-slate-400">
+      {text ? <p className="leading-relaxed">{text}</p> : null}
+      {mapUrl ? (
+        <a
+          href={mapUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:underline dark:text-violet-400"
+        >
+          <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          Google Maps
+          <ExternalLink className="h-3 w-3 shrink-0 opacity-60" aria-hidden />
+        </a>
+      ) : null}
+    </div>
+  )
+}
+
+function OrderTotalsPanel({
+  order,
+  t,
+}: {
+  order: MerchantStorefrontOrderRow
+  t: (k: string) => string
+}) {
+  const hasSubtotal =
+    order.subtotal_amount != null && String(order.subtotal_amount).trim() !== ''
+  const deliveryNum =
+    order.delivery_fee != null ? Number.parseFloat(order.delivery_fee) : 0
+  const showDelivery = Number.isFinite(deliveryNum) && deliveryNum > 0
+
+  return (
+    <div className="w-full rounded-xl border border-slate-100 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/50 sm:max-w-[14rem]">
+      {order.delivery_zone_name ? (
+        <p className="mb-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+          {t('onlineOrders.deliveryArea')}: {order.delivery_zone_name}
+        </p>
+      ) : null}
+      <dl className="space-y-1.5 text-xs">
+        {hasSubtotal ? (
+          <div className="flex justify-between gap-2">
+            <dt className="text-slate-500 dark:text-slate-400">{t('onlineOrders.colSubtotal')}</dt>
+            <dd className="font-bold tabular-nums text-slate-800 dark:text-slate-100">
+              ${formatUsd(order.subtotal_amount)}
+            </dd>
+          </div>
+        ) : null}
+        {showDelivery ? (
+          <div className="flex justify-between gap-2">
+            <dt className="text-slate-500 dark:text-slate-400">{t('onlineOrders.colDelivery')}</dt>
+            <dd className="font-bold tabular-nums text-slate-800 dark:text-slate-100">
+              ${formatUsd(order.delivery_fee)}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+      <div className="mt-2 border-t border-slate-200 pt-2 dark:border-slate-600">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+          {t('onlineOrders.colTotal')}
+        </p>
+        <p className="text-2xl font-extrabold tabular-nums text-violet-700 dark:text-violet-300">
+          ${formatUsd(order.total_amount)}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function OrderReceiptActions({
+  order,
+  shopName,
+  labels,
+  statusLabel,
+  t,
+  compact,
+}: {
+  order: MerchantStorefrontOrderRow
+  shopName?: string
+  labels: StorefrontOrderReceiptLabels
+  statusLabel: (s: StorefrontOrderStatus) => string
+  t: (k: string) => string
+  compact?: boolean
+}) {
+  const html = receiptHtmlForOrder(order, { shopName, labels, statusLabel })
+  const btn =
+    'inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition'
+  return (
+    <div className={`flex flex-wrap gap-2 ${compact ? '' : ''}`}>
+      <button
+        type="button"
+        onClick={() => printStorefrontOrderReceipt(html)}
+        className={`${btn} bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700`}
+      >
+        <Printer className="h-4 w-4 shrink-0" aria-hidden />
+        {t('onlineOrders.printReceipt')}
+      </button>
+      <button
+        type="button"
+        onClick={() => downloadStorefrontOrderReceiptPdf(html)}
+        className={`${btn} bg-violet-50 text-violet-700 hover:bg-violet-100 dark:bg-violet-950/50 dark:text-violet-300 dark:hover:bg-violet-950`}
+        title={t('onlineOrders.downloadPdf')}
+      >
+        <FileDown className="h-4 w-4 shrink-0" aria-hidden />
+        {t('onlineOrders.downloadPdf')}
+      </button>
+    </div>
+  )
+}
+
 function LineItemsBlock({
   order,
   t,
@@ -537,124 +739,117 @@ function LineItemsBlock({
 
 function OrderCard({
   order,
+  shopName,
   busy,
   expanded,
   t,
   statusLabel,
+  receiptLabels,
   onToggleExpand,
   onStatusChange,
   onOpenDetail,
 }: {
   order: MerchantStorefrontOrderRow
+  shopName?: string
   busy: boolean
   expanded: boolean
   t: (k: string) => string
   statusLabel: (s: StorefrontOrderStatus) => string
+  receiptLabels: StorefrontOrderReceiptLabels
   onToggleExpand: () => void
   onStatusChange: (s: StorefrontOrderStatus) => void
   onOpenDetail: () => void
 }) {
   return (
-    <li className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:shadow-md dark:border-slate-700/80 dark:bg-slate-900">
-      <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
-        <div className="min-w-0 flex-1 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-xl bg-violet-100 px-2.5 py-1 text-sm font-extrabold tabular-nums text-violet-800 dark:bg-violet-950/50 dark:text-violet-200">
-              #{order.id}
-            </span>
-            <StatusBadge status={order.status} statusLabel={statusLabel} />
-            <span className="text-xs font-medium text-slate-400">
-              {formatDateTime(order.created_at)}
-            </span>
-          </div>
+    <li className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-100/80 transition hover:shadow-lg dark:border-slate-700/80 dark:bg-slate-900 dark:ring-slate-800/80">
+      <div className="h-1 bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-400" aria-hidden />
 
-          <div className="grid gap-2 sm:grid-cols-2">
-            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-slate-800 sm:px-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-xl bg-violet-600 px-3 py-1 text-sm font-extrabold tabular-nums text-white shadow-sm shadow-violet-500/30">
+            #{order.id}
+          </span>
+          <StatusBadge status={order.status} statusLabel={statusLabel} />
+        </div>
+        <time
+          className="text-xs font-semibold tabular-nums text-slate-500 dark:text-slate-400"
+          dateTime={order.created_at}
+        >
+          {formatDateTime(order.created_at)}
+        </time>
+      </div>
+
+      <div className="grid gap-4 p-4 sm:grid-cols-[1fr_auto] sm:items-start sm:p-5">
+        <div className="min-w-0 space-y-3">
+          <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 dark:border-slate-700 dark:bg-slate-800/30">
+            <p className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
               <User className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
               {order.customer_name}
             </p>
-            <p className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300" dir="ltr">
-              <Phone className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
-              <a href={`tel:${order.customer_phone}`} className="hover:underline">
-                {order.customer_phone}
-              </a>
-            </p>
-          </div>
-
-          <p className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
-            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" aria-hidden />
-            <span className="line-clamp-2">{order.customer_address}</span>
-          </p>
-        </div>
-
-        <div className="flex shrink-0 flex-col items-stretch gap-3 sm:items-end sm:text-end">
-          {order.delivery_zone_name ? (
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {t('onlineOrders.deliveryArea')}: {order.delivery_zone_name}
-            </p>
-          ) : null}
-          {order.subtotal_amount != null && String(order.subtotal_amount).trim() !== '' ? (
-            <div className="text-xs text-slate-500 dark:text-slate-400">
-              <span>{t('onlineOrders.colSubtotal')}: </span>
-              <span className="font-semibold tabular-nums">${formatUsd(order.subtotal_amount)}</span>
-              {order.delivery_fee != null && Number.parseFloat(order.delivery_fee) > 0 ? (
-                <>
-                  <span className="mx-1">·</span>
-                  <span>{t('onlineOrders.colDelivery')}: </span>
-                  <span className="font-semibold tabular-nums">${formatUsd(order.delivery_fee)}</span>
-                </>
-              ) : null}
+            <WhatsAppPhoneLink phone={order.customer_phone} t={t} />
+            <div className="mt-3 flex items-start gap-2 border-t border-slate-100 pt-3 dark:border-slate-700">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" aria-hidden />
+              <AddressText address={order.customer_address} />
             </div>
-          ) : null}
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-              {t('onlineOrders.colTotal')}
-            </p>
-            <p className="text-2xl font-extrabold tabular-nums text-slate-900 dark:text-white">
-              ${formatUsd(order.total_amount)}
-            </p>
           </div>
-          <StatusSelect
-            value={order.status}
-            disabled={busy}
-            onChange={onStatusChange}
-            t={t}
-            statusLabel={statusLabel}
-          />
-          {busy ? (
-            <p className="flex items-center justify-center gap-1.5 text-xs text-slate-500 sm:justify-end">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-              {t('onlineOrders.statusUpdating')}
-            </p>
-          ) : null}
+
+          <div className="max-w-xs">
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-400">
+              {t('onlineOrders.updateStatus')}
+            </label>
+            <StatusSelect
+              value={order.status}
+              disabled={busy}
+              onChange={onStatusChange}
+              t={t}
+              statusLabel={statusLabel}
+            />
+            {busy ? (
+              <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                {t('onlineOrders.statusUpdating')}
+              </p>
+            ) : null}
+          </div>
         </div>
+
+        <OrderTotalsPanel order={order} t={t} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-4 py-3 dark:border-slate-800 sm:px-5">
-        <button
-          type="button"
-          onClick={onToggleExpand}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-3.5 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-        >
-          {expanded ? (
-            <>
-              <ChevronUp className="h-4 w-4" aria-hidden />
-              {t('onlineOrders.hideItems')}
-            </>
-          ) : (
-            <>
-              <ChevronDown className="h-4 w-4" aria-hidden />
-              {t('onlineOrders.viewItems')}
-            </>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={onOpenDetail}
-          className="rounded-xl px-3.5 py-2 text-xs font-bold text-violet-600 transition hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40"
-        >
-          {t('onlineOrders.detailsTitle').replace('{id}', String(order.id))}
-        </button>
+      <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/40 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50 sm:px-5">
+        <OrderReceiptActions
+          order={order}
+          shopName={shopName}
+          labels={receiptLabels}
+          statusLabel={statusLabel}
+          t={t}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-600 dark:hover:bg-slate-700"
+          >
+            {expanded ? (
+              <>
+                <ChevronUp className="h-4 w-4" aria-hidden />
+                {t('onlineOrders.hideItems')}
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-4 w-4" aria-hidden />
+                {t('onlineOrders.viewItems')} ({order.items.length})
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={onOpenDetail}
+            className="rounded-xl px-3.5 py-2 text-xs font-bold text-violet-600 transition hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40"
+          >
+            {t('onlineOrders.detailsTitle').replace('{id}', String(order.id))}
+          </button>
+        </div>
       </div>
 
       {expanded ? (
@@ -668,16 +863,20 @@ function OrderCard({
 
 function OrderDetailModal({
   order,
+  shopName,
   busy,
   t,
   statusLabel,
+  receiptLabels,
   onClose,
   onStatusChange,
 }: {
   order: MerchantStorefrontOrderRow
+  shopName?: string
   busy: boolean
   t: (k: string) => string
   statusLabel: (s: StorefrontOrderStatus) => string
+  receiptLabels: StorefrontOrderReceiptLabels
   onClose: () => void
   onStatusChange: (s: StorefrontOrderStatus) => void
 }) {
@@ -745,17 +944,17 @@ function OrderDetailModal({
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {t('onlineOrders.colPhone')}
               </dt>
-              <dd className="mt-1 font-semibold" dir="ltr">
-                <a href={`tel:${order.customer_phone}`} className="text-violet-600 hover:underline dark:text-violet-400">
-                  {order.customer_phone}
-                </a>
+              <dd className="mt-2">
+                <WhatsAppPhoneLink phone={order.customer_phone} t={t} className="w-full justify-center sm:justify-start" />
               </dd>
             </div>
             <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50">
               <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 {t('onlineOrders.colAddress')}
               </dt>
-              <dd className="mt-1 text-slate-700 dark:text-slate-200">{order.customer_address}</dd>
+              <dd className="mt-1">
+                <AddressText address={order.customer_address} />
+              </dd>
             </div>
           </dl>
 
@@ -777,7 +976,14 @@ function OrderDetailModal({
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-slate-100 p-4 dark:border-slate-800">
+        <div className="shrink-0 space-y-2 border-t border-slate-100 p-4 dark:border-slate-800">
+          <OrderReceiptActions
+            order={order}
+            shopName={shopName}
+            labels={receiptLabels}
+            statusLabel={statusLabel}
+            t={t}
+          />
           <button
             type="button"
             onClick={onClose}
