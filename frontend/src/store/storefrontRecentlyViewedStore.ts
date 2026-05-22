@@ -3,6 +3,9 @@ import { create } from 'zustand'
 const STORAGE_KEY = 'sf_recent_v1'
 const MAX_PER_SHOP = 12
 
+/** Stable empty list — avoids infinite re-renders in Zustand selectors. */
+export const EMPTY_RECENT_IDS: number[] = []
+
 type RecentState = {
   byShop: Record<string, number[]>
   hydrate: () => void
@@ -53,5 +56,5 @@ export const useStorefrontRecentlyViewedStore = create<RecentState>((set, get) =
     })
   },
 
-  recentIds: (shopId) => get().byShop[String(shopId)] ?? [],
+  recentIds: (shopId) => get().byShop[String(shopId)] ?? EMPTY_RECENT_IDS,
 }))

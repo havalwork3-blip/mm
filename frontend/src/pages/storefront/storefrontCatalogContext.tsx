@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
 
 import type {
   PublicStorefrontCategory,
@@ -49,6 +49,8 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
   const [search, setSearch] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [catalogCategories, setCatalogCategories] = useState<PublicStorefrontCategory[]>([])
+  const viewRef = useRef(view)
+  viewRef.current = view
 
   const selectCategory = useCallback((id: number) => {
     setSelectedCategoryId(id)
@@ -90,19 +92,17 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
     setSearchOpen(false)
   }, [])
 
-  const openProduct = useCallback(
-    (product: PublicStorefrontProduct, categoryName = '') => {
-      setSearchOpen(false)
-      setReturnView((prev) => (view === 'product' ? prev : view))
-      setSelectedProduct(product)
-      setProductCategoryName(categoryName)
-      setView('product')
-      setProductUrlParam(product.id)
-      document.documentElement.style.overflow = 'hidden'
-      scrollMainTop(false)
-    },
-    [view],
-  )
+  const openProduct = useCallback((product: PublicStorefrontProduct, categoryName = '') => {
+    setSearchOpen(false)
+    const currentView = viewRef.current
+    setReturnView((prev) => (currentView === 'product' ? prev : currentView))
+    setSelectedProduct(product)
+    setProductCategoryName(categoryName)
+    setView('product')
+    setProductUrlParam(product.id)
+    document.documentElement.style.overflow = 'hidden'
+    scrollMainTop(false)
+  }, [])
 
   const backFromProduct = useCallback(() => {
     setSelectedProduct(null)

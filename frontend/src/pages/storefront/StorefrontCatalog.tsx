@@ -44,7 +44,10 @@ import {
 } from './storefrontProductSort'
 import { readProductIdFromUrl } from './storefrontProductUrl'
 import { StorefrontProductToolbar } from './StorefrontProductToolbar'
-import { useStorefrontRecentlyViewedStore } from '../../store/storefrontRecentlyViewedStore'
+import {
+  EMPTY_RECENT_IDS,
+  useStorefrontRecentlyViewedStore,
+} from '../../store/storefrontRecentlyViewedStore'
 import { accentAlpha, resolveAccent, SF_INSET_X, SF_PRODUCT_GRID } from './storefrontTheme'
 
 export function StorefrontCatalog() {
@@ -207,7 +210,7 @@ export function StorefrontCatalog() {
   ])
 
   const recentIds = useStorefrontRecentlyViewedStore((st) =>
-    shopId != null ? st.recentIds(shopId) : [],
+    shopId != null ? st.recentIds(shopId) : EMPTY_RECENT_IDS,
   )
 
   const recentRows = useMemo(() => {

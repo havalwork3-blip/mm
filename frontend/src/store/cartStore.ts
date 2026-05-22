@@ -164,10 +164,21 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   bindShop: (shopId) => {
     const saved = readStorage(String(shopId))
+    const lines = saved?.lines ?? []
+    const deliveryZoneId = saved?.deliveryZoneId ?? null
+    const cur = get()
+    if (
+      cur.shopId === shopId &&
+      cur.deliveryZoneId === deliveryZoneId &&
+      cur.lines.length === lines.length &&
+      cur.lines.every((l, i) => l.productId === lines[i]?.productId && l.quantity === lines[i]?.quantity)
+    ) {
+      return
+    }
     set({
       shopId,
-      lines: saved?.lines ?? [],
-      deliveryZoneId: saved?.deliveryZoneId ?? null,
+      lines,
+      deliveryZoneId,
       showViewCartNudge: false,
     })
   },
