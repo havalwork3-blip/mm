@@ -23,21 +23,29 @@ function SlideContent({
   img: string | null
 }) {
   if (img) {
+    const hasCaption = Boolean(slide.title || slide.subtitle)
     return (
-      <>
-        <img src={img} alt={slide.title || ''} className="sf-hero-img h-full w-full object-cover" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/5" />
-        {(slide.title || slide.subtitle) ? (
-          <div className="absolute inset-x-0 bottom-0 px-5 pb-5 pt-12">
-            {slide.title ? (
-              <p className="text-base font-extrabold text-white drop-shadow-sm sm:text-lg">{slide.title}</p>
-            ) : null}
-            {slide.subtitle ? (
-              <p className="mt-0.5 text-xs text-white/90 sm:text-sm">{slide.subtitle}</p>
-            ) : null}
-          </div>
+      <div className="sf-hero-media flex h-full w-full items-center justify-center bg-slate-900">
+        <img
+          src={img}
+          alt={slide.title || ''}
+          className="sf-hero-img h-full w-full object-contain object-center"
+          decoding="async"
+        />
+        {hasCaption ? (
+          <>
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 px-5 pb-5 pt-12">
+              {slide.title ? (
+                <p className="text-base font-extrabold text-white drop-shadow-sm sm:text-lg">{slide.title}</p>
+              ) : null}
+              {slide.subtitle ? (
+                <p className="mt-0.5 text-xs text-white/90 sm:text-sm">{slide.subtitle}</p>
+              ) : null}
+            </div>
+          </>
         ) : null}
-      </>
+      </div>
     )
   }
   return (
@@ -110,7 +118,7 @@ export function StorefrontHeroCarousel({
 
   return (
     <div className={`relative ${SF_INSET_X} mt-3 sm:mt-4 lg:mt-5`}>
-      <div className="sf-hero-frame relative aspect-[2.15/1] w-full max-h-[min(44vh,280px)] overflow-hidden rounded-2xl bg-slate-100 sm:aspect-[2.4/1] sm:max-h-[min(40vh,340px)] sm:rounded-3xl md:max-h-[380px] lg:aspect-[3.2/1] lg:max-h-[460px] lg:rounded-2xl xl:max-h-[480px]">
+      <div className="sf-hero-frame relative aspect-[2.15/1] w-full overflow-hidden rounded-2xl bg-slate-900 sm:aspect-[2.35/1] sm:rounded-3xl md:aspect-[2.5/1] lg:aspect-[2.6/1] lg:rounded-2xl xl:aspect-[2.75/1]">
         {slides.map((slide, i) => {
           const img = resolveMediaUrl(slide.image_url)
           const clickable = slide.link_type === 'url' || slide.link_type === 'category'

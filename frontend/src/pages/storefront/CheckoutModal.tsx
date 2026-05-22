@@ -1,7 +1,7 @@
-import { CheckCircle2, Crosshair, ExternalLink, Loader2, User, MapPin, Phone } from 'lucide-react'
+import { CheckCircle2, Crosshair, ExternalLink, Loader2, MessageCircle, User, MapPin, Phone } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
-import { submitPublicOrder } from '../../api/storefrontApi'
+import { submitPublicOrder, type StorefrontOrderResponse } from '../../api/storefrontApi'
 import { ApiError } from '../../lib/api'
 import { googleMapsUrl, resolveAddressFromDevice } from '../../lib/geolocation'
 import { useLocale } from '../../context/LocaleContext'
@@ -16,6 +16,7 @@ import {
 import { useStorefrontShop } from './StorefrontShopContext'
 import { storefrontStrings } from './storefrontStrings'
 import { useStorefrontPriceLabel } from './useStorefrontPriceLabel'
+import { buildCustomerOrderWhatsAppUrl } from './storefrontOrderWhatsApp'
 import { StorefrontBackButton } from './StorefrontBackButton'
 import { accentAlpha } from './storefrontTheme'
 
@@ -45,10 +46,12 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
+  const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [locating, setLocating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [placedOrder, setPlacedOrder] = useState<StorefrontOrderResponse | null>(null)
 
   const mapsLink = useMemo(() => {
     const m = address.match(/https:\/\/www\.google\.com\/maps\?q=([-\d.]+),([-\d.]+)/i)
@@ -58,6 +61,13 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
     return googleMapsUrl({ lat, lon })
   }, [address])
+
+  const whatsappUrl = useMemo(() => {
+    if (!placedOrder) return null
+    const raw = appearance.contact_whatsapp?.trim() || appearance.contact_phone?.trim() || ''
+    if (!raw) return null
+    return buildCustomerOrderWhatsAppUrl(raw, placedOrder, lang)
+  }, [placedOrder, appearance.contact_whatsapp, appearance.contact_phone, lang])
 
   useEffect(() => {
     if (!open) return
@@ -72,6 +82,7 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
     if (!open) {
       setError(null)
       setSuccess(false)
+      setPlacedOrder(null)
       setSubmitting(false)
       setLocating(false)
     }
@@ -85,6 +96,7 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
     const trimmedName = name.trim()
     const trimmedPhone = phone.trim()
     const trimmedAddress = address.trim()
+    const trimmedNotes = notes.trim()
     if (!trimmedName || !trimmedPhone || !trimmedAddress) {
       setError(s.required)
       return
@@ -104,11 +116,12 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
 
     setSubmitting(true)
     try {
-      await submitPublicOrder({
+      const order = await submitPublicOrder({
         shop: shopId,
         customer_name: trimmedName,
         customer_phone: trimmedPhone,
         customer_address: trimmedAddress,
+        customer_notes: trimmedNotes || undefined,
         delivery_zone_id: hasZones ? deliveryZoneId : undefined,
         items: orderLines.map((l) => ({ product: l.productId, quantity: l.quantity })),
       })
@@ -116,6 +129,8 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
       setName('')
       setPhone('')
       setAddress('')
+      setNotes('')
+      setPlacedOrder(order)
       setSuccess(true)
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : s.orderError
@@ -192,14 +207,32 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
         </div>
 
         <div className="overflow-y-auto px-5 py-5">
-          {success ? (
+          {success && placedOrder ? (
             <div className="flex flex-col items-center gap-4 py-4 text-center">
               <CheckCircle2 className="h-16 w-16 text-emerald-500" strokeWidth={1.5} aria-hidden />
               <p className="max-w-sm text-sm text-slate-600">{s.successBody}</p>
+              <p
+                className="rounded-2xl px-4 py-2.5 text-base font-extrabold tabular-nums"
+                style={{ backgroundColor: accentAlpha(accent, 0.1), color: accent }}
+              >
+                {s.orderNumber.replace('{id}', String(placedOrder.id))}
+              </p>
+              {whatsappUrl ? (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-full max-w-sm items-center justify-center gap-2 rounded-2xl border-2 py-3 text-sm font-bold transition hover:bg-slate-50"
+                  style={{ borderColor: accent, color: accent }}
+                >
+                  <MessageCircle className="h-5 w-5" aria-hidden />
+                  {s.orderWhatsApp}
+                </a>
+              ) : null}
               <button
                 type="button"
                 onClick={handleClose}
-                className="mt-2 w-full rounded-2xl py-3 font-bold text-white"
+                className="mt-2 w-full max-w-sm rounded-2xl py-3 font-bold text-white"
                 style={{ backgroundColor: accent }}
               >
                 {s.close}
@@ -328,6 +361,19 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
                     </a>
                   ) : null}
                 </div>
+
+                <label className="flex flex-col gap-1.5 text-sm">
+                  <span className="font-medium text-slate-700">{s.customerNotes}</span>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                    placeholder={s.customerNotesPlaceholder}
+                    className={`${inputClass} resize-none ps-4`}
+                    style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.35) }}
+                    disabled={submitting}
+                  />
+                </label>
 
                 {error ? (
                   <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">

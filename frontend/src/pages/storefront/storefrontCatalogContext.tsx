@@ -5,6 +5,7 @@ import type {
   PublicStorefrontProduct,
   StorefrontProductCollection,
 } from '../../api/storefrontApi'
+import { setProductUrlParam } from './storefrontProductUrl'
 
 export type StorefrontView = 'categories' | 'products' | 'product'
 
@@ -96,6 +97,7 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
       setSelectedProduct(product)
       setProductCategoryName(categoryName)
       setView('product')
+      setProductUrlParam(product.id)
       document.documentElement.style.overflow = 'hidden'
       scrollMainTop(false)
     },
@@ -104,6 +106,7 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
 
   const backFromProduct = useCallback(() => {
     setSelectedProduct(null)
+    setProductUrlParam(null)
     setView(returnView)
     document.documentElement.style.overflow = ''
     scrollMainTop(false)

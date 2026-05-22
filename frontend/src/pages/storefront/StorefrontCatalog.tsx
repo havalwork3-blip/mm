@@ -1,5 +1,5 @@
 import { Heart, Loader2, PackageOpen, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import {
@@ -35,6 +35,16 @@ import {
   storefrontHomeCategoriesTitle,
   storefrontHomeHighlightsTitle,
 } from './storefrontDisplay'
+import { matchProductSearch } from './storefrontProductSearch'
+import {
+  applyProductListFilters,
+  sortProductRows,
+  type ProductListFilters,
+  type ProductSortKey,
+} from './storefrontProductSort'
+import { readProductIdFromUrl } from './storefrontProductUrl'
+import { StorefrontProductToolbar } from './StorefrontProductToolbar'
+import { useStorefrontRecentlyViewedStore } from '../../store/storefrontRecentlyViewedStore'
 import { accentAlpha, resolveAccent, SF_INSET_X, SF_PRODUCT_GRID } from './storefrontTheme'
 
 export function StorefrontCatalog() {
@@ -62,9 +72,17 @@ export function StorefrontCatalog() {
   const setQuantity = useCartStore((st) => st.setQuantity)
   const cartLines = useCartStore((st) => st.lines)
   const hydrateFavorites = useStorefrontFavoritesStore((st) => st.hydrate)
+  const hydrateRecent = useStorefrontRecentlyViewedStore((st) => st.hydrate)
+  const trackRecent = useStorefrontRecentlyViewedStore((st) => st.track)
   const favoriteIds = useStorefrontFavoritesStore((st) =>
     shopId != null ? st.favoriteIds(shopId) : EMPTY_FAVORITE_IDS,
   )
+  const [sortKey, setSortKey] = useState<ProductSortKey>('default')
+  const [listFilters, setListFilters] = useState<ProductListFilters>({
+    inStockOnly: false,
+    onSaleOnly: false,
+  })
+  const urlProductHandled = useRef(false)
 
   const [categories, setCategories] = useState<PublicStorefrontCategory[]>([])
   const [banners, setBanners] = useState<PublicStorefrontBanner[]>([])
@@ -106,7 +124,22 @@ export function StorefrontCatalog() {
 
   useEffect(() => {
     hydrateFavorites()
-  }, [hydrateFavorites])
+    hydrateRecent()
+  }, [hydrateFavorites, hydrateRecent])
+
+  useEffect(() => {
+    if (loading || urlProductHandled.current || categories.length === 0) return
+    const productId = readProductIdFromUrl()
+    if (productId == null) return
+    for (const cat of categories) {
+      const product = cat.products.find((p) => p.id === productId)
+      if (product) {
+        urlProductHandled.current = true
+        openProduct(product, categoryDisplayName(cat, lang))
+        break
+      }
+    }
+  }, [loading, categories, lang, openProduct])
 
   useEffect(() => {
     if (view !== 'categories') return
@@ -126,7 +159,7 @@ export function StorefrontCatalog() {
     if (!q) return list
     return list.map((cat) => ({
       ...cat,
-      products: cat.products.filter((p) => p.name.toLowerCase().includes(q)),
+      products: cat.products.filter((p) => matchProductSearch(p, q)),
     }))
   }, [categories, search, selectedCategoryId, showProductsView])
 
@@ -156,10 +189,53 @@ export function StorefrontCatalog() {
       favoriteIds,
       cartProductIds,
     )
-    return productCollection === 'available_now'
-      ? filtered
-      : sortProductsAvailableFirst(filtered)
-  }, [filteredCategories, lang, productCollection, favoriteIds, cartProductIds, allCatalogRows])
+    const sorted =
+      productCollection === 'available_now'
+        ? filtered
+        : sortProductsAvailableFirst(filtered)
+    const filteredList = applyProductListFilters(sorted, listFilters)
+    return sortProductRows(filteredList, sortKey)
+  }, [
+    filteredCategories,
+    lang,
+    productCollection,
+    favoriteIds,
+    cartProductIds,
+    allCatalogRows,
+    listFilters,
+    sortKey,
+  ])
+
+  const recentIds = useStorefrontRecentlyViewedStore((st) =>
+    shopId != null ? st.recentIds(shopId) : [],
+  )
+
+  const recentRows = useMemo(() => {
+    const byId = new Map(allCatalogRows.map((r) => [r.product.id, r]))
+    return recentIds
+      .map((id) => byId.get(id))
+      .filter((r): r is (typeof allCatalogRows)[0] => r != null)
+      .slice(0, 8)
+  }, [recentIds, allCatalogRows])
+
+  const hasActiveListFilters = listFilters.inStockOnly || listFilters.onSaleOnly || sortKey !== 'default'
+
+  const relatedProducts = useMemo(() => {
+    if (!selectedProduct) return []
+    const cid = selectedProduct.category_id
+    return allCatalogRows
+      .filter(
+        ({ product }) =>
+          product.id !== selectedProduct.id &&
+          (cid == null || product.category_id === cid),
+      )
+      .slice(0, 8)
+  }, [selectedProduct, allCatalogRows])
+
+  function handleOpenProduct(product: PublicStorefrontProduct, categoryName: string) {
+    if (shopId != null) trackRecent(shopId, product.id)
+    openProduct(product, categoryName)
+  }
 
   const selectedCategory =
     selectedCategoryId != null ? categories.find((c) => c.id === selectedCategoryId) : null
@@ -211,10 +287,6 @@ export function StorefrontCatalog() {
     cannotOrder: s.cannotOrder,
   }
 
-  function handleOpenProduct(product: PublicStorefrontProduct, categoryName: string) {
-    openProduct(product, categoryName)
-  }
-
   function handleAddToCart(product: PublicStorefrontProduct) {
     addItem(product, 1)
   }
@@ -249,8 +321,15 @@ export function StorefrontCatalog() {
           inCart: s.inCart,
           addToFavorites: s.addToFavorites,
           removeFromFavorites: s.removeFromFavorites,
+          shareProduct: s.shareProduct,
+          linkCopied: s.linkCopied,
+          relatedProducts: s.relatedProducts,
+          addToCart: s.addToCart,
           ...availabilityLabels,
         }}
+        relatedProducts={relatedProducts}
+        onOpenRelated={handleOpenProduct}
+        onAddRelatedToCart={handleAddToCart}
         onBack={backFromProduct}
         onAdd={handleAddFromDetail}
       />
@@ -321,6 +400,8 @@ export function StorefrontCatalog() {
                 onSelectCollection={showCollection}
                 onOpenProduct={handleOpenProduct}
                 onViewAllProducts={showAllProducts}
+                recentRows={recentRows}
+                recentTitle={s.recentlyViewed}
               />
             ) : null}
           </div>
@@ -361,6 +442,30 @@ export function StorefrontCatalog() {
             ) : null}
 
             <section className={`${SF_INSET_X} pb-6 pt-2 sm:pt-4`}>
+              <StorefrontProductToolbar
+                accent={accent}
+                sortKey={sortKey}
+                filters={listFilters}
+                hasActiveFilters={hasActiveListFilters}
+                labels={{
+                  sort: s.sort,
+                  sortDefault: s.sortDefault,
+                  sortPriceAsc: s.sortPriceAsc,
+                  sortPriceDesc: s.sortPriceDesc,
+                  sortName: s.sortName,
+                  sortNewest: s.sortNewest,
+                  filterInStock: s.filterInStock,
+                  filterOnSale: s.filterOnSale,
+                  clearFilters: s.clearFilters,
+                }}
+                onSortChange={setSortKey}
+                onFiltersChange={setListFilters}
+                onClearFilters={() => {
+                  setSortKey('default')
+                  setListFilters({ inStockOnly: false, onSaleOnly: false })
+                }}
+              />
+
               <div className="mb-5 flex items-center justify-between gap-3">
                 <h2 className="sf-heading text-lg font-extrabold tracking-tight sm:text-xl">
                   {productsHeading

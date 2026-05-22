@@ -72,7 +72,12 @@ export function StorefrontLayout() {
   const headerTitle = storefrontHeaderTitle(appearance, shopName)
   const headerSubtitle = storefrontHeaderSubtitle(appearance)
   const lines = useCartStore((st) => st.lines)
+  const bindCartShop = useCartStore((st) => st.bindShop)
   const count = cartItemCount(lines)
+
+  useEffect(() => {
+    if (shopId != null) bindCartShop(shopId)
+  }, [shopId, bindCartShop])
 
   const [cartOpen, setCartOpen] = useState(false)
   const [checkoutOpen, setCheckoutOpen] = useState(false)

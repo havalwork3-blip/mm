@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from 'react'
 
 import { resolveMediaUrl } from '../../lib/api'
 import { categoryDisplayName } from '../../lib/categoryNames'
+import { matchProductSearch } from './storefrontProductSearch'
 import { useLocale } from '../../context/LocaleContext'
 import { useStorefrontCatalog } from './storefrontCatalogContext'
 import { storefrontStrings } from './storefrontStrings'
@@ -58,7 +59,7 @@ export function StorefrontSearchOverlay({
     for (const cat of catalogCategories) {
       const catName = categoryDisplayName(cat, lang)
       for (const p of cat.products) {
-        if (p.name.toLowerCase().includes(q)) {
+        if (matchProductSearch(p, q)) {
           out.push({ product: p, categoryName: catName })
         }
       }

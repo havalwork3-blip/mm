@@ -304,6 +304,7 @@ export type MerchantStorefrontOrderRow = {
   customer_name: string
   customer_phone: string
   customer_address: string
+  customer_notes?: string
   subtotal_amount?: string | null
   delivery_fee?: string
   delivery_zone_name?: string

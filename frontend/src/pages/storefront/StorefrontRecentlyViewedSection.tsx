@@ -1,0 +1,61 @@
+import type { PublicStorefrontProduct } from '../../api/storefrontApi'
+import type { CatalogProductRow } from './storefrontCollections'
+import { StorefrontProductCardCompact } from './StorefrontProductCardCompact'
+import { SF_COLLECTION_GRID, accentAlpha } from './storefrontTheme'
+
+type Props = {
+  shopId: number
+  accent: string
+  rows: CatalogProductRow[]
+  qtyInCart: (productId: number) => number
+  title: string
+  addToCart: string
+  addToFavorites: string
+  removeFromFavorites: string
+  onOpenProduct: (product: PublicStorefrontProduct, categoryName: string) => void
+  onAddToCart: (product: PublicStorefrontProduct) => void
+}
+
+export function StorefrontRecentlyViewedSection({
+  shopId,
+  accent,
+  rows,
+  qtyInCart,
+  title,
+  addToCart,
+  addToFavorites,
+  removeFromFavorites,
+  onOpenProduct,
+  onAddToCart,
+}: Props) {
+  if (rows.length === 0) return null
+
+  return (
+    <section className="sf-recent-section mb-6 lg:mb-8">
+      <div className="mb-3 flex items-center gap-2">
+        <span
+          className="h-6 w-1 rounded-full"
+          style={{ background: `linear-gradient(180deg, ${accent}, ${accent}88)` }}
+          aria-hidden
+        />
+        <h2 className="sf-heading text-base font-extrabold text-slate-900 sm:text-lg">{title}</h2>
+      </div>
+      <ul className={SF_COLLECTION_GRID}>
+        {rows.map(({ product, categoryName }) => (
+          <StorefrontProductCardCompact
+            key={product.id}
+            shopId={shopId}
+            product={product}
+            accent={accent}
+            inCart={qtyInCart(product.id)}
+            onOpen={() => onOpenProduct(product, categoryName)}
+            onAddToCart={() => onAddToCart(product)}
+            addToCart={addToCart}
+            addToFavorites={addToFavorites}
+            removeFromFavorites={removeFromFavorites}
+          />
+        ))}
+      </ul>
+    </section>
+  )
+}

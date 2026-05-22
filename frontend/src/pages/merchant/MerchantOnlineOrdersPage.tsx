@@ -876,6 +876,12 @@ function OrderCard({
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" aria-hidden />
               <OrderAddressBlock address={order.customer_address} t={t} />
             </div>
+            {order.customer_notes?.trim() ? (
+              <p className="mt-3 border-t border-slate-100 pt-3 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
+                <span className="font-bold text-slate-800 dark:text-slate-200">{t('onlineOrders.customerNote')}: </span>
+                {order.customer_notes.trim()}
+              </p>
+            ) : null}
           </div>
 
           <div className="max-w-xs">
@@ -1046,6 +1052,16 @@ function OrderDetailModal({
                 <OrderAddressBlock address={order.customer_address} t={t} />
               </dd>
             </div>
+            {order.customer_notes?.trim() ? (
+              <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50">
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  {t('onlineOrders.customerNote')}
+                </dt>
+                <dd className="mt-1 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-200">
+                  {order.customer_notes.trim()}
+                </dd>
+              </div>
+            ) : null}
           </dl>
 
           <div className="mt-4">

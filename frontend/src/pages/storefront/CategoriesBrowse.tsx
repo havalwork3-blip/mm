@@ -7,6 +7,7 @@ import { StorefrontCategoryIconsRow } from './StorefrontCategoryIconsRow'
 import { StorefrontMobileCategories } from './StorefrontMobileCategories'
 import { StorefrontCollectionSections } from './StorefrontCollectionSections'
 import type { CatalogProductRow } from './storefrontCollections'
+import { StorefrontRecentlyViewedSection } from './StorefrontRecentlyViewedSection'
 import { SF_INSET_X } from './storefrontTheme'
 
 type Props = {
@@ -42,6 +43,8 @@ type Props = {
   onSelectCollection: (id: StorefrontProductCollection) => void
   onOpenProduct: (product: PublicStorefrontProduct, categoryName: string) => void
   onViewAllProducts: () => void
+  recentRows: CatalogProductRow[]
+  recentTitle: string
 }
 
 export function CategoriesBrowse({
@@ -58,6 +61,8 @@ export function CategoriesBrowse({
   onSelectCollection,
   onOpenProduct,
   onViewAllProducts,
+  recentRows,
+  recentTitle,
 }: Props) {
   return (
     <section className={`${SF_INSET_X} sf-view-panel mt-2 sm:mt-4 lg:mt-6`}>
@@ -76,6 +81,21 @@ export function CategoriesBrowse({
         productCountLabel={(n) => labels.productCount.replace('{n}', String(n))}
         onSelect={onSelectCategory}
       />
+
+      {recentRows.length > 0 ? (
+        <StorefrontRecentlyViewedSection
+          shopId={shopId}
+          accent={accent}
+          rows={recentRows}
+          qtyInCart={qtyInCart}
+          title={recentTitle}
+          addToCart={labels.addToCart}
+          addToFavorites={labels.addToFavorites}
+          removeFromFavorites={labels.removeFromFavorites}
+          onOpenProduct={onOpenProduct}
+          onAddToCart={onAddToCart}
+        />
+      ) : null}
 
       <StorefrontCollectionSections
         shopId={shopId}

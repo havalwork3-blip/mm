@@ -9,7 +9,10 @@ import { UnavailableProductBanner } from './UnavailableProductBadge'
 import { useLocale } from '../../context/LocaleContext'
 import { StorefrontFavoriteButton } from './StorefrontFavoriteButton'
 import { StorefrontBackButton } from './StorefrontBackButton'
-import { accentAlpha } from './storefrontTheme'
+import { StorefrontShareProductButton } from './StorefrontShareProductButton'
+import { StorefrontProductCardCompact } from './StorefrontProductCardCompact'
+import type { CatalogProductRow } from './storefrontCollections'
+import { SF_COLLECTION_GRID, accentAlpha } from './storefrontTheme'
 import { useStorefrontPriceLabel } from './useStorefrontPriceLabel'
 
 type Labels = {
@@ -36,7 +39,14 @@ type Props = {
   labels: Labels & {
     addToFavorites: string
     removeFromFavorites: string
+    shareProduct: string
+    linkCopied: string
+    relatedProducts: string
+    addToCart: string
   }
+  relatedProducts?: CatalogProductRow[]
+  onOpenRelated?: (product: PublicStorefrontProduct, categoryName: string) => void
+  onAddRelatedToCart?: (product: PublicStorefrontProduct) => void
   onBack: () => void
   onAdd: (quantity: number) => void
 }
@@ -48,6 +58,9 @@ export function StorefrontProductDetail({
   accent,
   inCart,
   labels,
+  relatedProducts = [],
+  onOpenRelated,
+  onAddRelatedToCart,
   onBack,
   onAdd,
 }: Props) {
@@ -221,6 +234,16 @@ export function StorefrontProductDetail({
             </p>
           ) : null}
 
+          <div className="mt-4">
+            <StorefrontShareProductButton
+              productId={product.id}
+              productName={product.name}
+              accent={accent}
+              shareLabel={labels.shareProduct}
+              linkCopiedLabel={labels.linkCopied}
+            />
+          </div>
+
           {description ? (
             <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
               <h2 className="mb-2 text-sm font-bold text-slate-800">{labels.productDetails}</h2>
@@ -268,6 +291,28 @@ export function StorefrontProductDetail({
               </button>
             </div>
           </div>
+
+          {relatedProducts.length > 0 && onOpenRelated ? (
+            <section className="mt-8 border-t border-slate-200/80 pt-6">
+              <h2 className="mb-3 text-base font-extrabold text-slate-900">{labels.relatedProducts}</h2>
+              <ul className={SF_COLLECTION_GRID}>
+                {relatedProducts.map(({ product: rel, categoryName: relCat }) => (
+                  <StorefrontProductCardCompact
+                    key={rel.id}
+                    shopId={shopId}
+                    product={rel}
+                    accent={accent}
+                    inCart={0}
+                    onOpen={() => onOpenRelated(rel, relCat)}
+                    onAddToCart={() => onAddRelatedToCart?.(rel)}
+                    addToCart={labels.addToCart}
+                    addToFavorites={labels.addToFavorites}
+                    removeFromFavorites={labels.removeFromFavorites}
+                  />
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </div>
       </div>
 

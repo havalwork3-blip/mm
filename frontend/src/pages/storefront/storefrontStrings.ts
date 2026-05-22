@@ -154,6 +154,23 @@ const STRINGS = {
     removeFromFavorites: 'لابردن لە دڵخواز',
     favoritesEmpty: 'هێشتا دڵخوازت نییە',
     favoritesEmptyHint: 'لەسەر دڵ بگرە بۆ پاشەکەوتکردن',
+    sort: 'ڕیزکردن',
+    sortDefault: 'بنەڕەت',
+    sortPriceAsc: 'نرخ: کەم بۆ زۆر',
+    sortPriceDesc: 'نرخ: زۆر بۆ کەم',
+    sortName: 'ناو',
+    sortNewest: 'نوێترین',
+    filterInStock: 'بەردەست',
+    filterOnSale: 'داشکاندن',
+    clearFilters: 'پاککردنەوە',
+    customerNotes: 'تێبینی (ئارەزوومەندانە)',
+    customerNotesPlaceholder: 'کاتێکی گەیاندن، ڕێنمایی، …',
+    orderNumber: 'ژمارەی داواکاری: #{id}',
+    orderWhatsApp: 'پەیوەندی لە واتسئاپ',
+    shareProduct: 'هاوبەشکردنی بەرهەم',
+    linkCopied: 'لینک کۆپی کرا',
+    recentlyViewed: 'دواتر بینراو',
+    relatedProducts: 'بەرهەمە پەیوەندیدارەکان',
   },
   ar: {
     hello: 'مرحباً',
@@ -271,6 +288,23 @@ const STRINGS = {
     removeFromFavorites: 'إزالة من المفضلة',
     favoritesEmpty: 'لا مفضلات بعد',
     favoritesEmptyHint: 'اضغط القلب لحفظ المنتج',
+    sort: 'ترتيب',
+    sortDefault: 'افتراضي',
+    sortPriceAsc: 'السعر: من الأقل',
+    sortPriceDesc: 'السعر: من الأعلى',
+    sortName: 'الاسم',
+    sortNewest: 'الأحدث',
+    filterInStock: 'متوفر',
+    filterOnSale: 'تخفيض',
+    clearFilters: 'مسح الفلاتر',
+    customerNotes: 'ملاحظة (اختياري)',
+    customerNotesPlaceholder: 'وقت التوصيل، تعليمات، …',
+    orderNumber: 'رقم الطلب: #{id}',
+    orderWhatsApp: 'تواصل عبر واتساب',
+    shareProduct: 'مشاركة المنتج',
+    linkCopied: 'تم نسخ الرابط',
+    recentlyViewed: 'شوهد مؤخراً',
+    relatedProducts: 'منتجات ذات صلة',
   },
   en: {
     hello: 'Hello',
@@ -388,6 +422,23 @@ const STRINGS = {
     removeFromFavorites: 'Remove from favorites',
     favoritesEmpty: 'No favorites yet',
     favoritesEmptyHint: 'Tap the heart on any product to save it here',
+    sort: 'Sort',
+    sortDefault: 'Default',
+    sortPriceAsc: 'Price: low to high',
+    sortPriceDesc: 'Price: high to low',
+    sortName: 'Name',
+    sortNewest: 'Newest',
+    filterInStock: 'In stock',
+    filterOnSale: 'On sale',
+    clearFilters: 'Clear filters',
+    customerNotes: 'Note (optional)',
+    customerNotesPlaceholder: 'Delivery time, instructions, …',
+    orderNumber: 'Order #{id}',
+    orderWhatsApp: 'Contact on WhatsApp',
+    shareProduct: 'Share product',
+    linkCopied: 'Link copied',
+    recentlyViewed: 'Recently viewed',
+    relatedProducts: 'Related products',
   },
 }
 
@@ -507,6 +558,23 @@ export type StorefrontStrings = {
   removeFromFavorites: string
   favoritesEmpty: string
   favoritesEmptyHint: string
+  sort: string
+  sortDefault: string
+  sortPriceAsc: string
+  sortPriceDesc: string
+  sortName: string
+  sortNewest: string
+  filterInStock: string
+  filterOnSale: string
+  clearFilters: string
+  customerNotes: string
+  customerNotesPlaceholder: string
+  orderNumber: string
+  orderWhatsApp: string
+  shareProduct: string
+  linkCopied: string
+  recentlyViewed: string
+  relatedProducts: string
 }
 
 export function storefrontStrings(lang: Lang): StorefrontStrings {

@@ -493,6 +493,7 @@ class StorefrontOrder(ShopScopedModel):
     customer_name = models.CharField(max_length=255)
     customer_phone = models.CharField(max_length=32)
     customer_address = models.TextField()
+    customer_notes = models.TextField(blank=True, default="")
     subtotal_amount = models.DecimalField(
         max_digits=18,
         decimal_places=4,

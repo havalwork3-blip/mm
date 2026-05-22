@@ -149,6 +149,7 @@ export type StorefrontOrderPayload = {
   customer_name: string
   customer_phone: string
   customer_address: string
+  customer_notes?: string
   delivery_zone_id?: number | null
   items: Array<{ product: number; quantity: number }>
 }
@@ -159,6 +160,7 @@ export type StorefrontOrderResponse = {
   customer_name: string
   customer_phone: string
   customer_address: string
+  customer_notes?: string
   subtotal_amount?: string | null
   delivery_fee?: string
   delivery_zone_name?: string

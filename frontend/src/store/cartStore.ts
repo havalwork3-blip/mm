@@ -13,16 +13,68 @@ export type CartLine = {
   quantity: number
 }
 
+type PersistedCart = {
+  lines: CartLine[]
+  deliveryZoneId: number | null
+}
+
+const STORAGE_KEY = 'sf_cart_v1'
+
 type CartState = {
+  shopId: number | null
   lines: CartLine[]
   deliveryZoneId: number | null
   showViewCartNudge: boolean
+  bindShop: (shopId: number) => void
   addItem: (product: PublicStorefrontProduct, quantity?: number) => void
   removeItem: (productId: number) => void
   setQuantity: (productId: number, quantity: number) => void
   setDeliveryZoneId: (zoneId: number | null) => void
   dismissViewCartNudge: () => void
   clearCart: () => void
+}
+
+function readStorage(shopKey: string): PersistedCart | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    const block = parsed[shopKey]
+    if (!block || typeof block !== 'object') return null
+    const o = block as PersistedCart
+    if (!Array.isArray(o.lines)) return null
+    return {
+      lines: o.lines.filter(
+        (l) =>
+          l &&
+          typeof l === 'object' &&
+          Number.isFinite((l as CartLine).productId) &&
+          (l as CartLine).quantity > 0,
+      ) as CartLine[],
+      deliveryZoneId:
+        o.deliveryZoneId != null && Number.isFinite(o.deliveryZoneId)
+          ? Number(o.deliveryZoneId)
+          : null,
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeStorage(shopKey: string, data: PersistedCart) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {}
+    parsed[shopKey] = data
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed))
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function persist(shopId: number | null, lines: CartLine[], deliveryZoneId: number | null) {
+  if (shopId == null) return
+  writeStorage(String(shopId), { lines: cartActiveLines(lines), deliveryZoneId })
 }
 
 function productPricing(product: PublicStorefrontProduct) {
@@ -104,10 +156,21 @@ export function cartItemCount(lines: CartLine[]): number {
   return cartActiveLines(lines).reduce((sum, line) => sum + line.quantity, 0)
 }
 
-export const useCartStore = create<CartState>((set) => ({
+export const useCartStore = create<CartState>((set, get) => ({
+  shopId: null,
   lines: [],
   deliveryZoneId: null,
   showViewCartNudge: false,
+
+  bindShop: (shopId) => {
+    const saved = readStorage(String(shopId))
+    set({
+      shopId,
+      lines: saved?.lines ?? [],
+      deliveryZoneId: saved?.deliveryZoneId ?? null,
+      showViewCartNudge: false,
+    })
+  },
 
   addItem: (product, quantity = 1) => {
     const qty = Math.max(1, Math.floor(quantity))
@@ -115,13 +178,13 @@ export const useCartStore = create<CartState>((set) => ({
     const pricing = productPricing(product)
     set((state) => {
       const idx = state.lines.findIndex((l) => l.productId === product.id)
+      let lines: CartLine[]
       if (idx >= 0) {
         const next = [...state.lines]
         next[idx] = { ...next[idx], quantity: next[idx].quantity + qty }
-        return { lines: next, showViewCartNudge: true }
-      }
-      return {
-        lines: [
+        lines = next
+      } else {
+        lines = [
           ...state.lines,
           {
             productId: product.id,
@@ -130,16 +193,19 @@ export const useCartStore = create<CartState>((set) => ({
             quantity: qty,
             ...pricing,
           },
-        ],
-        showViewCartNudge: true,
+        ]
       }
+      persist(state.shopId, lines, state.deliveryZoneId)
+      return { lines, showViewCartNudge: true }
     })
   },
 
   removeItem: (productId) => {
-    set((state) => ({
-      lines: state.lines.filter((l) => l.productId !== productId),
-    }))
+    set((state) => {
+      const lines = state.lines.filter((l) => l.productId !== productId)
+      persist(state.shopId, lines, state.deliveryZoneId)
+      return { lines }
+    })
   },
 
   setQuantity: (productId, quantity) => {
@@ -150,6 +216,7 @@ export const useCartStore = create<CartState>((set) => ({
       const prevQty = state.lines[idx].quantity
       const next = [...state.lines]
       next[idx] = { ...next[idx], quantity: qty }
+      persist(state.shopId, next, state.deliveryZoneId)
       const addedMore = qty > prevQty && qty > 0
       return {
         lines: next,
@@ -158,9 +225,18 @@ export const useCartStore = create<CartState>((set) => ({
     })
   },
 
-  setDeliveryZoneId: (zoneId) => set({ deliveryZoneId: zoneId }),
+  setDeliveryZoneId: (zoneId) => {
+    set((state) => {
+      persist(state.shopId, state.lines, zoneId)
+      return { deliveryZoneId: zoneId }
+    })
+  },
 
   dismissViewCartNudge: () => set({ showViewCartNudge: false }),
 
-  clearCart: () => set({ lines: [], deliveryZoneId: null, showViewCartNudge: false }),
+  clearCart: () => {
+    const { shopId, deliveryZoneId } = get()
+    persist(shopId, [], deliveryZoneId)
+    set({ lines: [], showViewCartNudge: false })
+  },
 }))
