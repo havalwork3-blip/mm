@@ -109,8 +109,8 @@ export function StorefrontHeroCarousel({
   }
 
   return (
-    <div className={`relative ${SF_INSET_X} mt-3 sm:mt-4 lg:mt-6`}>
-      <div className="sf-hero-frame relative aspect-[2.15/1] w-full max-h-[min(44vh,280px)] overflow-hidden rounded-2xl bg-slate-100 sm:aspect-[2.4/1] sm:max-h-[min(40vh,340px)] sm:rounded-3xl md:max-h-[380px] lg:aspect-[3/1] lg:max-h-[420px] lg:rounded-2xl">
+    <div className={`relative ${SF_INSET_X} mt-3 sm:mt-4 lg:mt-5`}>
+      <div className="sf-hero-frame relative aspect-[2.15/1] w-full max-h-[min(44vh,280px)] overflow-hidden rounded-2xl bg-slate-100 sm:aspect-[2.4/1] sm:max-h-[min(40vh,340px)] sm:rounded-3xl md:max-h-[380px] lg:aspect-[3.2/1] lg:max-h-[460px] lg:rounded-2xl xl:max-h-[480px]">
         {slides.map((slide, i) => {
           const img = resolveMediaUrl(slide.image_url)
           const clickable = slide.link_type === 'url' || slide.link_type === 'category'

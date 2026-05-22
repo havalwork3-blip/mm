@@ -548,7 +548,7 @@ html.sf-mode select {
 .sf-desktop-header-spacer {
   display: none;
   flex-shrink: 0;
-  height: 7.25rem;
+  height: 8.75rem;
 }
 
 @media (min-width: 1024px) {
@@ -597,13 +597,58 @@ html.sf-mode select {
       linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
   }
 
+  .sf-hero-frame {
+    box-shadow:
+      0 4px 6px rgba(15, 23, 42, 0.04),
+      0 16px 48px rgba(15, 23, 42, 0.08);
+  }
+
+  .sf-cat-icons-row {
+    margin-bottom: 1.75rem;
+  }
+
   .sf-collection-section {
+    border-radius: 1.25rem;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    background: #ffffff;
+    padding: 1.5rem;
+    box-shadow:
+      0 1px 3px rgba(15, 23, 42, 0.05),
+      0 12px 32px rgba(15, 23, 42, 0.06);
+  }
+
+  .sf-collection-grid > li {
+    display: flex;
+  }
+
+  .sf-product-card-compact article {
+    width: 100%;
     border-radius: 1rem;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04);
+  }
+
+  .sf-product-card-compact article:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 8px 20px rgba(15, 23, 42, 0.1),
+      0 2px 6px rgba(15, 23, 42, 0.06);
+  }
+
+  .sf-product-card-compact .aspect-square {
+    padding: 0.75rem;
   }
 
   .sf-cat-card {
     border-radius: 1.25rem;
+  }
+
+  .sf-desktop-search:focus {
+    box-shadow: 0 0 0 3px rgba(var(--sf-accent-rgb, 255, 90, 0), 0.12);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .sf-collection-section {
+    padding: 0 0.25rem;
   }
 }
 

@@ -21,23 +21,6 @@ type Props = {
   onOpenMenu: () => void
 }
 
-function darkenHex(hex: string, amount = 0.55): string {
-  const h = hex.replace('#', '')
-  const full =
-    h.length === 3
-      ? h
-          .split('')
-          .map((x) => x + x)
-          .join('')
-      : h.slice(0, 6)
-  const n = Number.parseInt(full, 16)
-  if (Number.isNaN(n)) return '#1e3a5f'
-  const r = Math.round(((n >> 16) & 255) * (1 - amount))
-  const g = Math.round(((n >> 8) & 255) * (1 - amount))
-  const b = Math.round((n & 255) * (1 - amount))
-  return `#${[r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')}`
-}
-
 export function StorefrontDesktopHeader({
   accent,
   cartCount,
@@ -66,7 +49,6 @@ export function StorefrontDesktopHeader({
 
   const [query, setQuery] = useState(search)
   const logoSrc = resolveMediaUrl(appearance.logo_url ?? null)
-  const navDark = darkenHex(accent, 0.72)
   const headerTitle = storefrontHeaderTitle(appearance, shopName)
   const headerSubtitle = storefrontHeaderSubtitle(appearance)
 
@@ -81,44 +63,49 @@ export function StorefrontDesktopHeader({
   }
 
   const cats = catalogCategories.filter((c) => c.products.length > 0)
+  const navActive =
+    view === 'products' && selectedCategoryId == null && !productCollection
 
   return (
     <header className="sf-desktop-header hidden lg:block">
-      <div
-        className="border-b border-white/10 text-white"
-        style={{
-          background: `linear-gradient(90deg, ${navDark} 0%, ${accent} 55%, ${navDark} 100%)`,
-        }}
-      >
-        <div className={`${SF_DESKTOP_SHELL} flex items-center gap-4 py-3`}>
+      <div className="sf-desktop-header-top border-b border-slate-200/90 bg-white/95 shadow-[0_4px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+        <div className={`${SF_DESKTOP_SHELL} flex items-center gap-5 py-3.5 xl:gap-6 xl:py-4`}>
           <button
             type="button"
             onClick={backToCategories}
-            className="flex shrink-0 items-center gap-3 text-start transition hover:opacity-95"
+            className="group flex shrink-0 items-center gap-3 text-start transition hover:opacity-90"
           >
             <span
-              className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-white/15 text-lg font-bold backdrop-blur-sm"
+              className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-slate-200/80 transition group-hover:ring-2"
+              style={{ boxShadow: `0 8px 24px ${accentAlpha(accent, 0.18)}` }}
             >
               {logoSrc ? (
                 <img src={logoSrc} alt="" className="h-full w-full object-cover" />
               ) : (
-                shopName.charAt(0) || 'M'
+                <span
+                  className="flex h-full w-full items-center justify-center text-lg font-black text-white"
+                  style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)` }}
+                >
+                  {shopName.charAt(0) || 'M'}
+                </span>
               )}
             </span>
             {(headerTitle || headerSubtitle) ? (
-              <div className="min-w-0 max-w-[12rem]">
+              <div className="hidden min-w-0 max-w-[11rem] xl:block">
                 {headerTitle ? (
-                  <p className="truncate text-[15px] font-extrabold">{headerTitle}</p>
+                  <p className="truncate text-[15px] font-extrabold tracking-tight text-slate-900">
+                    {headerTitle}
+                  </p>
                 ) : null}
                 {headerSubtitle ? (
-                  <p className="truncate text-[11px] text-white/75">{headerSubtitle}</p>
+                  <p className="truncate text-[11px] font-medium text-slate-500">{headerSubtitle}</p>
                 ) : null}
               </div>
             ) : null}
           </button>
 
           <form
-            className="mx-auto flex min-w-0 max-w-2xl flex-1"
+            className="mx-auto flex min-w-0 max-w-3xl flex-1"
             onSubmit={(e) => {
               e.preventDefault()
               submitSearch()
@@ -137,7 +124,8 @@ export function StorefrontDesktopHeader({
                   if (!e.target.value.trim()) setSearch('')
                 }}
                 placeholder={s.searchPlaceholder}
-                className="w-full rounded-xl border-0 bg-white py-3 ps-12 pe-4 text-sm font-medium text-slate-800 shadow-lg outline-none ring-2 ring-white/20 focus:ring-white/40"
+                className="sf-desktop-search w-full rounded-2xl border border-slate-200/90 bg-slate-50/90 py-3.5 ps-12 pe-4 text-sm font-medium text-slate-800 shadow-inner outline-none transition focus:border-transparent focus:bg-white focus:ring-2 focus:ring-[color:var(--sf-accent-ring)]"
+                style={{ ['--sf-accent-ring' as string]: accentAlpha(accent, 0.35) }}
                 dir="auto"
               />
             </div>
@@ -147,7 +135,7 @@ export function StorefrontDesktopHeader({
             <button
               type="button"
               onClick={onOpenMenu}
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 transition hover:bg-white/25"
+              className="sf-desktop-icon-btn flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
               aria-label={s.menu}
             >
               <Menu className="h-5 w-5" aria-hidden />
@@ -156,8 +144,10 @@ export function StorefrontDesktopHeader({
               type="button"
               onClick={onShowFavorites}
               className={[
-                'relative flex h-11 w-11 items-center justify-center rounded-xl transition',
-                favoritesActive ? 'bg-white text-rose-500 shadow-md' : 'bg-white/15 hover:bg-white/25',
+                'sf-desktop-icon-btn relative flex h-11 w-11 items-center justify-center rounded-xl border transition',
+                favoritesActive
+                  ? 'border-rose-200 bg-rose-50 text-rose-600 shadow-sm'
+                  : 'border-slate-200/90 bg-white text-slate-600 shadow-sm hover:bg-slate-50',
               ].join(' ')}
               aria-label={s.myFavorites}
               aria-pressed={favoritesActive}
@@ -175,18 +165,18 @@ export function StorefrontDesktopHeader({
               type="button"
               onClick={onOpenCart}
               className={[
-                'relative flex h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-bold shadow-md transition hover:bg-white/95',
+                'sf-desktop-cart-btn relative flex h-11 items-center gap-2.5 rounded-xl px-5 text-sm font-bold text-white shadow-md transition hover:brightness-105',
                 cartPulse ? 'sf-cart-pulse' : '',
               ].join(' ')}
-              style={{ color: accent }}
+              style={{
+                background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
+                boxShadow: `0 8px 22px ${accentAlpha(accent, 0.35)}`,
+              }}
             >
               <ShoppingBag className="h-5 w-5" strokeWidth={2.25} aria-hidden />
               <span>{s.cart}</span>
               {cartCount > 0 ? (
-                <span
-                  className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-extrabold text-white"
-                  style={{ backgroundColor: accent }}
-                >
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/25 px-1.5 text-[10px] font-extrabold">
                   {cartCount > 99 ? '99+' : cartCount}
                 </span>
               ) : null}
@@ -195,20 +185,23 @@ export function StorefrontDesktopHeader({
         </div>
       </div>
 
-      <nav className="border-b border-slate-200/80 bg-white shadow-sm">
-        <div className={`${SF_DESKTOP_SHELL} flex items-center gap-1 py-2.5`}>
+      <nav className="sf-desktop-nav border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
+        <div className={`${SF_DESKTOP_SHELL} flex items-center gap-2 py-2.5 xl:py-3`}>
           <button
             type="button"
             onClick={showAllProducts}
             className={[
-              'sf-desktop-nav-pill flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold transition',
-              view === 'products' && selectedCategoryId == null && !productCollection
+              'sf-desktop-nav-pill flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition',
+              navActive
                 ? 'text-white shadow-md'
-                : 'text-slate-700 hover:bg-slate-100',
+                : 'border border-transparent bg-slate-100/80 text-slate-700 hover:bg-slate-100',
             ].join(' ')}
             style={
-              view === 'products' && selectedCategoryId == null && !productCollection
-                ? { background: `linear-gradient(135deg, ${accent}, ${accent}dd)` }
+              navActive
+                ? {
+                    background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
+                    boxShadow: `0 4px 14px ${accentAlpha(accent, 0.28)}`,
+                  }
                 : undefined
             }
           >
@@ -216,7 +209,7 @@ export function StorefrontDesktopHeader({
             {s.allCategories}
           </button>
 
-          <div className="sf-scrollbar-none flex min-w-0 flex-1 gap-1 overflow-x-auto">
+          <div className="sf-scrollbar-none flex min-w-0 flex-1 flex-wrap items-center gap-1.5 overflow-x-auto pb-0.5">
             {cats.map((cat) => {
               const active = view === 'products' && selectedCategoryId === cat.id
               const label = categoryDisplayName(cat, lang)
@@ -226,14 +219,16 @@ export function StorefrontDesktopHeader({
                   type="button"
                   onClick={() => selectCategory(cat.id)}
                   className={[
-                    'sf-desktop-nav-pill shrink-0 rounded-lg px-4 py-2 text-sm font-bold transition',
-                    active ? 'text-white shadow-md' : 'text-slate-700 hover:bg-slate-100',
+                    'sf-desktop-nav-pill shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold transition',
+                    active
+                      ? 'text-white shadow-md'
+                      : 'text-slate-600 hover:bg-slate-100',
                   ].join(' ')}
                   style={
                     active
                       ? {
                           background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
-                          boxShadow: `0 4px 12px ${accentAlpha(accent, 0.3)}`,
+                          boxShadow: `0 4px 12px ${accentAlpha(accent, 0.25)}`,
                         }
                       : undefined
                   }

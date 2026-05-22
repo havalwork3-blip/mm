@@ -65,7 +65,11 @@ export const SF_INSET_X =
   'px-[max(1rem,env(safe-area-inset-left))] pe-[max(1rem,env(safe-area-inset-right))] sm:px-6 md:px-8'
 
 export const SF_PRODUCT_GRID =
-  'grid grid-cols-2 gap-3 min-[380px]:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-5 lg:grid-cols-5 xl:grid-cols-6'
+  'grid grid-cols-2 gap-3 min-[380px]:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-5 lg:grid-cols-4 lg:gap-5 xl:grid-cols-5 2xl:grid-cols-6'
+
+/** Home collection rows — full grid on tablet/desktop (no horizontal scroll). */
+export const SF_COLLECTION_GRID =
+  'sf-collection-grid grid grid-cols-2 gap-3 min-[380px]:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-5 lg:grid-cols-4 lg:gap-5 xl:grid-cols-5'
 
 export const SF_CATEGORY_GRID =
   'hidden gap-3 md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
