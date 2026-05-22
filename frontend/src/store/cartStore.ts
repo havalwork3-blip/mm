@@ -104,7 +104,7 @@ export function cartItemCount(lines: CartLine[]): number {
   return cartActiveLines(lines).reduce((sum, line) => sum + line.quantity, 0)
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
+export const useCartStore = create<CartState>((set) => ({
   lines: [],
   deliveryZoneId: null,
   showViewCartNudge: false,
