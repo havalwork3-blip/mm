@@ -137,33 +137,6 @@ const SHOP_NAV: ShopNavEntry[] = [
   },
   {
     type: 'group',
-    id: 'online',
-    labelKey: 'nav.onlineSection',
-    icon: Globe,
-    items: [
-      {
-        to: '/online-pricing',
-        labelKey: 'nav.onlinePricing',
-        icon: DollarSign,
-        requiresOnlineStorefront: true,
-      },
-      {
-        to: '/online-shop',
-        labelKey: 'nav.onlineShop',
-        icon: Globe,
-        requiresOnlineStorefront: true,
-      },
-      {
-        to: '/online-orders',
-        labelKey: 'nav.onlineOrders',
-        icon: ShoppingCart,
-        requiresOnlineStorefront: true,
-        showOnlineOrdersBadge: true,
-      },
-    ],
-  },
-  {
-    type: 'group',
     id: 'inventory',
     labelKey: 'nav.inventorySection',
     icon: Package,
@@ -281,6 +254,33 @@ const SHOP_NAV: ShopNavEntry[] = [
     to: '/catalog',
     labelKey: 'nav.catalog',
     icon: BookOpen,
+  },
+  {
+    type: 'group',
+    id: 'online',
+    labelKey: 'nav.onlineSection',
+    icon: Globe,
+    items: [
+      {
+        to: '/online-pricing',
+        labelKey: 'nav.onlinePricing',
+        icon: DollarSign,
+        requiresOnlineStorefront: true,
+      },
+      {
+        to: '/online-shop',
+        labelKey: 'nav.onlineShop',
+        icon: Globe,
+        requiresOnlineStorefront: true,
+      },
+      {
+        to: '/online-orders',
+        labelKey: 'nav.onlineOrders',
+        icon: ShoppingCart,
+        requiresOnlineStorefront: true,
+        showOnlineOrdersBadge: true,
+      },
+    ],
   },
   {
     type: 'item',

@@ -515,9 +515,7 @@ class OnlineProductPricingSerializer(serializers.ModelSerializer):
             return None
 
     def get_gallery_images(self, obj: Product) -> list:
-        from inventory.online_product_schema import online_product_content_schema_ready
-
-        if not online_product_content_schema_ready():
+        if not self.context.get("include_online_content"):
             return []
         try:
             images = obj.storefront_gallery_images.all()
@@ -530,9 +528,7 @@ class OnlineProductPricingSerializer(serializers.ModelSerializer):
         ).data
 
     def get_online_description(self, obj: Product) -> str:
-        from inventory.online_product_schema import online_product_content_schema_ready
-
-        if not online_product_content_schema_ready():
+        if not self.context.get("include_online_content"):
             return ""
         return (getattr(obj, "online_description", None) or "").strip()
 

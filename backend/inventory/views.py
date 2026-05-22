@@ -1071,15 +1071,22 @@ class MerchantOnlineProductPricingView(APIView):
         shop = Shop.objects.filter(pk=shop_id, online_storefront_enabled=True).first()
         if shop is None:
             raise PermissionDenied("Online storefront is not enabled for this shop.")
-        from django.db.utils import OperationalError, ProgrammingError
+        from django.db.utils import DatabaseError
 
         from inventory.online_product_schema import product_pricing_queryset
 
         try:
-            rows = product_pricing_queryset(shop_id)
-            ser = OnlineProductPricingSerializer(rows, many=True, context={"request": request})
+            rows, include_content = product_pricing_queryset(shop_id)
+            ser = OnlineProductPricingSerializer(
+                rows,
+                many=True,
+                context={
+                    "request": request,
+                    "include_online_content": include_content,
+                },
+            )
             return Response(ser.data)
-        except (OperationalError, ProgrammingError) as exc:
+        except DatabaseError as exc:
             import logging
 
             logging.getLogger(__name__).exception("online-product-pricing failed")
@@ -1120,6 +1127,11 @@ class MerchantOnlineProductPricingView(APIView):
                     is_unregistered_placeholder=False,
                 ).update(**updates)
 
+        from inventory.online_product_schema import (
+            online_product_content_schema_ready,
+            product_pricing_lookup_queryset,
+        )
+
         items = data.get("items") or []
         allowed_fields = {
             "online_sale_price",
@@ -1131,24 +1143,16 @@ class MerchantOnlineProductPricingView(APIView):
             pid = row.get("id")
             if pid is None:
                 continue
-            product = Product.objects.filter(
-                pk=pid,
-                shop_id=shop_id,
-                is_unregistered_placeholder=False,
-            ).first()
+
+            product = product_pricing_lookup_queryset(shop_id, int(pid))
             if product is None:
                 continue
             patch: dict = {}
             for key in allowed_fields:
                 if key not in row:
                     continue
-                if key == "online_description":
-                    from inventory.online_product_schema import (
-                        online_product_content_schema_ready,
-                    )
-
-                    if not online_product_content_schema_ready():
-                        continue
+                if key == "online_description" and not online_product_content_schema_ready():
+                    continue
                 val = row[key]
                 if key == "online_sale_price":
                     if val is None or (isinstance(val, str) and not str(val).strip()):
@@ -1169,8 +1173,15 @@ class MerchantOnlineProductPricingView(APIView):
 
         from inventory.online_product_schema import product_pricing_queryset
 
-        rows = product_pricing_queryset(shop_id)
-        ser = OnlineProductPricingSerializer(rows, many=True, context={"request": request})
+        rows, include_content = product_pricing_queryset(shop_id)
+        ser = OnlineProductPricingSerializer(
+            rows,
+            many=True,
+            context={
+                "request": request,
+                "include_online_content": include_content,
+            },
+        )
         return Response(ser.data)
 
 
