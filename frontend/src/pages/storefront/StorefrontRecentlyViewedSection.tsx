@@ -1,7 +1,7 @@
 import type { PublicStorefrontProduct } from '../../api/storefrontApi'
 import type { CatalogProductRow } from './storefrontCollections'
 import { StorefrontProductCardCompact } from './StorefrontProductCardCompact'
-import { SF_COLLECTION_GRID, accentAlpha } from './storefrontTheme'
+import { SF_COLLECTION_GRID } from './storefrontTheme'
 
 type Props = {
   shopId: number
