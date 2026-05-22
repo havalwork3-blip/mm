@@ -1,4 +1,4 @@
-import { CheckCircle2, Crosshair, ExternalLink, Loader2, User, MapPin, Phone, X } from 'lucide-react'
+import { CheckCircle2, Crosshair, ExternalLink, Loader2, User, MapPin, Phone } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { submitPublicOrder } from '../../api/storefrontApi'
@@ -16,6 +16,7 @@ import {
 import { useStorefrontShop } from './StorefrontShopContext'
 import { storefrontStrings } from './storefrontStrings'
 import { useStorefrontPriceLabel } from './useStorefrontPriceLabel'
+import { StorefrontBackButton } from './StorefrontBackButton'
 import { accentAlpha } from './storefrontTheme'
 
 type Props = {
@@ -175,19 +176,19 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
 
       <div className="relative flex max-h-[92dvh] w-full max-w-[100%] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-lg sm:rounded-3xl md:max-w-xl lg:max-w-2xl">
         <div
-          className="flex shrink-0 items-center justify-between px-5 py-4 text-white"
+          className="flex shrink-0 items-center gap-3 px-5 py-4 text-white"
           style={{ backgroundColor: accent }}
         >
-          <h2 className="text-lg font-bold">{success ? s.successTitle : s.checkout}</h2>
-          <button
-            type="button"
+          <StorefrontBackButton
+            label={s.backToProducts}
             onClick={handleClose}
-            disabled={submitting}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 hover:bg-white/30 disabled:opacity-50"
-            aria-label={s.close}
-          >
-            <X className="h-5 w-5" aria-hidden />
-          </button>
+            variant="onAccent"
+            accent={accent}
+          />
+          <h2 className="min-w-0 flex-1 truncate text-center text-lg font-bold">
+            {success ? s.successTitle : s.checkout}
+          </h2>
+          <div className="w-[4.5rem] shrink-0 sm:w-[5.5rem]" aria-hidden />
         </div>
 
         <div className="overflow-y-auto px-5 py-5">

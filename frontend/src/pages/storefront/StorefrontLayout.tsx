@@ -11,6 +11,7 @@ import { cartItemCount, useCartStore } from '../../store/cartStore'
 import { useStorefrontFavoritesStore } from '../../store/storefrontFavoritesStore'
 import { CartDrawer } from './CartDrawer'
 import { CheckoutModal } from './CheckoutModal'
+import { StorefrontViewCartNudge } from './StorefrontViewCartNudge'
 import { StorefrontBackBar } from './StorefrontBackBar'
 import { StorefrontDesktopHeader } from './StorefrontDesktopHeader'
 import { StorefrontSearchOverlay } from './StorefrontSearchOverlay'
@@ -141,7 +142,7 @@ export function StorefrontLayout() {
         ) : null}
 
         {!shopLoading && !shopError ? (
-          <header className="sf-mobile-header sf-glass-strong sticky top-0 z-30 w-full border-b border-slate-200/50 shadow-[0_4px_20px_rgba(15,23,42,0.06)] pt-[env(safe-area-inset-top)] lg:hidden">
+          <header className="sf-mobile-header sf-glass-strong w-full border-b border-slate-200/50 shadow-[0_4px_20px_rgba(15,23,42,0.06)] pt-[env(safe-area-inset-top)] lg:hidden">
             <div className={`${SF_SHELL} flex items-center gap-2 py-2.5 sm:gap-2.5 sm:py-3`}>
               <button
                 type="button"
@@ -258,6 +259,13 @@ export function StorefrontLayout() {
           </header>
         ) : null}
 
+        {!shopLoading && !shopError ? (
+          <div className="sf-mobile-header-spacer lg:hidden" aria-hidden />
+        ) : null}
+        {!shopLoading && !shopError ? (
+          <div className="sf-desktop-header-spacer hidden lg:block" aria-hidden />
+        ) : null}
+
         <main className={`relative z-10 flex-1 pb-6 ${SF_MAIN}`}>
           {shopError ? (
             <div className="mx-4 mt-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -287,6 +295,14 @@ export function StorefrontLayout() {
           )}
         </main>
       </div>
+
+      {!shopLoading && !shopError ? (
+        <StorefrontViewCartNudge
+          accent={accent}
+          cartOpen={cartOpen}
+          onOpenCart={() => setCartOpen(true)}
+        />
+      ) : null}
 
       <CartDrawer
         open={cartOpen}

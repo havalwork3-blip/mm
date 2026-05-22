@@ -16,10 +16,12 @@ export type CartLine = {
 type CartState = {
   lines: CartLine[]
   deliveryZoneId: number | null
+  showViewCartNudge: boolean
   addItem: (product: PublicStorefrontProduct, quantity?: number) => void
   removeItem: (productId: number) => void
   setQuantity: (productId: number, quantity: number) => void
   setDeliveryZoneId: (zoneId: number | null) => void
+  dismissViewCartNudge: () => void
   clearCart: () => void
 }
 
@@ -105,6 +107,7 @@ export function cartItemCount(lines: CartLine[]): number {
 export const useCartStore = create<CartState>((set, get) => ({
   lines: [],
   deliveryZoneId: null,
+  showViewCartNudge: false,
 
   addItem: (product, quantity = 1) => {
     const qty = Math.max(1, Math.floor(quantity))
@@ -115,7 +118,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       if (idx >= 0) {
         const next = [...state.lines]
         next[idx] = { ...next[idx], quantity: next[idx].quantity + qty }
-        return { lines: next }
+        return { lines: next, showViewCartNudge: true }
       }
       return {
         lines: [
@@ -128,6 +131,7 @@ export const useCartStore = create<CartState>((set, get) => ({
             ...pricing,
           },
         ],
+        showViewCartNudge: true,
       }
     })
   },
@@ -143,13 +147,20 @@ export const useCartStore = create<CartState>((set, get) => ({
     set((state) => {
       const idx = state.lines.findIndex((l) => l.productId === productId)
       if (idx < 0) return state
+      const prevQty = state.lines[idx].quantity
       const next = [...state.lines]
       next[idx] = { ...next[idx], quantity: qty }
-      return { lines: next }
+      const addedMore = qty > prevQty && qty > 0
+      return {
+        lines: next,
+        showViewCartNudge: addedMore ? true : state.showViewCartNudge,
+      }
     })
   },
 
   setDeliveryZoneId: (zoneId) => set({ deliveryZoneId: zoneId }),
 
-  clearCart: () => set({ lines: [], deliveryZoneId: null }),
+  dismissViewCartNudge: () => set({ showViewCartNudge: false }),
+
+  clearCart: () => set({ lines: [], deliveryZoneId: null, showViewCartNudge: false }),
 }))

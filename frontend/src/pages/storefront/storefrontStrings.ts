@@ -79,6 +79,7 @@ const STRINGS = {
     productCount: '{n} بەرهەم',
     addToCart: 'زیادکردن بۆ سەبەتە',
     inCart: 'لە سەبەتەدا',
+    viewCart: 'بینینی سەبەتە',
     cart: 'سەبەتە',
     cartEmpty: 'سەبەتەکەت بەتاڵە',
     cartEmptyHint: 'بەرهەمێک زیاد بکە بۆ دەستپێکردن',
@@ -195,6 +196,7 @@ const STRINGS = {
     productCount: '{n} منتج',
     addToCart: 'أضف إلى السلة',
     inCart: 'في السلة',
+    viewCart: 'عرض السلة',
     cart: 'السلة',
     cartEmpty: 'سلتك فارغة',
     cartEmptyHint: 'أضف منتجاً للبدء',
@@ -311,6 +313,7 @@ const STRINGS = {
     productCount: '{n} products',
     addToCart: 'Add to cart',
     inCart: 'In cart',
+    viewCart: 'View cart',
     cart: 'Cart',
     cartEmpty: 'Your cart is empty',
     cartEmptyHint: 'Add a product to get started',
@@ -429,6 +432,7 @@ export type StorefrontStrings = {
   productCount: string
   addToCart: string
   inCart: string
+  viewCart: string
   cart: string
   cartEmpty: string
   cartEmptyHint: string

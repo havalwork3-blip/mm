@@ -11,6 +11,7 @@ import { CategoriesBrowse } from './CategoriesBrowse'
 import { CategoryFilterBar } from './CategoryFilterBar'
 import { StorefrontHeroCarousel } from './StorefrontHeroCarousel'
 import { StorefrontProductCard } from './StorefrontProductCard'
+import { StorefrontBackBar } from './StorefrontBackBar'
 import { StorefrontProductDetail } from './StorefrontProductDetail'
 import { useLocale } from '../../context/LocaleContext'
 import { useCartStore } from '../../store/cartStore'
@@ -52,6 +53,7 @@ export function StorefrontCatalog() {
     showCollection,
     openProduct,
     backFromProduct,
+    backToCategories,
     setSearchActive,
     setCatalogCategories,
   } = useStorefrontCatalog()
@@ -305,6 +307,15 @@ export function StorefrontCatalog() {
             ].join(' ')}
             aria-hidden={!showProductsView || view === 'product'}
           >
+            <div className={`${SF_INSET_X} mb-2 mt-1 sm:mb-3`}>
+              <StorefrontBackBar
+                label={s.backToCategories}
+                onClick={backToCategories}
+                accent={accent}
+                sticky={false}
+              />
+            </div>
+
             {categories.length > 0 && !productCollection ? (
               <CategoryFilterBar
                 categories={categories}

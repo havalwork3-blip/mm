@@ -1,4 +1,4 @@
-import { ArrowRight, ChevronLeft, ChevronRight, Minus, PackageOpen, Plus, ShoppingBag } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Minus, PackageOpen, Plus, ShoppingBag } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { PublicStorefrontProduct } from '../../api/storefrontApi'
@@ -8,6 +8,7 @@ import { triggerCartFly } from './cartFlyAnimation'
 import { UnavailableProductBanner } from './UnavailableProductBadge'
 import { useLocale } from '../../context/LocaleContext'
 import { StorefrontFavoriteButton } from './StorefrontFavoriteButton'
+import { StorefrontBackButton } from './StorefrontBackButton'
 import { accentAlpha } from './storefrontTheme'
 import { useStorefrontPriceLabel } from './useStorefrontPriceLabel'
 
@@ -108,18 +109,13 @@ export function StorefrontProductDetail({
       <header
         className="sf-glass-strong flex shrink-0 items-center gap-3 border-b border-white/60 px-4 py-3.5 pt-[max(0.75rem,env(safe-area-inset-top))]"
       >
-        <button
-          type="button"
+        <StorefrontBackButton
+          label={labels.back}
           onClick={onBack}
-          className="flex h-11 w-11 items-center justify-center rounded-2xl text-white shadow-md transition hover:brightness-110 sm:h-12 sm:w-12"
-          style={{
-            background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
-            boxShadow: `0 4px 14px ${accentAlpha(accent, 0.35)}`,
-          }}
-          aria-label={labels.back}
-        >
-          <ArrowRight className="h-5 w-5 rotate-180 rtl:rotate-0" aria-hidden />
-        </button>
+          variant="accent"
+          accent={accent}
+          showLabel={false}
+        />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-slate-900">{product.name}</p>
           {categoryName ? (

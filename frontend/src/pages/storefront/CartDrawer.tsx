@@ -1,4 +1,4 @@
-import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
+import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { useEffect } from 'react'
 
 import { resolveMediaUrl } from '../../lib/api'
@@ -12,6 +12,7 @@ import {
   parseDeliveryFreeMinUsd,
   useCartStore,
 } from '../../store/cartStore'
+import { StorefrontBackButton } from './StorefrontBackButton'
 import { storefrontStrings } from './storefrontStrings'
 import { accentAlpha } from './storefrontTheme'
 import { useStorefrontShop } from './StorefrontShopContext'
@@ -78,26 +79,25 @@ export function CartDrawer({ open, accent, onClose, onCheckout }: Props) {
         ].join(' ')}
       >
         <div
-          className="flex items-center justify-between px-4 py-4 text-white"
+          className="flex items-center gap-3 px-4 py-3.5 text-white sm:py-4"
           style={{ backgroundColor: accent }}
         >
-          <div className="flex items-center gap-2">
-            <ShoppingBag className="h-5 w-5" aria-hidden />
-            <h2 className="text-lg font-bold">{s.cart}</h2>
+          <StorefrontBackButton
+            label={s.backToProducts}
+            onClick={onClose}
+            variant="onAccent"
+            accent={accent}
+          />
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+            <ShoppingBag className="h-5 w-5 shrink-0" aria-hidden />
+            <h2 className="truncate text-lg font-bold">{s.cart}</h2>
             {count > 0 ? (
               <span className="rounded-full bg-white/25 px-2 py-0.5 text-xs font-semibold">
                 {count}
               </span>
             ) : null}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 transition hover:bg-white/30"
-            aria-label={s.close}
-          >
-            <X className="h-5 w-5" aria-hidden />
-          </button>
+          <div className="w-[4.5rem] shrink-0 sm:w-[5.5rem]" aria-hidden />
         </div>
 
         <div className="flex-1 overflow-y-auto bg-[#f5f5f7] px-4 py-3">

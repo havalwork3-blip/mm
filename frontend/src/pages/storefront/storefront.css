@@ -500,14 +500,72 @@ html.sf-mode select {
   background: #f8fafc;
 }
 
-.sf-desktop-header {
-  position: sticky;
+/* Fixed headers — sticky breaks when ancestors use overflow-x: hidden */
+.sf-mobile-header {
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 40;
+  width: 100%;
+}
+
+.sf-mobile-header-spacer {
+  display: block;
+  flex-shrink: 0;
+  height: calc(3.85rem + env(safe-area-inset-top, 0px));
+}
+
+@media (min-width: 640px) {
+  .sf-mobile-header-spacer {
+    height: calc(4.35rem + env(safe-area-inset-top, 0px));
+  }
+}
+
+@media (min-width: 1024px) {
+  .sf-mobile-header-spacer {
+    display: none;
+  }
+}
+
+.sf-desktop-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  width: 100%;
+}
+
+.sf-desktop-header-spacer {
+  display: none;
+  flex-shrink: 0;
+  height: 7.25rem;
+}
+
+@media (min-width: 1024px) {
+  .sf-desktop-header-spacer {
+    display: block;
+  }
 }
 
 .sf-mobile-header .sf-surface-btn {
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+}
+
+.sf-view-cart-nudge {
+  animation: sf-view-cart-nudge-in 0.28s ease-out;
+}
+
+@keyframes sf-view-cart-nudge-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .sf-cat-icons-row {
