@@ -230,15 +230,36 @@ export function AdminQrSocialPage() {
     setManagerTelegramSending(true)
     setManagerTelegramMsg(null)
     try {
-      const res = await apiJson<{ sent: number; shops: number }>(
-        '/api/admin/qr-landing/manager-telegram-send-now/',
-        { method: 'POST', omitShopScope: true },
-      )
-      setManagerTelegramMsg(
-        t('qrAdmin.managerTelegramSendOk')
-          .replace('{sent}', String(res.sent))
-          .replace('{shops}', String(res.shops)),
-      )
+      const res = await apiJson<{
+        ok?: boolean
+        status?: string
+        sent: number
+        shops: number
+        shop_ok?: number
+        failed?: { id: number; name: string; error: string }[]
+      }>('/api/admin/qr-landing/manager-telegram-send-now/', {
+        method: 'POST',
+        omitShopScope: true,
+      })
+      if (res.status === 'sending') {
+        setManagerTelegramMsg(
+          t('qrAdmin.managerTelegramSendStarted').replace('{shops}', String(res.shops)),
+        )
+      } else if (res.failed?.length) {
+        const names = res.failed.map((f) => f.name).join(', ')
+        setManagerTelegramMsg(
+          t('qrAdmin.managerTelegramSendPartial')
+            .replace('{ok}', String(res.shop_ok ?? res.sent))
+            .replace('{shops}', String(res.shops))
+            .replace('{failed}', names),
+        )
+      } else {
+        setManagerTelegramMsg(
+          t('qrAdmin.managerTelegramSendOk')
+            .replace('{sent}', String(res.sent))
+            .replace('{shops}', String(res.shops)),
+        )
+      }
       await load({ silent: true })
     } catch (e) {
       setManagerTelegramMsg(e instanceof Error ? e.message : t('qrAdmin.managerTelegramSendFail'))

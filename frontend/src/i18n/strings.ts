@@ -404,6 +404,10 @@ const en: Record<string, string> = {
   'qrAdmin.managerTelegramTestOk': 'Test message sent.',
   'qrAdmin.managerTelegramTestFail': 'Could not send. Check token and chat ID.',
   'qrAdmin.managerTelegramSendOk': 'Sent {sent} message(s) for {shops} shop(s).',
+  'qrAdmin.managerTelegramSendStarted':
+    'Sending started for {shops} shops — each shop in a separate Telegram message (check chat in ~1 min).',
+  'qrAdmin.managerTelegramSendPartial':
+    'Sent {ok}/{shops} shops; failed: {failed}.',
   'qrAdmin.managerTelegramSendFail': 'Send failed. Check settings.',
   'qrAdmin.managerTelegramCronHint':
     'On the server, schedule: python manage.py send_manager_daily_jard_telegram --scheduled',
@@ -1435,6 +1439,9 @@ const ar: Record<string, string> = {
   'qrAdmin.managerTelegramTestOk': 'تم إرسال رسالة الاختبار.',
   'qrAdmin.managerTelegramTestFail': 'تعذر الإرسال. تحقق من الرمز و Chat ID.',
   'qrAdmin.managerTelegramSendOk': 'تم إرسال {sent} رسالة لـ {shops} متجر.',
+  'qrAdmin.managerTelegramSendStarted':
+    'بدء الإرسال لـ {shops} متجر — كل متجر في رسالة منفصلة (تحقق من المحادثة خلال دقيقة).',
+  'qrAdmin.managerTelegramSendPartial': 'أُرسل {ok}/{shops}؛ فشل: {failed}.',
   'qrAdmin.managerTelegramSendFail': 'فشل الإرسال.',
   'qrAdmin.managerTelegramCronHint':
     'على الخادم: python manage.py send_manager_daily_jard_telegram --scheduled',
@@ -2609,6 +2616,9 @@ const ku: Record<string, string> = {
   'qrAdmin.managerTelegramTestOk': 'پەیامی تاقیکردنەوە نێردرا.',
   'qrAdmin.managerTelegramTestFail': 'ناردن سەرکەوتوو نەبوو. تۆکێن و Chat ID بپشکنە.',
   'qrAdmin.managerTelegramSendOk': '{sent} پەیام نێردرا بۆ {shops} فرۆشگا.',
+  'qrAdmin.managerTelegramSendStarted':
+    'ناردن دەستپێکرا بۆ {shops} فرۆشگا — هەر یەکەکە لە پەیامێکی جیای تیلیگرام (چەند خولەک چاوەڕوان بە).',
+  'qrAdmin.managerTelegramSendPartial': '{ok}/{shops} نێردرا؛ شکست: {failed}.',
   'qrAdmin.managerTelegramSendFail': 'ناردن سەرکەوتوو نەبوو.',
   'qrAdmin.managerTelegramCronHint':
     'لە سێرڤەر cron: python manage.py send_manager_daily_jard_telegram --scheduled',

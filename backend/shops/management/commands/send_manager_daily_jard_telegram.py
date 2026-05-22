@@ -35,11 +35,19 @@ class Command(BaseCommand):
                 self.stdout.write("Skipped (not due or already sent today).")
                 return
 
-        sent, shops = send_manager_daily_digest(
+        result = send_manager_daily_digest(
             settings,
             report_date=business_today(),
             force=force,
         )
+        failed = result.get("failed") or []
         self.stdout.write(
-            self.style.SUCCESS(f"Manager Telegram: {sent} message(s) for {shops} shop(s)."),
+            self.style.SUCCESS(
+                f"Manager Telegram: {result['sent']} message(s), "
+                f"{result['shop_ok']}/{result['shops']} shop(s) OK.",
+            ),
         )
+        for row in failed:
+            self.stdout.write(
+                self.style.WARNING(f"  Failed: {row.get('name')} — {row.get('error')}"),
+            )

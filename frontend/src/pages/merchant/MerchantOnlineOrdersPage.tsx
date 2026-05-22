@@ -34,6 +34,7 @@ import {
   printStorefrontOrderReceipt,
   stripMapsUrlFromAddress,
   type StorefrontOrderReceiptLabels,
+  type StorefrontOrderReceiptShopInfo,
 } from '../../lib/storefrontOrderReceipt'
 import { buildWhatsAppUrl } from '../../lib/whatsappUrl'
 import type {
@@ -135,7 +136,7 @@ export function MerchantOnlineOrdersPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [detailOrder, setDetailOrder] = useState<MerchantStorefrontOrderRow | null>(null)
   const [updatingId, setUpdatingId] = useState<number | null>(null)
-  const [receiptLogoUrl, setReceiptLogoUrl] = useState<string | null>(null)
+  const [receiptShopInfo, setReceiptShopInfo] = useState<StorefrontOrderReceiptShopInfo>({})
 
   useEffect(() => {
     setShopOverride(shopImpersonation ?? '')
@@ -151,9 +152,16 @@ export function MerchantOnlineOrdersPage() {
             () => null
           ),
         ])
-        setReceiptLogoUrl(storefront?.logo_url ?? receipt?.logo_url ?? null)
+        setReceiptShopInfo({
+          logoUrl: storefront?.logo_url ?? receipt?.logo_url ?? null,
+          shopName: me?.shop_name,
+          shopNameKu: receipt?.shop_name_ku,
+          subTitle: receipt?.sub_title,
+          shopAddress: receipt?.address,
+          footerNote: receipt?.footer_note,
+        })
       } catch {
-        setReceiptLogoUrl(null)
+        setReceiptShopInfo({ shopName: me?.shop_name })
       }
     })()
   }, [me, canAccessShopData])
@@ -481,7 +489,7 @@ export function MerchantOnlineOrdersPage() {
               t={t}
               statusLabel={statusLabel}
               receiptLabels={receiptLabels}
-              receiptLogoUrl={receiptLogoUrl}
+              receiptShopInfo={receiptShopInfo}
               onToggleExpand={() =>
                 setExpandedId((id) => (id === order.id ? null : order.id))
               }
@@ -500,7 +508,7 @@ export function MerchantOnlineOrdersPage() {
           t={t}
           statusLabel={statusLabel}
           receiptLabels={receiptLabels}
-          receiptLogoUrl={receiptLogoUrl}
+          receiptShopInfo={receiptShopInfo}
           onClose={() => setDetailOrder(null)}
           onStatusChange={(s) => void handleStatusChange(detailOrder.id, s)}
         />
@@ -561,8 +569,7 @@ function StatusSelect({
 function receiptHtmlForOrder(
   order: MerchantStorefrontOrderRow,
   args: {
-    shopName?: string
-    logoUrl?: string | null
+    shop?: StorefrontOrderReceiptShopInfo
     labels: StorefrontOrderReceiptLabels
     statusLabel: (s: StorefrontOrderStatus) => string
   }
@@ -571,8 +578,7 @@ function receiptHtmlForOrder(
     document.documentElement.dir === 'ltr' ? ('ltr' as const) : ('rtl' as const)
   return buildStorefrontOrderReceiptHtml({
     order,
-    shopName: args.shopName,
-    logoUrl: args.logoUrl,
+    shop: args.shop,
     labels: args.labels,
     dateFormatted: formatDateTime(order.created_at),
     statusText: args.statusLabel(order.status),
@@ -673,22 +679,20 @@ function OrderTotalsPanel({
 
 function OrderReceiptActions({
   order,
-  shopName,
-  logoUrl,
+  receiptShopInfo,
   labels,
   statusLabel,
   t,
   compact,
 }: {
   order: MerchantStorefrontOrderRow
-  shopName?: string
-  logoUrl?: string | null
+  receiptShopInfo?: StorefrontOrderReceiptShopInfo
   labels: StorefrontOrderReceiptLabels
   statusLabel: (s: StorefrontOrderStatus) => string
   t: (k: string) => string
   compact?: boolean
 }) {
-  const html = receiptHtmlForOrder(order, { shopName, logoUrl, labels, statusLabel })
+  const html = receiptHtmlForOrder(order, { shop: receiptShopInfo, labels, statusLabel })
   const btn =
     'inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition'
   return (
@@ -758,7 +762,7 @@ function OrderCard({
   t,
   statusLabel,
   receiptLabels,
-  receiptLogoUrl,
+  receiptShopInfo,
   onToggleExpand,
   onStatusChange,
   onOpenDetail,
@@ -770,7 +774,7 @@ function OrderCard({
   t: (k: string) => string
   statusLabel: (s: StorefrontOrderStatus) => string
   receiptLabels: StorefrontOrderReceiptLabels
-  receiptLogoUrl?: string | null
+  receiptShopInfo?: StorefrontOrderReceiptShopInfo
   onToggleExpand: () => void
   onStatusChange: (s: StorefrontOrderStatus) => void
   onOpenDetail: () => void
@@ -834,8 +838,10 @@ function OrderCard({
       <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/40 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50 sm:px-5">
         <OrderReceiptActions
           order={order}
-          shopName={shopName}
-          logoUrl={receiptLogoUrl}
+          receiptShopInfo={{
+            ...receiptShopInfo,
+            shopName: receiptShopInfo?.shopName ?? shopName,
+          }}
           labels={receiptLabels}
           statusLabel={statusLabel}
           t={t}
@@ -884,7 +890,7 @@ function OrderDetailModal({
   t,
   statusLabel,
   receiptLabels,
-  receiptLogoUrl,
+  receiptShopInfo,
   onClose,
   onStatusChange,
 }: {
@@ -894,7 +900,7 @@ function OrderDetailModal({
   t: (k: string) => string
   statusLabel: (s: StorefrontOrderStatus) => string
   receiptLabels: StorefrontOrderReceiptLabels
-  receiptLogoUrl?: string | null
+  receiptShopInfo?: StorefrontOrderReceiptShopInfo
   onClose: () => void
   onStatusChange: (s: StorefrontOrderStatus) => void
 }) {
@@ -997,8 +1003,10 @@ function OrderDetailModal({
         <div className="shrink-0 space-y-2 border-t border-slate-100 p-4 dark:border-slate-800">
           <OrderReceiptActions
             order={order}
-            shopName={shopName}
-            logoUrl={receiptLogoUrl}
+            receiptShopInfo={{
+              ...receiptShopInfo,
+              shopName: receiptShopInfo?.shopName ?? shopName,
+            }}
             labels={receiptLabels}
             statusLabel={statusLabel}
             t={t}
