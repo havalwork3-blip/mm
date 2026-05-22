@@ -159,14 +159,18 @@ export function StorefrontLayout() {
                 className="flex min-w-0 flex-1 items-center gap-2 text-start transition active:scale-[0.98]"
               >
                 <span
-                  className={[
-                    'relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg',
-                    logoSrc ? 'bg-transparent' : 'sf-surface-btn text-base font-bold',
-                  ].join(' ')}
-                  style={logoSrc ? undefined : { color: accent }}
+                  className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl text-sm font-bold text-white shadow-md ring-2 ring-white"
+                  style={
+                    logoSrc
+                      ? { boxShadow: `0 4px 14px ${accentAlpha(accent, 0.25)}` }
+                      : {
+                          background: `linear-gradient(135deg, ${accent}, ${accent}cc)`,
+                          boxShadow: `0 4px 14px ${accentAlpha(accent, 0.35)}`,
+                        }
+                  }
                 >
                   {logoSrc ? (
-                    <img src={logoSrc} alt="" className="h-full w-full object-contain p-0.5" />
+                    <img src={logoSrc} alt="" className="h-full w-full object-cover" />
                   ) : (
                     shopName.charAt(0) || 'M'
                   )}

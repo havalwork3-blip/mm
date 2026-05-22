@@ -97,13 +97,10 @@ export function StorefrontDesktopHeader({
             className="flex shrink-0 items-center gap-3 text-start transition hover:opacity-95"
           >
             <span
-              className={[
-                'flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg text-lg font-bold',
-                logoSrc ? 'bg-transparent' : 'bg-white/15 backdrop-blur-sm',
-              ].join(' ')}
+              className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-white/15 text-lg font-bold backdrop-blur-sm"
             >
               {logoSrc ? (
-                <img src={logoSrc} alt="" className="h-full w-full object-contain p-0.5" />
+                <img src={logoSrc} alt="" className="h-full w-full object-cover" />
               ) : (
                 shopName.charAt(0) || 'M'
               )}

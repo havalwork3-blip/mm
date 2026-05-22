@@ -39,14 +39,15 @@ export function StorefrontPreview({
           <div className="flex items-center justify-between bg-white px-3 py-2.5">
             <div className="flex min-w-0 items-center gap-2">
               <span
-                className={[
-                  'flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg text-xs font-bold',
-                  logoSrc ? 'bg-transparent' : 'bg-slate-100',
-                ].join(' ')}
-                style={logoSrc ? undefined : { color: accent }}
+                className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl text-xs font-bold text-white"
+                style={
+                  logoSrc
+                    ? undefined
+                    : { backgroundColor: accent }
+                }
               >
                 {logoSrc ? (
-                  <img src={logoSrc} alt="" className="h-full w-full object-contain p-0.5" />
+                  <img src={logoSrc} alt="" className="h-full w-full object-cover" />
                 ) : (
                   title.charAt(0) || 'M'
                 )}
