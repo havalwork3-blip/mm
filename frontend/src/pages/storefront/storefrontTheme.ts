@@ -71,5 +71,10 @@ export const SF_PRODUCT_GRID =
 export const SF_COLLECTION_GRID =
   'sf-collection-grid grid grid-cols-2 gap-3 min-[380px]:grid-cols-3 sm:gap-4 md:grid-cols-4 md:gap-5 lg:grid-cols-4 lg:gap-5 xl:grid-cols-5'
 
-export const SF_CATEGORY_GRID =
-  'hidden gap-3 md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+/** Horizontal scroll row inside home section panels. */
+export const SF_SECTION_SCROLL_ROW =
+  'sf-section-scroll-row sf-scrollbar-none flex flex-nowrap gap-2.5 overflow-x-auto pb-0.5 sm:gap-3'
+
+export const SF_SECTION_PRODUCT_WIDTH = 'w-[9.25rem] shrink-0 sm:w-[10rem] lg:w-[10.5rem]'
+
+export const SF_SECTION_CAT_WIDTH = 'w-[6.85rem] shrink-0 min-[380px]:w-[7.25rem] sm:w-[7.5rem] lg:w-[8rem]'

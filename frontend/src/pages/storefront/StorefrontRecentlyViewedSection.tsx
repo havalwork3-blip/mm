@@ -2,7 +2,7 @@ import type { PublicStorefrontProduct } from '../../api/storefrontApi'
 import type { CatalogProductRow } from './storefrontCollections'
 import { StorefrontProductCardCompact } from './StorefrontProductCardCompact'
 import { StorefrontSectionPanel } from './StorefrontSectionPanel'
-import { SF_COLLECTION_GRID } from './storefrontTheme'
+import { SF_SECTION_PRODUCT_WIDTH, SF_SECTION_SCROLL_ROW } from './storefrontTheme'
 
 type Props = {
   shopId: number
@@ -33,7 +33,7 @@ export function StorefrontRecentlyViewedSection({
 
   return (
     <StorefrontSectionPanel sectionKey="recently_viewed" title={title} className="mb-6 lg:mb-8">
-      <ul className={SF_COLLECTION_GRID}>
+      <ul className={SF_SECTION_SCROLL_ROW}>
         {rows.map(({ product, categoryName }) => (
           <StorefrontProductCardCompact
             key={product.id}
@@ -46,6 +46,7 @@ export function StorefrontRecentlyViewedSection({
             addToCart={addToCart}
             addToFavorites={addToFavorites}
             removeFromFavorites={removeFromFavorites}
+            className={SF_SECTION_PRODUCT_WIDTH}
           />
         ))}
       </ul>

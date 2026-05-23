@@ -498,14 +498,31 @@ html.sf-mode select {
   margin-bottom: 0;
 }
 
+.sf-section-panel-header {
+  position: relative;
+  z-index: 1;
+}
+
+.sf-section-scroll-row {
+  position: relative;
+  z-index: 1;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+
+.sf-section-scroll-row > li,
+.sf-section-scroll-row > button {
+  scroll-snap-align: start;
+}
+
 .sf-section-cat-card {
   -webkit-tap-highlight-color: transparent;
 }
 
 .sf-section-panel-shine {
   background:
-    radial-gradient(ellipse 80% 60% at 15% 10%, rgba(255, 255, 255, 0.35), transparent 55%),
-    radial-gradient(ellipse 50% 40% at 90% 90%, rgba(255, 255, 255, 0.12), transparent 50%);
+    radial-gradient(ellipse 100% 55% at 50% 0%, rgba(255, 255, 255, 0.28), transparent 68%),
+    radial-gradient(ellipse 45% 35% at 100% 15%, rgba(255, 255, 255, 0.1), transparent 55%);
 }
 
 .sf-section-panel::after {
@@ -513,12 +530,12 @@ html.sf-mode select {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
   pointer-events: none;
 }
 
-.sf-section-cat-card {
-  -webkit-tap-highlight-color: transparent;
+.sf-section-panel-fade {
+  z-index: 0;
 }
 
 .sf-collection-section {

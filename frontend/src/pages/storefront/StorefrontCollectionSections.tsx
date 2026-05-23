@@ -12,7 +12,7 @@ import {
 import { StorefrontProductCardCompact } from './StorefrontProductCardCompact'
 import { StorefrontSectionPanel } from './StorefrontSectionPanel'
 import type { StorefrontSectionKey } from './storefrontSectionTheme'
-import { accentAlpha, SF_COLLECTION_GRID } from './storefrontTheme'
+import { accentAlpha, SF_SECTION_PRODUCT_WIDTH, SF_SECTION_SCROLL_ROW } from './storefrontTheme'
 
 const COLLECTION_META = {
   bestsellers: { icon: Flame, titleKey: 'bestsellers' as const, hintKey: 'bestsellersHint' as const },
@@ -128,7 +128,7 @@ export function StorefrontCollectionSections({
             subtitle={hint}
             headerAside={viewAllBtn}
           >
-            <ul className={SF_COLLECTION_GRID}>
+            <ul className={SF_SECTION_SCROLL_ROW}>
               {preview.map(({ product, categoryName }) => (
                 <StorefrontProductCardCompact
                   key={product.id}
@@ -141,6 +141,7 @@ export function StorefrontCollectionSections({
                   addToCart={labels.addToCart}
                   addToFavorites={labels.addToFavorites}
                   removeFromFavorites={labels.removeFromFavorites}
+                  className={SF_SECTION_PRODUCT_WIDTH}
                 />
               ))}
             </ul>
@@ -149,7 +150,8 @@ export function StorefrontCollectionSections({
               <button
                 type="button"
                 onClick={() => onSelectCollection(id)}
-                className="sf-view-all-link mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/35 bg-white/15 py-2.5 text-sm font-bold text-white transition hover:bg-white/25 active:scale-[0.99] md:hidden"
+                className="sf-section-more-btn mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200/90 bg-white/90 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-white active:scale-[0.99] md:hidden"
+                style={{ color: accent, borderColor: accentAlpha(accent, 0.25) }}
               >
                 {labels.viewAll}
                 <ArrowLeft className="h-4 w-4 rotate-180 rtl:rotate-0" aria-hidden />

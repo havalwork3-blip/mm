@@ -121,14 +121,15 @@ export function MerchantStorefrontCategoryCardsSection() {
               style={{ background: sectionGradient }}
             >
               <span className="sf-section-panel-shine pointer-events-none absolute inset-0" aria-hidden />
-              <div className="relative grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-                {rows.slice(0, 6).map((row) => {
+              <span className="sf-section-panel-fade pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white/80 to-transparent" aria-hidden />
+              <div className="relative flex gap-2 overflow-x-auto pb-0.5">
+                {rows.slice(0, 8).map((row) => {
                   const label = categoryDisplayName(row, lang)
                   const img = resolveMediaUrl(row.image_url)
                   return (
                     <div
                       key={row._key}
-                      className="flex flex-col overflow-hidden rounded-xl bg-white/95 p-2 shadow-sm ring-1 ring-white/50"
+                      className="flex w-[4.5rem] shrink-0 flex-col overflow-hidden rounded-xl bg-white p-2 shadow-sm ring-1 ring-slate-200/60 sm:w-[5rem]"
                     >
                       <div className="aspect-square overflow-hidden rounded-lg bg-slate-50">
                         {img ? (
