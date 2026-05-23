@@ -154,7 +154,7 @@ const STRINGS = {
     removeFromFavorites: 'لابردن لە دڵخواز',
     favoritesEmpty: 'هێشتا دڵخوازت نییە',
     favoritesEmptyHint: 'لەسەر دڵ بگرە بۆ پاشەکەوتکردن',
-    sort: 'ڕیزکردن',
+    sort: 'فلتەرکردن',
     sortDefault: 'بنەڕەت',
     sortPriceAsc: 'نرخ: کەم بۆ زۆر',
     sortPriceDesc: 'نرخ: زۆر بۆ کەم',

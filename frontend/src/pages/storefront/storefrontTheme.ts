@@ -73,8 +73,8 @@ export const SF_COLLECTION_GRID =
 
 /** Horizontal scroll row inside home section panels. */
 export const SF_SECTION_SCROLL_ROW =
-  'sf-section-scroll-row sf-scrollbar-none flex flex-nowrap gap-2.5 overflow-x-auto pb-0.5 sm:gap-3'
+  'sf-section-scroll-row sf-scrollbar-none flex flex-nowrap gap-3.5 overflow-x-auto px-1 pb-1 sm:gap-4 md:gap-5'
 
-export const SF_SECTION_PRODUCT_WIDTH = 'w-[9.25rem] shrink-0 sm:w-[10rem] lg:w-[10.5rem]'
+export const SF_SECTION_PRODUCT_WIDTH = 'w-[9.25rem] shrink-0 sm:w-[10rem] lg:w-[10.75rem]'
 
-export const SF_SECTION_CAT_WIDTH = 'w-[6.85rem] shrink-0 min-[380px]:w-[7.25rem] sm:w-[7.5rem] lg:w-[8rem]'
+export const SF_SECTION_CAT_WIDTH = 'w-[7rem] shrink-0 min-[380px]:w-[7.5rem] sm:w-[8rem] lg:w-[8.5rem]'

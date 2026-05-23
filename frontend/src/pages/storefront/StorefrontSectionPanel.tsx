@@ -29,7 +29,7 @@ export function StorefrontSectionPanel({
         style={{ background: gradient, boxShadow: shadow }}
       >
         <span className="sf-section-panel-shine pointer-events-none absolute inset-0" aria-hidden />
-        <span className="sf-section-panel-fade pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white/80 to-transparent" aria-hidden />
+        <span className="sf-section-panel-fade pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white via-white/70 to-transparent sm:h-28" aria-hidden />
 
         <div className="relative px-3 pb-3.5 pt-3.5 sm:px-4 sm:pb-4 sm:pt-4 lg:px-5 lg:pb-5 lg:pt-5">
           <div className="sf-section-panel-header mb-3 flex items-start gap-2.5 lg:mb-4">

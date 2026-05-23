@@ -508,6 +508,7 @@ html.sf-mode select {
   z-index: 1;
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x proximity;
+  padding-top: 0.125rem;
 }
 
 .sf-section-scroll-row > li,
@@ -517,6 +518,35 @@ html.sf-mode select {
 
 .sf-section-cat-card {
   -webkit-tap-highlight-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Image tile only — label area stays transparent and blends into panel white. */
+.sf-section-cat-media {
+  border-radius: 1rem;
+  background: #ffffff;
+  padding: 0.45rem;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.07);
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.sf-section-cat-card:hover .sf-section-cat-media {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.1);
+}
+
+.sf-section-cat-label {
+  margin-top: 0.625rem;
+  padding: 0 0.2rem 0.35rem;
+  text-align: center;
+  background: transparent;
+}
+
+.sf-section-panel-fade {
+  z-index: 0;
 }
 
 .sf-section-panel-shine {
@@ -532,10 +562,6 @@ html.sf-mode select {
   border-radius: inherit;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
   pointer-events: none;
-}
-
-.sf-section-panel-fade {
-  z-index: 0;
 }
 
 .sf-collection-section {

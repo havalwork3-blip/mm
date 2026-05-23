@@ -17,8 +17,8 @@ type Props = {
   onViewAll?: () => void
 }
 
-const CAT_CARD =
-  'sf-section-cat-card group flex flex-col overflow-hidden rounded-2xl bg-white text-start shadow-[0_4px_16px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/60 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(15,23,42,0.12)] active:scale-[0.98]'
+const CAT_BTN =
+  'sf-section-cat-card group flex flex-col items-stretch text-start transition duration-300 active:scale-[0.98]'
 
 export function StorefrontMobileCategories({
   categories,
@@ -36,16 +36,16 @@ export function StorefrontMobileCategories({
     <StorefrontSectionPanel sectionKey="categories" title={title} className="mb-6 lg:mb-8">
       <div className={SF_SECTION_SCROLL_ROW}>
         {onViewAll && viewAllLabel ? (
-          <button type="button" onClick={onViewAll} className={[CAT_CARD, SF_SECTION_CAT_WIDTH].join(' ')}>
-            <div className="flex flex-1 flex-col p-2.5">
-              <div className="relative mx-auto flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-violet-100 to-violet-50 ring-1 ring-violet-100/80">
+          <button type="button" onClick={onViewAll} className={[CAT_BTN, SF_SECTION_CAT_WIDTH].join(' ')}>
+            <div className="sf-section-cat-media">
+              <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-gradient-to-br from-violet-100 to-violet-50">
                 <LayoutGrid className="h-6 w-6 text-violet-600 sm:h-7 sm:w-7" aria-hidden />
               </div>
-              <div className="mt-2 px-0.5 pb-1 text-center">
-                <p className="line-clamp-2 text-[10px] font-extrabold leading-snug text-slate-800 sm:text-[11px]">
-                  {viewAllLabel}
-                </p>
-              </div>
+            </div>
+            <div className="sf-section-cat-label">
+              <p className="line-clamp-2 text-[10px] font-extrabold leading-snug text-slate-700 sm:text-[11px]">
+                {viewAllLabel}
+              </p>
             </div>
           </button>
         ) : null}
@@ -60,19 +60,19 @@ export function StorefrontMobileCategories({
               key={cat.id}
               type="button"
               onClick={() => onSelect(cat.id)}
-              className={[CAT_CARD, SF_SECTION_CAT_WIDTH].join(' ')}
+              className={[CAT_BTN, SF_SECTION_CAT_WIDTH].join(' ')}
             >
-              <div className="relative flex flex-1 flex-col p-2.5">
-                <div className="relative mx-auto aspect-square w-full overflow-hidden rounded-xl bg-gradient-to-b from-slate-50 to-white p-1.5 ring-1 ring-slate-100">
+              <div className="sf-section-cat-media">
+                <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-gradient-to-b from-slate-50 to-white">
                   {img ? (
                     <img
                       src={img}
                       alt=""
-                      className="h-full w-full rounded-lg object-cover transition duration-500 group-hover:scale-105"
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       loading="lazy"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center rounded-lg bg-violet-100 text-xl font-black text-violet-700 sm:text-2xl">
+                    <div className="flex h-full w-full items-center justify-center bg-violet-100 text-xl font-black text-violet-700 sm:text-2xl">
                       {label.charAt(0)}
                     </div>
                   )}
@@ -83,15 +83,15 @@ export function StorefrontMobileCategories({
                     <ChevronLeft className="h-3 w-3 rotate-180 rtl:rotate-0" />
                   </span>
                 </div>
+              </div>
 
-                <div className="mt-2 px-0.5 pb-1 text-center">
-                  <p className="line-clamp-2 text-[10px] font-extrabold leading-snug text-slate-800 sm:text-[11px]">
-                    {label}
-                  </p>
-                  <p className="mt-0.5 text-[9px] font-semibold text-slate-500 sm:text-[10px]">
-                    {productCountLabel(count)}
-                  </p>
-                </div>
+              <div className="sf-section-cat-label">
+                <p className="line-clamp-2 text-[10px] font-extrabold leading-snug text-slate-700 sm:text-[11px]">
+                  {label}
+                </p>
+                <p className="mt-0.5 text-[9px] font-semibold text-slate-500 sm:text-[10px]">
+                  {productCountLabel(count)}
+                </p>
               </div>
             </button>
           )

@@ -62,8 +62,9 @@ export function sectionPanelGradient(sectionKey: StorefrontSectionKey): string {
     `${from} 0%,`,
     `${mixHex(from, mid, 0.35)} 14%,`,
     `${mid} 32%,`,
-    `${soft} 58%,`,
-    `${pale} 78%,`,
+    `${soft} 55%,`,
+    `${pale} 72%,`,
+    `#ffffff 88%,`,
     `#ffffff 100%)`,
   ].join(' ')
 }

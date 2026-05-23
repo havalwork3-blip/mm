@@ -122,25 +122,27 @@ export function MerchantStorefrontCategoryCardsSection() {
             >
               <span className="sf-section-panel-shine pointer-events-none absolute inset-0" aria-hidden />
               <span className="sf-section-panel-fade pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white/80 to-transparent" aria-hidden />
-              <div className="relative flex gap-2 overflow-x-auto pb-0.5">
+              <div className="relative flex gap-3 overflow-x-auto pb-0.5 sm:gap-3.5">
                 {rows.slice(0, 8).map((row) => {
                   const label = categoryDisplayName(row, lang)
                   const img = resolveMediaUrl(row.image_url)
                   return (
                     <div
                       key={row._key}
-                      className="flex w-[4.5rem] shrink-0 flex-col overflow-hidden rounded-xl bg-white p-2 shadow-sm ring-1 ring-slate-200/60 sm:w-[5rem]"
+                      className="flex w-[4.75rem] shrink-0 flex-col sm:w-[5.25rem]"
                     >
-                      <div className="aspect-square overflow-hidden rounded-lg bg-slate-50">
-                        {img ? (
-                          <img src={img} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-sm font-black text-violet-700">
-                            {label.charAt(0)}
-                          </div>
-                        )}
+                      <div className="sf-section-cat-media">
+                        <div className="aspect-square overflow-hidden rounded-lg bg-slate-50">
+                          {img ? (
+                            <img src={img} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-sm font-black text-violet-700">
+                              {label.charAt(0)}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <p className="mt-1.5 truncate text-center text-[10px] font-bold text-slate-800">
+                      <p className="sf-section-cat-label mt-2 truncate text-center text-[10px] font-bold text-slate-700">
                         {label}
                       </p>
                     </div>
