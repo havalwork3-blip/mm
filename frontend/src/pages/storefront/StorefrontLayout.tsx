@@ -243,7 +243,7 @@ export function StorefrontLayout() {
                 </button>
 
                 <button
-                  id="sf-cart-anchor"
+                  id="sf-cart-anchor-mobile"
                   type="button"
                   onClick={() => setCartOpen(true)}
                   className={[

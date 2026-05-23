@@ -161,7 +161,7 @@ export function StorefrontDesktopHeader({
             </button>
 
             <button
-              id="sf-cart-anchor"
+              id="sf-cart-anchor-desktop"
               type="button"
               onClick={onOpenCart}
               className={[

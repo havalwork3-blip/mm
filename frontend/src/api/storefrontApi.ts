@@ -78,6 +78,9 @@ export type PublicStorefrontCategory = {
   name_ar: string
   name_en: string
   image_url: string | null
+  storefront_home_order?: number | null
+  storefront_bg_from?: string | null
+  storefront_bg_to?: string | null
   products: PublicStorefrontProduct[]
 }
 

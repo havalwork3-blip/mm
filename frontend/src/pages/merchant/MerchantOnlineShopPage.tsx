@@ -40,6 +40,7 @@ import { STOREFRONT_SOCIAL_PLATFORMS } from '../../lib/storefrontSocial'
 import { StorefrontPreview } from '../storefront/StorefrontPreview'
 import { storefrontStrings } from '../storefront/storefrontStrings'
 import { MerchantStorefrontBannersSection } from './MerchantStorefrontBannersSection'
+import { MerchantStorefrontCategoryCardsSection } from './MerchantStorefrontCategoryCardsSection'
 
 const COLOR_PRESETS = [
   { id: 'orange', hex: '#FF5A00', label: 'Orange' },
@@ -398,6 +399,8 @@ export function MerchantOnlineShopPage() {
               rotateSeconds={bannerRotateSeconds}
               onRotateSecondsChange={setBannerRotateSeconds}
             />
+
+            <MerchantStorefrontCategoryCardsSection />
 
             <form onSubmit={(e) => void save(e)} className="space-y-5">
             <SectionCard title={t('onlineShop.copySection')} icon={Type}>

@@ -15,6 +15,9 @@ class Category(ShopScopedModel):
     name_ar = models.CharField(max_length=255, blank=True, default="")
     name_en = models.CharField(max_length=255, blank=True, default="")
     image = models.ImageField(upload_to="categories/%Y/%m/", blank=True, null=True)
+    storefront_home_order = models.PositiveIntegerField(null=True, blank=True, db_index=True)
+    storefront_bg_from = models.CharField(max_length=7, blank=True, default="")
+    storefront_bg_to = models.CharField(max_length=7, blank=True, default="")
 
     class Meta:
         ordering = ["name_ku", "name"]

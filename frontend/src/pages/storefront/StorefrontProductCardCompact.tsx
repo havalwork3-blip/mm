@@ -48,7 +48,7 @@ export function StorefrontProductCardCompact({
     e.preventDefault()
     e.stopPropagation()
     onAddToCart()
-    triggerCartFly(addRef.current, accent)
+    triggerCartFly(addRef.current, accent, { imageUrl: img })
   }
 
   return (
@@ -93,7 +93,7 @@ export function StorefrontProductCardCompact({
               accent={accent}
               addLabel={addToFavorites}
               removeLabel={removeFromFavorites}
-              className="absolute end-2 top-2 z-20 !h-8 !w-8 !rounded-xl !bg-white/95 !shadow-sm !ring-1 !ring-slate-200/80"
+              className="absolute end-2 top-2 z-20 !h-8 !w-8"
             />
           </div>
         </button>

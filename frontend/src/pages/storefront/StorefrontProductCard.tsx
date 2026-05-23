@@ -130,6 +130,7 @@ export function StorefrontProductCard({
               label={labels.addToCart}
               inCart={inCart}
               onAdd={onAddToCart}
+              imageUrl={img}
             />
           </div>
         ) : null}

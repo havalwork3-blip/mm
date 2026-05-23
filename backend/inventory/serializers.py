@@ -594,7 +594,19 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ["id", "shop", "name", "name_ku", "name_ar", "name_en", "image", "image_url"]
+        fields = [
+            "id",
+            "shop",
+            "name",
+            "name_ku",
+            "name_ar",
+            "name_en",
+            "image",
+            "image_url",
+            "storefront_home_order",
+            "storefront_bg_from",
+            "storefront_bg_to",
+        ]
         read_only_fields = ["id", "shop", "name", "image_url"]
 
     def validate_name_ku(self, value: str) -> str:

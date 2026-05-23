@@ -11,6 +11,7 @@ type Props = {
   onAdd: () => void
   compact?: boolean
   className?: string
+  imageUrl?: string | null
 }
 
 export function StorefrontAddToCartButton({
@@ -20,6 +21,7 @@ export function StorefrontAddToCartButton({
   onAdd,
   compact = false,
   className = '',
+  imageUrl = null,
 }: Props) {
   const btnRef = useRef<HTMLButtonElement>(null)
 
@@ -27,7 +29,7 @@ export function StorefrontAddToCartButton({
     e.preventDefault()
     e.stopPropagation()
     onAdd()
-    triggerCartFly(btnRef.current, accent)
+    triggerCartFly(btnRef.current, accent, { imageUrl })
   }
 
   if (compact) {

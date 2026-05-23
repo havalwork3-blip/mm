@@ -80,6 +80,7 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
     setSearch('')
     setSearchOpen(false)
     setView('categories')
+    document.documentElement.classList.remove('sf-product-open')
     document.documentElement.style.overflow = ''
     scrollMainTop()
   }, [])
@@ -100,6 +101,7 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
     setProductCategoryName(categoryName)
     setView('product')
     setProductUrlParam(product.id)
+    document.documentElement.classList.add('sf-product-open')
     document.documentElement.style.overflow = 'hidden'
     scrollMainTop(false)
   }, [])
@@ -108,6 +110,7 @@ export function StorefrontCatalogProvider({ children }: { children: React.ReactN
     setSelectedProduct(null)
     setProductUrlParam(null)
     setView(returnView)
+    document.documentElement.classList.remove('sf-product-open')
     document.documentElement.style.overflow = ''
     scrollMainTop(false)
   }, [returnView])

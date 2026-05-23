@@ -107,7 +107,7 @@ export function StorefrontProductDetail({
   function handleOrder() {
     if (!available) return
     onAdd(qty)
-    triggerCartFly(orderBtnRef.current, accent)
+    triggerCartFly(orderBtnRef.current, accent, { imageUrl: activeSrc })
     setOrdered(true)
     window.setTimeout(() => setOrdered(false), 1600)
   }

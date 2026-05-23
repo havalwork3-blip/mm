@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import DecimalField, Prefetch, Q, Sum
+from django.db.models import Count, DecimalField, Prefetch, Q, Sum
 from django.db.models.functions import Coalesce
 
 from shops.storefront_settings_utils import (
@@ -914,6 +914,8 @@ def public_storefront_catalog(request):
 
     def _category_row(cat: Category) -> dict:
         ku = (cat.name_ku or cat.name or "").strip()
+        bg_from = (cat.storefront_bg_from or "").strip()
+        bg_to = (cat.storefront_bg_to or "").strip()
         return {
             "id": cat.id,
             "name": ku,
@@ -921,8 +923,17 @@ def public_storefront_catalog(request):
             "name_ar": (cat.name_ar or "").strip(),
             "name_en": (cat.name_en or "").strip(),
             "image_url": _category_image_url(cat),
+            "storefront_home_order": cat.storefront_home_order,
+            "storefront_bg_from": bg_from or None,
+            "storefront_bg_to": bg_to or None,
             "products": [],
         }
+
+    def _category_sort_key(row: dict) -> tuple:
+        order = row.get("storefront_home_order")
+        if order is not None:
+            return (0, int(order), (row.get("name_ku") or row["name"]).casefold())
+        return (1, 999_999, (row.get("name_ku") or row["name"]).casefold())
 
     by_category: dict[int, dict] = {}
     for cat in Category.objects.filter(shop_id=shop.pk).order_by("name_ku", "name"):
@@ -941,7 +952,7 @@ def public_storefront_catalog(request):
 
     categories = sorted(
         [row for row in by_category.values() if row["products"]],
-        key=lambda row: (row.get("name_ku") or row["name"]).casefold(),
+        key=_category_sort_key,
     )
     rate_raw = latest_usd_to_iqd_for_shop(shop.pk)
     exchange_rate = str(rate_raw) if rate_raw is not None else None
@@ -1058,6 +1069,128 @@ class MerchantStorefrontOrderViewSet(ShopScopedViewSet):
                 "cancelled_count": status_count(StorefrontOrderStatus.CANCELLED),
             },
         )
+
+
+def _normalize_storefront_hex(raw: str) -> str:
+    import re
+
+    value = (raw or "").strip()
+    if not value:
+        return ""
+    if not value.startswith("#"):
+        value = f"#{value}"
+    if not re.fullmatch(r"#[0-9A-Fa-f]{6}", value):
+        raise ValidationError({"color": "Use a hex color like #7c3aed."})
+    return value.upper()
+
+
+class MerchantStorefrontCategoryCardsView(APIView):
+    """GET/PATCH home-page category card order and gradient backgrounds."""
+
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    http_method_names = ["get", "patch", "options", "head"]
+
+    def _shop(self, request):
+        shop_id = require_shop_id(request)
+        shop = Shop.objects.filter(pk=shop_id, online_storefront_enabled=True).first()
+        if shop is None:
+            raise PermissionDenied("Online storefront is not enabled for this shop.")
+        return shop
+
+    def _image_url(self, request, cat: Category) -> str | None:
+        if not cat.image:
+            return None
+        try:
+            url = cat.image.url
+            return request.build_absolute_uri(url) if request else url
+        except Exception:
+            return None
+
+    def get(self, request):
+        shop = self._shop(request)
+        qs = (
+            Category.objects.filter(shop_id=shop.pk)
+            .annotate(
+                product_count=Count(
+                    "products",
+                    filter=Q(products__is_unregistered_placeholder=False),
+                ),
+            )
+            .order_by("storefront_home_order", "name_ku", "name")
+        )
+        rows = []
+        for cat in qs:
+            ku = (cat.name_ku or cat.name or "").strip()
+            bg_from = (cat.storefront_bg_from or "").strip()
+            bg_to = (cat.storefront_bg_to or "").strip()
+            rows.append(
+                {
+                    "id": cat.id,
+                    "name_ku": ku,
+                    "name_ar": (cat.name_ar or "").strip(),
+                    "name_en": (cat.name_en or "").strip(),
+                    "image_url": self._image_url(request, cat),
+                    "product_count": int(cat.product_count or 0),
+                    "storefront_home_order": cat.storefront_home_order,
+                    "storefront_bg_from": bg_from or None,
+                    "storefront_bg_to": bg_to or None,
+                },
+            )
+        return Response(rows)
+
+    def patch(self, request):
+        shop = self._shop(request)
+        items = request.data.get("items")
+        if not isinstance(items, list) or not items:
+            raise ValidationError({"items": "Provide a non-empty list of category updates."})
+
+        ids: list[int] = []
+        updates: dict[int, dict] = {}
+        for row in items:
+            if not isinstance(row, dict):
+                continue
+            try:
+                cid = int(row.get("id"))
+            except (TypeError, ValueError):
+                continue
+            if cid <= 0:
+                continue
+            patch: dict = {}
+            if "storefront_home_order" in row:
+                raw_order = row.get("storefront_home_order")
+                if raw_order is None or raw_order == "":
+                    patch["storefront_home_order"] = None
+                else:
+                    patch["storefront_home_order"] = max(0, int(raw_order))
+            if "storefront_bg_from" in row:
+                patch["storefront_bg_from"] = _normalize_storefront_hex(str(row.get("storefront_bg_from") or ""))
+            if "storefront_bg_to" in row:
+                patch["storefront_bg_to"] = _normalize_storefront_hex(str(row.get("storefront_bg_to") or ""))
+            if patch:
+                ids.append(cid)
+                updates[cid] = patch
+
+        if not ids:
+            raise ValidationError({"items": "No valid category updates."})
+
+        with transaction.atomic():
+            cats = {
+                c.id: c
+                for c in Category.objects.select_for_update().filter(
+                    shop_id=shop.pk,
+                    id__in=ids,
+                )
+            }
+            missing = [i for i in ids if i not in cats]
+            if missing:
+                raise ValidationError({"items": f"Unknown category ids: {missing}"})
+            for cid, patch in updates.items():
+                cat = cats[cid]
+                for key, val in patch.items():
+                    setattr(cat, key, val)
+                cat.save(update_fields=list(patch.keys()))
+
+        return self.get(request)
 
 
 class MerchantOnlineProductPricingView(APIView):

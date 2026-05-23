@@ -1,7 +1,6 @@
 import { Heart } from 'lucide-react'
 
 import { useStorefrontFavoritesStore } from '../../store/storefrontFavoritesStore'
-import { accentAlpha } from './storefrontTheme'
 
 type Props = {
   shopId: number
@@ -15,7 +14,7 @@ type Props = {
 export function StorefrontFavoriteButton({
   shopId,
   productId,
-  accent,
+  accent: _accent,
   addLabel,
   removeLabel,
   className = '',
@@ -33,22 +32,16 @@ export function StorefrontFavoriteButton({
       }}
       className={[
         'sf-fav-btn flex h-9 w-9 items-center justify-center rounded-full shadow-md ring-1 backdrop-blur-md transition active:scale-90',
-        isFavorite ? 'text-white' : 'bg-white/90 text-slate-500 ring-white/60 hover:text-rose-500',
+        isFavorite
+          ? 'bg-rose-500 text-white ring-rose-300/80 shadow-[0_4px_14px_rgba(244,63,94,0.45)]'
+          : 'bg-white/95 text-slate-500 ring-white/80 hover:bg-rose-50 hover:text-rose-600 hover:ring-rose-200/80',
         className,
       ].join(' ')}
-      style={
-        isFavorite
-          ? {
-              backgroundColor: accent,
-              boxShadow: `0 4px 14px ${accentAlpha(accent, 0.45)}`,
-            }
-          : undefined
-      }
       aria-label={isFavorite ? removeLabel : addLabel}
       aria-pressed={isFavorite}
     >
       <Heart
-        className={['h-4 w-4', isFavorite ? 'fill-current' : ''].join(' ')}
+        className={['h-4 w-4 transition-colors', isFavorite ? 'fill-current text-white' : ''].join(' ')}
         aria-hidden
       />
     </button>
