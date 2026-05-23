@@ -4,7 +4,11 @@ import type { PublicStorefrontCategory } from '../../api/storefrontApi'
 import { useLocale } from '../../context/LocaleContext'
 import { categoryDisplayName } from '../../lib/categoryNames'
 import { resolveMediaUrl } from '../../lib/api'
-import { sortStorefrontCategories } from './storefrontCategoryCardTheme'
+import {
+  categoriesUseClassicPanel,
+  resolveCategoriesSectionGradient,
+  sortStorefrontCategories,
+} from './storefrontCategoryCardTheme'
 import { StorefrontSectionPanel } from './StorefrontSectionPanel'
 import { SF_SECTION_CAT_WIDTH, SF_SECTION_SCROLL_ROW } from './storefrontTheme'
 
@@ -32,8 +36,16 @@ export function StorefrontMobileCategories({
   const rows = sortStorefrontCategories(categories.filter((c) => c.products.length > 0))
   if (rows.length === 0 && !onViewAll) return null
 
+  const classic = categoriesUseClassicPanel(rows)
+  const customGradient = resolveCategoriesSectionGradient(categories)
+
   return (
-    <StorefrontSectionPanel sectionKey="categories" title={title}>
+    <StorefrontSectionPanel
+      sectionKey="categories"
+      title={title}
+      appearance={classic ? 'classic' : 'blend'}
+      backgroundGradient={customGradient}
+    >
       <div className={SF_SECTION_SCROLL_ROW}>
         {onViewAll && viewAllLabel ? (
           <button type="button" onClick={onViewAll} className={[CAT_BTN, SF_SECTION_CAT_WIDTH].join(' ')}>

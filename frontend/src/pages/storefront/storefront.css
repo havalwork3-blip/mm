@@ -504,9 +504,15 @@ html.sf-mode select {
 }
 
 .sf-section-panel {
-  /* No outer shadow — bottom must blend into page (#faf8f5). */
-  box-shadow: none;
   border-bottom: none;
+}
+
+.sf-section-panel--classic {
+  box-shadow: var(--sf-section-panel-shadow, 0 10px 36px rgba(91, 33, 182, 0.16));
+}
+
+.sf-section-panel:not(.sf-section-panel--classic) {
+  box-shadow: none;
 }
 
 .sf-section-panel-body {

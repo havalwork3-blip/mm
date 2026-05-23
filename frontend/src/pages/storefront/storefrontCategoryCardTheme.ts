@@ -1,4 +1,5 @@
 import type { PublicStorefrontCategory } from '../../api/storefrontApi'
+import { verticalPanelGradient } from './storefrontSectionTheme'
 
 /** Beautiful default gradients when merchant has not set custom colors. */
 export const STOREFRONT_CATEGORY_BG_PRESETS = [
@@ -57,4 +58,48 @@ export function presetMatchesCategory(
     (cat.storefront_bg_from || '').toUpperCase() === preset.from.toUpperCase() &&
     (cat.storefront_bg_to || '').toUpperCase() === preset.to.toUpperCase()
   )
+}
+
+export function categoryHasCustomColors(
+  cat: Pick<PublicStorefrontCategory, 'storefront_bg_from' | 'storefront_bg_to'>,
+): boolean {
+  return isHexColor(cat.storefront_bg_from) || isHexColor(cat.storefront_bg_to)
+}
+
+/** Default storefront panel (shadow, rounded box) when no merchant category colors. */
+export function categoriesUseClassicPanel(
+  categories: Pick<PublicStorefrontCategory, 'storefront_bg_from' | 'storefront_bg_to'>[],
+): boolean {
+  return !categories.some(categoryHasCustomColors)
+}
+
+export function resolveCategoriesSectionGradient(
+  categories: Array<
+    Pick<
+      PublicStorefrontCategory,
+      'storefront_bg_from' | 'storefront_bg_to' | 'storefront_home_order' | 'name_ku' | 'name'
+    > & { products?: { length: number } }
+  >,
+): string | undefined {
+  const rows = sortStorefrontCategories(
+    categories.filter((c) => (c.products?.length ?? 0) > 0) as PublicStorefrontCategory[],
+  )
+  if (categoriesUseClassicPanel(rows)) return undefined
+
+  const source =
+    rows.find((c) => isHexColor(c.storefront_bg_from) && isHexColor(c.storefront_bg_to)) ||
+    rows.find((c) => isHexColor(c.storefront_bg_from)) ||
+    rows[0]
+  if (!source) return undefined
+
+  const from = isHexColor(source.storefront_bg_from)
+    ? source.storefront_bg_from
+    : STOREFRONT_CATEGORY_BG_PRESETS[0].from
+  const to = isHexColor(source.storefront_bg_to)
+    ? source.storefront_bg_to
+    : isHexColor(source.storefront_bg_from)
+      ? `${source.storefront_bg_from}cc`
+      : STOREFRONT_CATEGORY_BG_PRESETS[0].to
+
+  return verticalPanelGradient(from, to)
 }

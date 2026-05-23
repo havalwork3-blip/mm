@@ -80,3 +80,31 @@ export function sectionPanelRgb(sectionKey: StorefrontSectionKey): string {
   const b = Number.parseInt(rgb.slice(5, 7), 16)
   return `${r}, ${g}, ${b}`
 }
+
+export function sectionPanelShadow(sectionKey: StorefrontSectionKey): string {
+  const { from } = sectionPreset(sectionKey)
+  const rgb = normalizeHex(from)
+  const r = Number.parseInt(rgb.slice(1, 3), 16)
+  const g = Number.parseInt(rgb.slice(3, 5), 16)
+  const b = Number.parseInt(rgb.slice(5, 7), 16)
+  return `0 10px 36px rgba(${r}, ${g}, ${b}, 0.16), 0 4px 14px rgba(15, 23, 42, 0.07)`
+}
+
+/** Vertical fade using custom category colors (merchant). */
+export function verticalPanelGradient(from: string, to: string): string {
+  const mid = mixHex(from, to, 0.4)
+  const light = mixHex(to, STOREFRONT_PAGE_BG, 0.4)
+  const pale = mixHex(to, STOREFRONT_PAGE_BG, 0.78)
+  const blend = mixHex(to, STOREFRONT_PAGE_BG, 0.94)
+  return [
+    `linear-gradient(180deg,`,
+    `${from} 0%,`,
+    `${mixHex(from, mid, 0.28)} 10%,`,
+    `${mid} 26%,`,
+    `${light} 46%,`,
+    `${pale} 62%,`,
+    `${blend} 76%,`,
+    `${STOREFRONT_PAGE_BG} 90%,`,
+    `${STOREFRONT_PAGE_BG} 100%)`,
+  ].join(' ')
+}

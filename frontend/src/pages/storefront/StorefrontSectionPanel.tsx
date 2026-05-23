@@ -1,6 +1,13 @@
 import type { CSSProperties, ReactNode } from 'react'
 
-import { sectionPanelGradient, sectionPanelRgb, type StorefrontSectionKey } from './storefrontSectionTheme'
+import {
+  sectionPanelGradient,
+  sectionPanelRgb,
+  sectionPanelShadow,
+  type StorefrontSectionKey,
+} from './storefrontSectionTheme'
+
+export type StorefrontSectionAppearance = 'classic' | 'blend'
 
 type Props = {
   sectionKey: StorefrontSectionKey
@@ -9,6 +16,10 @@ type Props = {
   headerAside?: ReactNode
   children: ReactNode
   className?: string
+  /** classic = rounded box + shadow (default). blend = flat bottom, no shadow. */
+  appearance?: StorefrontSectionAppearance
+  /** Override panel background (e.g. merchant category colors). */
+  backgroundGradient?: string
 }
 
 export function StorefrontSectionPanel({
@@ -18,17 +29,26 @@ export function StorefrontSectionPanel({
   headerAside,
   children,
   className = '',
+  appearance = 'blend',
+  backgroundGradient,
 }: Props) {
-  const gradient = sectionPanelGradient(sectionKey)
+  const gradient = backgroundGradient ?? sectionPanelGradient(sectionKey)
+  const isClassic = appearance === 'classic'
   const panelStyle = {
     background: gradient,
     '--sf-section-rgb': sectionPanelRgb(sectionKey),
+    ...(isClassic ? { boxShadow: sectionPanelShadow(sectionKey) } : {}),
   } as CSSProperties
 
   return (
     <section className={`sf-section-panel-wrap ${className}`.trim()}>
       <div
-        className="sf-section-panel relative overflow-hidden rounded-t-[1.35rem] lg:rounded-t-[1.5rem]"
+        className={[
+          'sf-section-panel relative overflow-hidden',
+          isClassic
+            ? 'sf-section-panel--classic rounded-[1.35rem] lg:rounded-[1.5rem]'
+            : 'rounded-t-[1.35rem] lg:rounded-t-[1.5rem]',
+        ].join(' ')}
         style={panelStyle}
       >
         <span className="sf-section-panel-shine pointer-events-none absolute inset-0" aria-hidden />
