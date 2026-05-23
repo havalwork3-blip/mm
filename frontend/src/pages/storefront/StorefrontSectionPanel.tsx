@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
-import { sectionPanelGradient, sectionPanelShadow, type StorefrontSectionKey } from './storefrontSectionTheme'
+import { sectionPanelGradient, sectionPanelRgb, type StorefrontSectionKey } from './storefrontSectionTheme'
 
 type Props = {
   sectionKey: StorefrontSectionKey
@@ -20,13 +20,16 @@ export function StorefrontSectionPanel({
   className = '',
 }: Props) {
   const gradient = sectionPanelGradient(sectionKey)
-  const shadow = sectionPanelShadow(sectionKey)
+  const panelStyle = {
+    background: gradient,
+    '--sf-section-rgb': sectionPanelRgb(sectionKey),
+  } as CSSProperties
 
   return (
     <section className={`sf-section-panel-wrap ${className}`.trim()}>
       <div
         className="sf-section-panel relative overflow-hidden rounded-t-[1.35rem] lg:rounded-t-[1.5rem]"
-        style={{ background: gradient, boxShadow: shadow }}
+        style={panelStyle}
       >
         <span className="sf-section-panel-shine pointer-events-none absolute inset-0" aria-hidden />
 

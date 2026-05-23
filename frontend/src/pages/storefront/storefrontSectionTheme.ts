@@ -72,11 +72,11 @@ export function sectionPanelGradient(sectionKey: StorefrontSectionKey): string {
   ].join(' ')
 }
 
-export function sectionPanelShadow(sectionKey: StorefrontSectionKey): string {
+export function sectionPanelRgb(sectionKey: StorefrontSectionKey): string {
   const { from } = sectionPreset(sectionKey)
   const rgb = normalizeHex(from)
   const r = Number.parseInt(rgb.slice(1, 3), 16)
   const g = Number.parseInt(rgb.slice(3, 5), 16)
   const b = Number.parseInt(rgb.slice(5, 7), 16)
-  return `0 10px 36px rgba(${r}, ${g}, ${b}, 0.14)`
+  return `${r}, ${g}, ${b}`
 }
