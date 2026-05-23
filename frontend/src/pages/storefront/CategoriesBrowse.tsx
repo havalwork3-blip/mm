@@ -3,7 +3,6 @@ import type {
   PublicStorefrontProduct,
   StorefrontProductCollection,
 } from '../../api/storefrontApi'
-import { StorefrontCategoryIconsRow } from './StorefrontCategoryIconsRow'
 import { StorefrontMobileCategories } from './StorefrontMobileCategories'
 import { StorefrontCollectionSections } from './StorefrontCollectionSections'
 import type { CatalogProductRow } from './storefrontCollections'
@@ -66,20 +65,13 @@ export function CategoriesBrowse({
 }: Props) {
   return (
     <section className={`${SF_INSET_X} sf-view-panel mt-2 sm:mt-4 lg:mt-6`}>
-      <StorefrontCategoryIconsRow
-        categories={categories}
-        accent={accent}
-        allLabel={labels.viewAllProducts}
-        onSelectAll={onViewAllProducts}
-        onSelectCategory={onSelectCategory}
-      />
-
       <StorefrontMobileCategories
         categories={categories}
-        accent={accent}
         title={labels.shopCategories}
         productCountLabel={(n) => labels.productCount.replace('{n}', String(n))}
+        viewAllLabel={labels.viewAllProducts}
         onSelect={onSelectCategory}
+        onViewAll={onViewAllProducts}
       />
 
       {recentRows.length > 0 ? (

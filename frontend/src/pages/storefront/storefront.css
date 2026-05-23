@@ -490,6 +490,37 @@ html.sf-mode select {
   color: #0f172a;
 }
 
+.sf-section-panel .sf-heading {
+  color: #ffffff;
+}
+
+.sf-section-panel-wrap {
+  margin-bottom: 0;
+}
+
+.sf-section-cat-card {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sf-section-panel-shine {
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 10%, rgba(255, 255, 255, 0.35), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 90% 90%, rgba(255, 255, 255, 0.12), transparent 50%);
+}
+
+.sf-section-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+}
+
+.sf-section-cat-card {
+  -webkit-tap-highlight-color: transparent;
+}
+
 .sf-collection-section {
   padding-bottom: 0.25rem;
 }
@@ -656,14 +687,9 @@ html.sf-mode select {
     margin-bottom: 1.75rem;
   }
 
-  .sf-collection-section {
-    border-radius: 1.25rem;
-    border: 1px solid rgba(226, 232, 240, 0.92);
-    background: #ffffff;
-    padding: 1.5rem;
-    box-shadow:
-      0 1px 3px rgba(15, 23, 42, 0.05),
-      0 12px 32px rgba(15, 23, 42, 0.06);
+  .sf-section-panel-wrap + .sf-section-panel-wrap,
+  .sf-section-panel-wrap + .sf-collections {
+    margin-top: 0;
   }
 
   .sf-collection-grid > li {

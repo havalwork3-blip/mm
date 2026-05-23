@@ -1,6 +1,7 @@
 import type { PublicStorefrontProduct } from '../../api/storefrontApi'
 import type { CatalogProductRow } from './storefrontCollections'
 import { StorefrontProductCardCompact } from './StorefrontProductCardCompact'
+import { StorefrontSectionPanel } from './StorefrontSectionPanel'
 import { SF_COLLECTION_GRID } from './storefrontTheme'
 
 type Props = {
@@ -31,15 +32,7 @@ export function StorefrontRecentlyViewedSection({
   if (rows.length === 0) return null
 
   return (
-    <section className="sf-recent-section mb-6 lg:mb-8">
-      <div className="mb-3 flex items-center gap-2">
-        <span
-          className="h-6 w-1 rounded-full"
-          style={{ background: `linear-gradient(180deg, ${accent}, ${accent}88)` }}
-          aria-hidden
-        />
-        <h2 className="sf-heading text-base font-extrabold text-slate-900 sm:text-lg">{title}</h2>
-      </div>
+    <StorefrontSectionPanel sectionKey="recently_viewed" title={title} className="mb-6 lg:mb-8">
       <ul className={SF_COLLECTION_GRID}>
         {rows.map(({ product, categoryName }) => (
           <StorefrontProductCardCompact
@@ -56,6 +49,6 @@ export function StorefrontRecentlyViewedSection({
           />
         ))}
       </ul>
-    </section>
+    </StorefrontSectionPanel>
   )
 }

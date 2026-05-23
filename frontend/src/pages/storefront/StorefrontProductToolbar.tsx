@@ -37,15 +37,16 @@ export function StorefrontProductToolbar({
   onClearFilters,
 }: Props) {
   return (
-    <div className="sf-product-toolbar mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between lg:p-4">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
+    <div className="sf-product-toolbar mb-4 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-2.5 shadow-sm lg:p-3">
+      <div className="sf-scrollbar-none flex flex-nowrap items-center gap-2 overflow-x-auto lg:gap-2.5">
         <SlidersHorizontal className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-        <label className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-slate-700">
-          <span className="shrink-0">{labels.sort}</span>
+
+        <label className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-700 sm:text-sm">
+          <span className="whitespace-nowrap">{labels.sort}</span>
           <select
             value={sortKey}
             onChange={(e) => onSortChange(e.target.value as ProductSortKey)}
-            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800"
+            className="max-w-[6.75rem] shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-medium text-slate-800 sm:max-w-none sm:px-3 sm:py-2 sm:text-sm"
           >
             <option value="default">{labels.sortDefault}</option>
             <option value="price_asc">{labels.sortPriceAsc}</option>
@@ -54,14 +55,14 @@ export function StorefrontProductToolbar({
             <option value="newest">{labels.sortNewest}</option>
           </select>
         </label>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+        <span className="h-5 w-px shrink-0 bg-slate-200" aria-hidden />
+
         <button
           type="button"
           onClick={() => onFiltersChange({ ...filters, inStockOnly: !filters.inStockOnly })}
           className={[
-            'rounded-xl px-3 py-2 text-xs font-bold transition',
+            'shrink-0 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-bold transition sm:py-2',
             filters.inStockOnly ? 'text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
           ].join(' ')}
           style={
@@ -73,11 +74,12 @@ export function StorefrontProductToolbar({
         >
           {labels.filterInStock}
         </button>
+
         <button
           type="button"
           onClick={() => onFiltersChange({ ...filters, onSaleOnly: !filters.onSaleOnly })}
           className={[
-            'rounded-xl px-3 py-2 text-xs font-bold transition',
+            'shrink-0 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-bold transition sm:py-2',
             filters.onSaleOnly ? 'text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
           ].join(' ')}
           style={
@@ -89,11 +91,12 @@ export function StorefrontProductToolbar({
         >
           {labels.filterOnSale}
         </button>
+
         {hasActiveFilters ? (
           <button
             type="button"
             onClick={onClearFilters}
-            className="rounded-xl border px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
+            className="shrink-0 whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 sm:py-2"
             style={{ borderColor: accentAlpha(accent, 0.35), color: accent }}
           >
             {labels.clearFilters}

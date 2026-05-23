@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Loader2, Palette, Save } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, Save } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useLocale } from '../../context/LocaleContext'
@@ -9,11 +9,7 @@ import {
   patchMerchantStorefrontCategoryCards,
   type MerchantStorefrontCategoryCard,
 } from '../../lib/merchantStorefrontCategoriesApi'
-import {
-  categoryCardGradient,
-  presetMatchesCategory,
-  STOREFRONT_CATEGORY_BG_PRESETS,
-} from '../storefront/storefrontCategoryCardTheme'
+import { sectionPanelGradient } from '../storefront/storefrontSectionTheme'
 
 type Row = MerchantStorefrontCategoryCard & { _key: string }
 
@@ -39,6 +35,8 @@ export function MerchantStorefrontCategoryCardsSection() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+
+  const sectionGradient = sectionPanelGradient('categories')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -73,22 +71,6 @@ export function MerchantStorefrontCategoryCardsSection() {
     setSaved(false)
   }
 
-  function applyPreset(index: number, from: string, to: string) {
-    setRows((prev) =>
-      prev.map((r, i) =>
-        i === index ? { ...r, storefront_bg_from: from, storefront_bg_to: to } : r,
-      ),
-    )
-    setSaved(false)
-  }
-
-  function setColor(index: number, field: 'storefront_bg_from' | 'storefront_bg_to', value: string) {
-    setRows((prev) =>
-      prev.map((r, i) => (i === index ? { ...r, [field]: value || null } : r)),
-    )
-    setSaved(false)
-  }
-
   async function handleSave() {
     setSaving(true)
     setError(null)
@@ -97,8 +79,6 @@ export function MerchantStorefrontCategoryCardsSection() {
       const items = rows.map((r, i) => ({
         id: r.id,
         storefront_home_order: i,
-        storefront_bg_from: r.storefront_bg_from || '',
-        storefront_bg_to: r.storefront_bg_to || '',
       }))
       const data = await patchMerchantStorefrontCategoryCards(items)
       setRows(toRows(data))
@@ -114,7 +94,7 @@ export function MerchantStorefrontCategoryCardsSection() {
     <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-700/80 dark:bg-slate-900">
       <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
-          <Palette className="h-4 w-4" aria-hidden />
+          <ArrowUpDown className="h-4 w-4" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -135,126 +115,78 @@ export function MerchantStorefrontCategoryCardsSection() {
         ) : empty ? (
           <p className="py-6 text-center text-sm text-slate-500">{t('onlineShop.categoryCardsEmpty')}</p>
         ) : (
-          <ul className="space-y-4">
-            {rows.map((row, index) => {
-              const label = categoryDisplayName(row, lang)
-              const img = resolveMediaUrl(row.image_url)
-              const gradient = categoryCardGradient(row, index)
-              return (
-                <li
-                  key={row._key}
-                  className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 dark:border-slate-700 dark:bg-slate-800/40"
-                >
-                  <div className="flex flex-wrap items-start gap-4">
+          <>
+            <div
+              className="sf-section-panel relative overflow-hidden rounded-2xl p-3 shadow-md"
+              style={{ background: sectionGradient }}
+            >
+              <span className="sf-section-panel-shine pointer-events-none absolute inset-0" aria-hidden />
+              <div className="relative grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+                {rows.slice(0, 6).map((row) => {
+                  const label = categoryDisplayName(row, lang)
+                  const img = resolveMediaUrl(row.image_url)
+                  return (
                     <div
-                      className="sf-cat-card-editor-preview relative flex w-full min-w-[8rem] max-w-[9rem] flex-col overflow-hidden rounded-2xl shadow-lg sm:w-[9rem]"
-                      style={{ background: gradient }}
+                      key={row._key}
+                      className="flex flex-col overflow-hidden rounded-xl bg-white/95 p-2 shadow-sm ring-1 ring-white/50"
                     >
-                      <span className="sf-mobile-cat-card-shine pointer-events-none absolute inset-0" />
-                      <div className="relative p-2.5 pt-3">
-                        <div className="mx-auto aspect-square w-full overflow-hidden rounded-xl bg-white/25 p-1 ring-2 ring-white/30">
-                          {img ? (
-                            <img src={img} alt="" className="h-full w-full rounded-lg object-cover" />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-lg font-black text-white">
-                              {label.charAt(0)}
-                            </div>
-                          )}
-                        </div>
-                        <p className="mt-2 truncate text-center text-[10px] font-bold text-white drop-shadow">
-                          {label}
-                        </p>
+                      <div className="aspect-square overflow-hidden rounded-lg bg-slate-50">
+                        {img ? (
+                          <img src={img} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-sm font-black text-violet-700">
+                            {label.charAt(0)}
+                          </div>
+                        )}
                       </div>
+                      <p className="mt-1.5 truncate text-center text-[10px] font-bold text-slate-800">
+                        {label}
+                      </p>
                     </div>
+                  )
+                })}
+              </div>
+            </div>
 
-                    <div className="min-w-0 flex-1 space-y-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <p className="font-bold text-slate-900 dark:text-white">{label}</p>
-                          <p className="text-xs text-slate-500">
-                            {t('onlineShop.categoryCardsProducts').replace(
-                              '{n}',
-                              String(row.product_count),
-                            )}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            disabled={index === 0}
-                            onClick={() => moveRow(index, -1)}
-                            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800"
-                            aria-label={t('onlineShop.categoryCardsMoveUp')}
-                          >
-                            <ArrowUp className="h-4 w-4" aria-hidden />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={index === rows.length - 1}
-                            onClick={() => moveRow(index, 1)}
-                            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800"
-                            aria-label={t('onlineShop.categoryCardsMoveDown')}
-                          >
-                            <ArrowDown className="h-4 w-4" aria-hidden />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                          {t('onlineShop.categoryCardsPresets')}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {STOREFRONT_CATEGORY_BG_PRESETS.map((preset) => {
-                            const active = presetMatchesCategory(row, preset)
-                            const presetLabel = t(`onlineShop.categoryPreset.${preset.labelKey}`)
-                            return (
-                              <button
-                                key={preset.id}
-                                type="button"
-                                onClick={() => applyPreset(index, preset.from, preset.to)}
-                                className={[
-                                  'h-8 w-8 rounded-lg ring-2 transition active:scale-95',
-                                  active ? 'ring-violet-500 ring-offset-2' : 'ring-transparent',
-                                ].join(' ')}
-                                style={{
-                                  background: `linear-gradient(135deg, ${preset.from}, ${preset.to})`,
-                                }}
-                                title={presetLabel}
-                                aria-label={presetLabel}
-                                aria-pressed={active}
-                              />
-                            )
-                          })}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                          {t('onlineShop.categoryCardsColorFrom')}
-                          <input
-                            type="color"
-                            value={row.storefront_bg_from || '#5b21b6'}
-                            onChange={(e) => setColor(index, 'storefront_bg_from', e.target.value)}
-                            className="mt-1 h-10 w-full cursor-pointer rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-600"
-                          />
-                        </label>
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                          {t('onlineShop.categoryCardsColorTo')}
-                          <input
-                            type="color"
-                            value={row.storefront_bg_to || '#c4b5fd'}
-                            onChange={(e) => setColor(index, 'storefront_bg_to', e.target.value)}
-                            className="mt-1 h-10 w-full cursor-pointer rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-600"
-                          />
-                        </label>
-                      </div>
+            <ul className="space-y-2">
+              {rows.map((row, index) => {
+                const label = categoryDisplayName(row, lang)
+                return (
+                  <li
+                    key={row._key}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50/50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/40"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-bold text-slate-900 dark:text-white">{label}</p>
+                      <p className="text-xs text-slate-500">
+                        {t('onlineShop.categoryCardsProducts').replace('{n}', String(row.product_count))}
+                      </p>
                     </div>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => moveRow(index, -1)}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800"
+                        aria-label={t('onlineShop.categoryCardsMoveUp')}
+                      >
+                        <ArrowUp className="h-4 w-4" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === rows.length - 1}
+                        onClick={() => moveRow(index, 1)}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800"
+                        aria-label={t('onlineShop.categoryCardsMoveDown')}
+                      >
+                        <ArrowDown className="h-4 w-4" aria-hidden />
+                      </button>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
         )}
 
         {error ? (

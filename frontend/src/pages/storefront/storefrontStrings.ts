@@ -169,7 +169,7 @@ const STRINGS = {
     orderWhatsApp: 'پەیوەندی لە واتسئاپ',
     shareProduct: 'هاوبەشکردنی بەرهەم',
     linkCopied: 'لینک کۆپی کرا',
-    recentlyViewed: 'دواتر بینراو',
+    recentlyViewed: 'دواین بیندراوەکان',
     relatedProducts: 'بەرهەمە پەیوەندیدارەکان',
   },
   ar: {

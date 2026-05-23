@@ -167,7 +167,7 @@ const en: Record<string, string> = {
   'onlineShop.livePreview': 'Live preview',
   'onlineShop.categoryCardsTitle': 'Home category cards',
   'onlineShop.categoryCardsHint':
-    'Gradient background and order for category tiles on the shop home page (mobile). Lower number = shown first (top).',
+    'Order of category tiles on the shop home page. All categories share one section background; lower number = shown first.',
   'onlineShop.categoryCardsEmpty': 'No categories with products yet. Add categories and products in Inventory.',
   'onlineShop.categoryCardsProducts': '{n} products',
   'onlineShop.categoryCardsMoveUp': 'Move up (earlier on page)',
@@ -1878,7 +1878,7 @@ const ar: Record<string, string> = {
   'onlineShop.livePreview': 'معاينة مباشرة',
   'onlineShop.categoryCardsTitle': 'بطاقات الأقسام في الرئيسية',
   'onlineShop.categoryCardsHint':
-    'خلفية متدرجة وترتيب بطاقات الأقسام في الصفحة الرئيسية. الرقم الأقل = يظهر أولاً (أعلى).',
+    'ترتيب بطاقات الأقسام في الصفحة الرئيسية. خلفية واحدة مشتركة لكل الأقسام؛ الرقم الأقل = يظهر أولاً.',
   'onlineShop.categoryCardsEmpty': 'لا توجد أقسام بمنتجات بعد. أضف أقساماً ومنتجات من المخزون.',
   'onlineShop.categoryCardsProducts': '{n} منتج',
   'onlineShop.categoryCardsMoveUp': 'تحريك لأعلى',
@@ -3056,7 +3056,7 @@ const ku: Record<string, string> = {
   'onlineShop.livePreview': 'پێشبینینی ڕاستەوخۆ',
   'onlineShop.categoryCardsTitle': 'کارتی پۆلەکان لە سەرەکی',
   'onlineShop.categoryCardsHint':
-    'پاشخان و ڕیزبەندی کارتی پۆلەکان لە پەڕەی سەرەکی. ژمارەی کەمتر = لە سەرەوە یەکەم.',
+    'ڕیزبەندی کارتی پۆلەکان لە پەڕەی سەرەکی. هەموو پۆلەکان یەک پاشخانی گشتیان هەیە؛ ژمارەی کەمتر = لە سەرەوە یەکەم.',
   'onlineShop.categoryCardsEmpty': 'هێشتا پۆلێک بە بەرهەم نییە. لە کۆگا پۆل و بەرهەم زیاد بکە.',
   'onlineShop.categoryCardsProducts': '{n} بەرهەم',
   'onlineShop.categoryCardsMoveUp': 'بەرزتر (سەرەوە)',
