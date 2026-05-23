@@ -4,6 +4,9 @@ import type { CSSProperties } from 'react'
 
 export const DEFAULT_ACCENT = '#FF5A00'
 
+/** Page background — section gradients must fade into this color. */
+export const STOREFRONT_PAGE_BG = '#faf8f5'
+
 export function resolveAccent(color?: string | null): string {
   const c = color?.trim()
   if (!c || !/^#[0-9A-Fa-f]{3,8}$/.test(c)) return DEFAULT_ACCENT
@@ -73,7 +76,7 @@ export const SF_COLLECTION_GRID =
 
 /** Horizontal scroll row inside home section panels. */
 export const SF_SECTION_SCROLL_ROW =
-  'sf-section-scroll-row sf-scrollbar-none flex flex-nowrap gap-3.5 overflow-x-auto px-1 pb-1 sm:gap-4 md:gap-5'
+  'sf-section-scroll-row sf-scrollbar-none flex flex-nowrap gap-4 overflow-x-auto px-1.5 pb-1 sm:gap-5 md:gap-6'
 
 export const SF_SECTION_PRODUCT_WIDTH = 'w-[9.25rem] shrink-0 sm:w-[10rem] lg:w-[10.75rem]'
 

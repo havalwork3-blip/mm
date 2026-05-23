@@ -32,7 +32,7 @@ export function StorefrontRecentlyViewedSection({
   if (rows.length === 0) return null
 
   return (
-    <StorefrontSectionPanel sectionKey="recently_viewed" title={title} className="mb-6 lg:mb-8">
+    <StorefrontSectionPanel sectionKey="recently_viewed" title={title}>
       <ul className={SF_SECTION_SCROLL_ROW}>
         {rows.map(({ product, categoryName }) => (
           <StorefrontProductCardCompact

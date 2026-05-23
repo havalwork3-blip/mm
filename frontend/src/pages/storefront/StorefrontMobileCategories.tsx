@@ -33,7 +33,7 @@ export function StorefrontMobileCategories({
   if (rows.length === 0 && !onViewAll) return null
 
   return (
-    <StorefrontSectionPanel sectionKey="categories" title={title} className="mb-6 lg:mb-8">
+    <StorefrontSectionPanel sectionKey="categories" title={title}>
       <div className={SF_SECTION_SCROLL_ROW}>
         {onViewAll && viewAllLabel ? (
           <button type="button" onClick={onViewAll} className={[CAT_BTN, SF_SECTION_CAT_WIDTH].join(' ')}>

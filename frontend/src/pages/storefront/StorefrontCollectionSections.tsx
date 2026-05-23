@@ -96,7 +96,7 @@ export function StorefrontCollectionSections({
   if (sections.length === 0) return null
 
   return (
-    <div className="sf-collections mt-2 space-y-6 sm:space-y-7 lg:space-y-8">
+    <div className="sf-collections mt-2 space-y-0 lg:space-y-0">
       {sections.map(({ id, allCount, preview }) => {
         const meta = COLLECTION_META[id]
         const Icon = meta.icon
