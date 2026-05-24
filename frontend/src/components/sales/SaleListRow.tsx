@@ -110,6 +110,11 @@ export const SaleListRow = memo(function SaleListRowCard({
               {t('sales.returnedTag')} {formatMoney(returnedTotalUsd)} USD
             </p>
           ) : null}
+          {discount > 0.0001 ? (
+            <p className="mt-1 inline-flex rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-800 dark:border-rose-700/40 dark:bg-rose-900/30 dark:text-rose-200">
+              {t('sales.discountUsd')}: {formatMoney(discount)}
+            </p>
+          ) : null}
         </div>
         {/* Own row: avoids RTL + overflow-x-hidden clipping a sibling flex column */}
         <div className="flex flex-wrap items-center gap-2" dir="ltr">
@@ -188,6 +193,22 @@ export const SaleListRow = memo(function SaleListRowCard({
             {formatMoney(prevDebt)}
           </dd>
         </div>
+        {discount > 0.0001 ? (
+          <>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900/60">
+              <dt className="mb-1 text-slate-500 dark:text-slate-400">{t('sales.subtotalUsd')}</dt>
+              <dd className="font-mono text-sm tabular-nums text-slate-900 dark:text-slate-100">
+                {formatMoney(subtotal)}
+              </dd>
+            </div>
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 dark:border-rose-700/40 dark:bg-rose-900/20">
+              <dt className="mb-1 font-medium text-rose-800 dark:text-rose-200">{t('sales.discountUsd')}</dt>
+              <dd className="font-mono text-sm font-semibold tabular-nums text-rose-700 dark:text-rose-300">
+                −{formatMoney(discount)}
+              </dd>
+            </div>
+          </>
+        ) : null}
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 sm:col-span-2 dark:border-amber-700/40 dark:bg-amber-900/20">
           <dt className="mb-1 font-semibold text-slate-700 dark:text-slate-200">{t('sales.netTotalUsd')}</dt>
           <dd className="font-mono text-base font-bold tabular-nums text-amber-800 dark:text-amber-200">

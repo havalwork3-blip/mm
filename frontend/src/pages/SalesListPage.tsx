@@ -20,6 +20,7 @@ import type {
 } from '../types/api'
 
 type PaymentStatusFilter = 'all' | 'debt' | 'paid'
+type DiscountFilter = 'all' | 'with_discount'
 
 type SalesListFilters = {
   productName: string
@@ -29,6 +30,7 @@ type SalesListFilters = {
   dateFrom: string
   dateTo: string
   paymentStatus: PaymentStatusFilter
+  discountFilter: DiscountFilter
 }
 
 /** Tenant APIs: always send active `pos_shop_id` (even when Global View is on). */
@@ -42,6 +44,7 @@ const EMPTY_FILTERS: SalesListFilters = {
   dateFrom: '',
   dateTo: '',
   paymentStatus: 'all',
+  discountFilter: 'all',
 }
 
 function buildSalesQuery(filters: SalesListFilters): string {
@@ -58,6 +61,9 @@ function buildSalesQuery(filters: SalesListFilters): string {
   if (filters.dateTo) params.set('date_to', filters.dateTo)
   if (filters.paymentStatus !== 'all') {
     params.set('payment_status', filters.paymentStatus)
+  }
+  if (filters.discountFilter === 'with_discount') {
+    params.set('has_discount', '1')
   }
   const qs = params.toString()
   return qs ? `/api/sales/?${qs}` : '/api/sales/'
@@ -250,6 +256,7 @@ export function SalesListPage() {
       dateFrom: filters.dateFrom.trim(),
       dateTo: filters.dateTo.trim(),
       paymentStatus: filters.paymentStatus,
+      discountFilter: filters.discountFilter,
     }
     setFilters(next)
     void loadSales(next)
@@ -511,6 +518,20 @@ export function SalesListPage() {
                   <option value="all">{t('sales.paymentStatus.all')}</option>
                   <option value="debt">{t('sales.paymentStatus.debt')}</option>
                   <option value="paid">{t('sales.paymentStatus.paid')}</option>
+                </select>
+              </label>
+              <label className="flex w-full min-w-[160px] flex-col gap-1 text-start text-xs font-medium text-slate-600 sm:w-auto">
+                {t('sales.filterDiscount')}
+                <select
+                  value={filters.discountFilter}
+                  onChange={(e) => {
+                    const discountFilter = e.target.value as DiscountFilter
+                    patchFilters({ discountFilter }, true)
+                  }}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+                >
+                  <option value="all">{t('sales.discountFilter.all')}</option>
+                  <option value="with_discount">{t('sales.discountFilter.withDiscount')}</option>
                 </select>
               </label>
               <div className="flex flex-wrap gap-2">

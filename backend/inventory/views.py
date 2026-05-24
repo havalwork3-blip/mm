@@ -728,6 +728,9 @@ class SaleViewSet(ShopScopedViewSet):
                 qs = qs.filter(id__in=debt_ids)
             else:
                 qs = qs.filter(id__in=paid_ids)
+        has_discount = (self.request.query_params.get("has_discount") or "").strip().lower()
+        if has_discount in ("1", "true", "yes"):
+            qs = qs.filter(invoice_discount_usd__gt=Decimal("0"))
         if search:
             qs = qs.filter(
                 Q(customer__name__icontains=search)
