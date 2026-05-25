@@ -1,4 +1,4 @@
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, LayoutGrid } from 'lucide-react'
 
 import type { PublicStorefrontCategory } from '../../api/storefrontApi'
 import { useLocale } from '../../context/LocaleContext'
@@ -30,13 +30,27 @@ export function StorefrontMobileCategories({
 
   return (
     <section className="sf-shop-categories">
-      <header className="mb-4 sm:mb-5">
-        <h2 className="sf-heading text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">
-          {title}
-        </h2>
-        {subtitle ? (
-          <p className="mt-1 text-xs font-medium text-slate-500 sm:text-sm">{subtitle}</p>
-        ) : null}
+      <header className="sf-shop-categories-header mb-4 sm:mb-5">
+        <div className="flex items-start gap-3">
+          <span
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ring-slate-200/60"
+            style={{
+              backgroundColor: accentAlpha(accent, 0.1),
+              color: accent,
+            }}
+            aria-hidden
+          >
+            <LayoutGrid className="h-5 w-5" strokeWidth={2.25} />
+          </span>
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h2 className="sf-heading text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">
+              {title}
+            </h2>
+            {subtitle ? (
+              <p className="mt-0.5 text-xs font-medium text-slate-500 sm:text-sm">{subtitle}</p>
+            ) : null}
+          </div>
+        </div>
       </header>
 
       <ul className={SF_CATEGORY_GRID}>
@@ -50,46 +64,37 @@ export function StorefrontMobileCategories({
               <button
                 type="button"
                 onClick={() => onSelect(cat.id)}
-                className="sf-category-simple-card group flex w-full flex-col text-start"
+                className="sf-cat-card sf-card-shine group w-full text-start"
                 style={{ ['--sf-cat-accent' as string]: accent }}
               >
-                <div className="sf-category-simple-media relative aspect-square w-full overflow-hidden rounded-2xl bg-slate-50">
-                  {img ? (
-                    <img
-                      src={img}
-                      alt=""
-                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div
-                      className="flex h-full w-full items-center justify-center text-2xl font-black sm:text-3xl"
-                      style={{ color: accent }}
-                    >
-                      {label.charAt(0)}
-                    </div>
-                  )}
-                  <span
-                    className="absolute end-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-slate-500 opacity-0 shadow-sm ring-1 ring-slate-200/80 transition group-hover:opacity-100"
-                    aria-hidden
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5 rotate-180 rtl:rotate-0" />
-                  </span>
+                <div className="sf-cat-card-visual">
+                  <div className="sf-cat-card-frame">
+                    {img ? (
+                      <img
+                        src={img}
+                        alt=""
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div
+                        className="flex h-full w-full items-center justify-center text-2xl font-black sm:text-[1.65rem]"
+                        style={{ color: accent }}
+                      >
+                        {label.charAt(0)}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="pt-3 text-center">
-                  <p className="line-clamp-2 text-[13px] font-bold leading-snug text-slate-800 sm:text-sm">
-                    {label}
-                  </p>
-                  <p
-                    className="mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold sm:text-[11px]"
-                    style={{
-                      backgroundColor: accentAlpha(accent, 0.08),
-                      color: accent,
-                    }}
-                  >
-                    {productCountLabel(count)}
-                  </p>
+                <div className="sf-cat-card-body">
+                  <div className="sf-cat-card-title-row">
+                    <p className="sf-cat-card-name">{label}</p>
+                    <span className="sf-cat-card-arrow" aria-hidden>
+                      <ChevronLeft className="h-4 w-4 rotate-180 rtl:rotate-0" />
+                    </span>
+                  </div>
+                  <span className="sf-cat-card-count">{productCountLabel(count)}</span>
                 </div>
               </button>
             </li>

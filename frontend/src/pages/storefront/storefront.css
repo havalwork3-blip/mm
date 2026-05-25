@@ -574,7 +574,7 @@ html.sf-mode select {
   background: transparent;
 }
 
-/* Main shop categories — clean minimal grid */
+/* Main shop categories — catalog-style cards */
 .sf-shop-categories {
   margin-bottom: 0.25rem;
 }
@@ -583,32 +583,130 @@ html.sf-mode select {
   position: relative;
 }
 
-.sf-category-simple-card {
-  -webkit-tap-highlight-color: transparent;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-
-.sf-category-simple-media {
+.sf-cat-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  background: #ffffff;
+  --tw-ring-color: rgba(226, 232, 240, 0.95);
   box-shadow:
-    0 1px 3px rgba(15, 23, 42, 0.06),
-    0 0 0 1px rgba(226, 232, 240, 0.9);
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 12px rgba(15, 23, 42, 0.04),
+    0 0 0 1px var(--tw-ring-color);
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease;
 }
 
-.sf-category-simple-card:hover .sf-category-simple-media {
-  transform: translateY(-2px);
-  box-shadow:
-    0 8px 20px rgba(15, 23, 42, 0.08),
-    0 0 0 1px color-mix(in srgb, var(--sf-cat-accent, #7c3aed) 28%, #e2e8f0);
+.sf-cat-card::before {
+  content: '';
+  display: block;
+  height: 3px;
+  flex-shrink: 0;
+  background: var(--sf-cat-accent, #7c3aed);
+  opacity: 0.9;
 }
 
-.sf-category-simple-card:active .sf-category-simple-media {
-  transform: translateY(0);
+.sf-cat-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.09),
+    0 0 0 1px color-mix(in srgb, var(--sf-cat-accent, #7c3aed) 22%, #e2e8f0);
+}
+
+.sf-cat-card:active {
+  transform: translateY(-1px);
+}
+
+.sf-cat-card-visual {
+  padding: 0.7rem 0.7rem 0;
+}
+
+.sf-cat-card-frame {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: linear-gradient(160deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.sf-cat-card-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+  pointer-events: none;
+}
+
+.sf-cat-card-body {
+  padding: 0.7rem 0.85rem 0.85rem;
+}
+
+.sf-cat-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.sf-cat-card-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1.35;
+  color: #1e293b;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .sf-cat-card-name {
+    font-size: 0.875rem;
+  }
+}
+
+.sf-cat-card-arrow {
+  display: flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #64748b;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.sf-cat-card:hover .sf-cat-card-arrow {
+  background: color-mix(in srgb, var(--sf-cat-accent, #7c3aed) 12%, #f1f5f9);
+  color: var(--sf-cat-accent, #7c3aed);
+}
+
+.sf-cat-card-count {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #64748b;
+}
+
+@media (min-width: 640px) {
+  .sf-cat-card-visual {
+    padding: 0.8rem 0.8rem 0;
+  }
+
+  .sf-cat-card-body {
+    padding: 0.75rem 0.95rem 0.95rem;
+  }
 }
 
 .sf-section-panel-fade {
@@ -861,15 +959,31 @@ html.sf-mode select {
   color: #94a3b8;
 }
 
-.sf-root.sf-dark .sf-category-simple-card p {
-  color: #e2e8f0;
+.sf-root.sf-dark .sf-shop-categories-header > div > span:first-child {
+  background: rgba(30, 41, 59, 0.8) !important;
+  --tw-ring-color: rgba(51, 65, 85, 0.8);
 }
 
-.sf-root.sf-dark .sf-category-simple-media {
+.sf-root.sf-dark .sf-cat-card {
   background: #1e293b;
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(51, 65, 85, 0.8);
+  --tw-ring-color: rgba(51, 65, 85, 0.85);
+}
+
+.sf-root.sf-dark .sf-cat-card-name {
+  color: #f1f5f9;
+}
+
+.sf-root.sf-dark .sf-cat-card-count {
+  color: #94a3b8;
+}
+
+.sf-root.sf-dark .sf-cat-card-arrow {
+  background: #334155;
+  color: #94a3b8;
+}
+
+.sf-root.sf-dark .sf-cat-card-frame {
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
 }
 
 .sf-root.sf-dark .sf-mobile-cat-card,
