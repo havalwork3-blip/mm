@@ -128,7 +128,7 @@ export function HomePage() {
   const persistedSuperuserShopId = getPersistedSuperuserShopId()
 
   const showSuperuserScopeCard = Boolean(
-    me?.is_superuser && !getGlobalView() && !persistedSuperuserShopId,
+    me?.is_superuser && !scopeGlobalView && !persistedSuperuserShopId,
   )
 
   const canFetchShopDashboardExtras = useMemo(() => {
