@@ -2129,6 +2129,35 @@ type TopShopRow = {
   color: string
 }
 
+function ShopMetricAmount({
+  value,
+  currencyLabel,
+  size = 'pill',
+  className = '',
+}: {
+  value: number
+  currencyLabel: string
+  size?: 'pill' | 'hero' | 'highlight'
+  className?: string
+}) {
+  const sizeClasses = {
+    pill: 'text-[11px] sm:text-xs',
+    highlight: 'text-sm sm:text-base',
+    hero: 'text-lg sm:text-xl md:text-2xl',
+  }[size]
+
+  return (
+    <p
+      className={`mt-1 flex min-w-0 max-w-full flex-wrap items-baseline gap-x-1 gap-y-0 text-start font-bold tabular-nums leading-tight ${sizeClasses} ${className}`}
+    >
+      <span className="min-w-0 break-all">{formatCompactNumber(value)}</span>
+      <span className="shrink-0 text-[9px] font-medium text-slate-400 sm:text-[10px] dark:text-slate-500">
+        {currencyLabel}
+      </span>
+    </p>
+  )
+}
+
 function ShopMetricPill({
   icon,
   label,
@@ -2152,17 +2181,17 @@ function ShopMetricPill({
   }[tone]
 
   return (
-    <div className={`rounded-xl border px-2.5 py-2 transition-colors ${toneClasses}`}>
+    <div className={`min-w-0 overflow-hidden rounded-xl border px-2 py-1.5 transition-colors sm:px-2.5 sm:py-2 ${toneClasses}`}>
       <p className="flex items-center gap-1 text-[10px] font-medium leading-tight text-slate-500 dark:text-slate-400">
         <span className="shrink-0 opacity-80">{icon}</span>
         <span className="line-clamp-2 min-w-0">{label}</span>
       </p>
-      <p className="mt-1 text-start text-sm font-bold tabular-nums leading-tight text-slate-900 dark:text-slate-50">
-        {formatCompactNumber(value)}
-        <span className="ms-1 text-[10px] font-medium text-slate-400 dark:text-slate-500">
-          {currencyLabel}
-        </span>
-      </p>
+      <ShopMetricAmount
+        value={value}
+        currencyLabel={currencyLabel}
+        size="pill"
+        className="text-slate-900 dark:text-slate-50"
+      />
     </div>
   )
 }
@@ -2291,12 +2320,12 @@ function TopShopsListPanel({
                   <p className="text-start text-[10px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
                     {salesLabel}
                   </p>
-                  <p className="mt-0.5 text-start text-2xl font-bold tabular-nums leading-tight text-slate-900 dark:text-slate-50">
-                    {formatCompactNumber(row.sales)}
-                    <span className="ms-1.5 align-baseline text-xs font-medium text-slate-400 dark:text-slate-500">
-                      {currencyLabel}
-                    </span>
-                  </p>
+                  <ShopMetricAmount
+                    value={row.sales}
+                    currencyLabel={currencyLabel}
+                    size="hero"
+                    className="mt-0.5 text-slate-900 dark:text-slate-50"
+                  />
                   <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/80">
                     <div
                       className="h-full rounded-full transition-[width] duration-500"
@@ -2309,33 +2338,33 @@ function TopShopsListPanel({
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-2">
-                  <div className="rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50/90 to-white px-3 py-2.5 dark:border-emerald-800/50 dark:from-emerald-950/30 dark:to-slate-900/40">
+                  <div className="min-w-0 overflow-hidden rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50/90 to-white px-2.5 py-2 sm:px-3 sm:py-2.5 dark:border-emerald-800/50 dark:from-emerald-950/30 dark:to-slate-900/40">
                     <p className="flex items-center gap-1 text-start text-[10px] font-medium text-emerald-700/80 dark:text-emerald-300/80">
                       <TrendingUp className="h-3 w-3 shrink-0" aria-hidden />
                       {profitLabel}
                     </p>
-                    <p className={`mt-1 text-start text-lg font-bold tabular-nums leading-tight ${profitTone}`}>
-                      {formatCompactNumber(row.profit)}
-                      <span className="ms-1.5 align-baseline text-xs font-medium text-slate-400 opacity-90 dark:text-slate-500">
-                        {currencyLabel}
-                      </span>
-                    </p>
+                    <ShopMetricAmount
+                      value={row.profit}
+                      currencyLabel={currencyLabel}
+                      size="highlight"
+                      className={profitTone}
+                    />
                   </div>
-                  <div className="rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50/90 to-white px-3 py-2.5 dark:border-sky-800/50 dark:from-sky-950/30 dark:to-slate-900/40">
+                  <div className="min-w-0 overflow-hidden rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50/90 to-white px-2.5 py-2 sm:px-3 sm:py-2.5 dark:border-sky-800/50 dark:from-sky-950/30 dark:to-slate-900/40">
                     <p className="flex items-center gap-1 text-start text-[10px] font-medium text-sky-700/80 dark:text-sky-300/80">
                       <Package className="h-3 w-3 shrink-0" aria-hidden />
                       {stockLabel}
                     </p>
-                    <p className="mt-1 text-start text-lg font-bold tabular-nums leading-tight text-slate-900 dark:text-slate-50">
-                      {formatCompactNumber(row.stock)}
-                      <span className="ms-1.5 align-baseline text-xs font-medium text-slate-400 dark:text-slate-500">
-                        {currencyLabel}
-                      </span>
-                    </p>
+                    <ShopMetricAmount
+                      value={row.stock}
+                      currencyLabel={currencyLabel}
+                      size="highlight"
+                      className="text-slate-900 dark:text-slate-50"
+                    />
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-3">
                   <ShopMetricPill
                     icon={<TrendingUp className="h-3 w-3 text-emerald-600" aria-hidden />}
                     label={totalSoldLabel}
