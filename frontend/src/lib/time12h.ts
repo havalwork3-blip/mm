@@ -1,5 +1,12 @@
 export type AmPm = 'AM' | 'PM'
 
+export type TimeOption = {
+  key: number
+  hour24: number
+  minute: number
+  label: string
+}
+
 export function to24Hour(hour12: number, ampm: AmPm): number {
   const h = Math.min(12, Math.max(1, hour12))
   if (ampm === 'AM') return h === 12 ? 0 : h
@@ -15,6 +22,19 @@ export function from24Hour(hour24: number): { hour12: number; ampm: AmPm } {
 
 export function clampMinute(minute: number): number {
   return Math.min(59, Math.max(0, Math.floor(minute)))
+}
+
+export function clampHour24(hour: number): number {
+  return Math.min(23, Math.max(0, Math.floor(hour)))
+}
+
+export function timeKeyFromParts(hour24: number, minute: number): number {
+  return clampHour24(hour24) * 60 + clampMinute(minute)
+}
+
+export function timePartsFromKey(key: number): { hour24: number; minute: number } {
+  const k = Math.max(0, Math.min(24 * 60 - 1, Math.floor(key)))
+  return { hour24: Math.floor(k / 60), minute: k % 60 }
 }
 
 export const HOUR12_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const

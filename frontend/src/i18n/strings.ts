@@ -426,6 +426,8 @@ const en: Record<string, string> = {
   'qrAdmin.managerTelegramChatIdHint':
     'Your Telegram chat ID (e.g. from @userinfobot). The bot will send reports here.',
   'qrAdmin.managerTelegramSendTime': 'Send time (local / Baghdad)',
+  'qrAdmin.managerTelegramSendTimeListHint':
+    'Choose a time from the list (12-hour clock with AM/PM). Steps of 5 minutes.',
   'qrAdmin.managerTelegramHour': 'Hour',
   'qrAdmin.managerTelegramMinute': 'Minute',
   'qrAdmin.managerTelegramAm': 'AM',
@@ -1483,6 +1485,8 @@ const ar: Record<string, string> = {
   'qrAdmin.managerTelegramChatId': 'معرّف محادثة المدير',
   'qrAdmin.managerTelegramChatIdHint': 'Chat ID من تيليجرام (مثل @userinfobot).',
   'qrAdmin.managerTelegramSendTime': 'وقت الإرسال (محلي / بغداد)',
+  'qrAdmin.managerTelegramSendTimeListHint':
+    'اختر الوقت من القائمة (12 ساعة مع ص/م). كل 5 دقائق.',
   'qrAdmin.managerTelegramHour': 'الساعة',
   'qrAdmin.managerTelegramMinute': 'الدقيقة',
   'qrAdmin.managerTelegramAm': 'ص',
@@ -2709,6 +2713,8 @@ const ku: Record<string, string> = {
   'qrAdmin.managerTelegramChatIdHint':
     'ژمارەی چاتەکەت لە تیلیگرام (وەک @userinfobot). ڕاپۆرتەکان بۆ ئێرە دەنێردرێن.',
   'qrAdmin.managerTelegramSendTime': 'کاتی ناردن (کاتی ناوخۆیی / بەغدا)',
+  'qrAdmin.managerTelegramSendTimeListHint':
+    'کات لە لیستەکە هەڵبژێرە (١٢ کاتژمێر لەگەڵ AM/PM). هەر ٥ خولەک جارێک.',
   'qrAdmin.managerTelegramHour': 'کاتژمێر',
   'qrAdmin.managerTelegramMinute': 'خولەک',
   'qrAdmin.managerTelegramAm': 'AM',
