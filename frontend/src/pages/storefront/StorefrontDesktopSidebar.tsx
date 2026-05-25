@@ -15,22 +15,17 @@ import { categoryDisplayName } from '../../lib/categoryNames'
 import { resolveMediaUrl } from '../../lib/api'
 import { sortStorefrontCategories } from './storefrontCategoryCardTheme'
 import { storefrontCollectionLabel } from './storefrontDisplay'
-import type { StorefrontStrings } from './storefrontStrings'
 import type { PublicStorefrontAppearance } from '../../api/storefrontApi'
 import { accentAlpha } from './storefrontTheme'
 
 const COLLECTION_LINKS: {
   id: StorefrontProductCollection
   icon: typeof Flame
-  key: keyof Pick<
-    StorefrontStrings,
-    'bestsellers' | 'newArrivals' | 'onSale' | 'availableNow'
-  >
 }[] = [
-  { id: 'bestsellers', icon: Flame, key: 'bestsellers' },
-  { id: 'new_arrivals', icon: Sparkles, key: 'newArrivals' },
-  { id: 'on_sale', icon: BadgePercent, key: 'onSale' },
-  { id: 'available_now', icon: PackageCheck, key: 'availableNow' },
+  { id: 'bestsellers', icon: Flame },
+  { id: 'new_arrivals', icon: Sparkles },
+  { id: 'on_sale', icon: BadgePercent },
+  { id: 'available_now', icon: PackageCheck },
 ]
 
 type Props = {
@@ -174,7 +169,7 @@ export function StorefrontDesktopSidebar({
           {s.shopHighlights}
         </p>
         <ul className="space-y-0.5">
-          {COLLECTION_LINKS.map(({ id, icon: Icon, key }) => {
+          {COLLECTION_LINKS.map(({ id, icon: Icon }) => {
             const active = productCollection === id
             const label = storefrontCollectionLabel(appearance, s, id)
             return (
