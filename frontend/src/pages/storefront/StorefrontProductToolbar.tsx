@@ -38,7 +38,7 @@ export function StorefrontProductToolbar({
 }: Props) {
   return (
     <div className="sf-product-toolbar mb-4 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-2.5 shadow-sm lg:p-3">
-      <div className="sf-scrollbar-none flex flex-nowrap items-center gap-2 overflow-x-auto lg:gap-2.5">
+      <div className="sf-scrollbar-none flex flex-nowrap items-center gap-2 overflow-x-auto lg:flex-wrap lg:overflow-visible lg:gap-2.5">
         <SlidersHorizontal className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
 
         <label className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-700 sm:text-sm">

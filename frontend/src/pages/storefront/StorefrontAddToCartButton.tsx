@@ -60,17 +60,19 @@ export function StorefrontAddToCartButton({
       type="button"
       onClick={handleClick}
       className={[
-        'sf-add-cart-btn flex w-full items-center justify-center gap-2 rounded-2xl py-2.5 text-xs font-extrabold text-white shadow-md transition active:scale-[0.98] sm:text-sm',
+        'sf-add-cart-btn flex h-8 w-full items-center justify-center gap-1.5 rounded-xl px-2 text-[10px] font-bold text-white shadow-sm transition active:scale-[0.98] sm:h-9 sm:text-[11px]',
         className,
       ].join(' ')}
       style={{
         background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
-        boxShadow: `0 6px 18px ${accentAlpha(accent, 0.35)}`,
+        boxShadow: `0 3px 10px ${accentAlpha(accent, 0.28)}`,
       }}
       aria-label={label}
     >
-      <ShoppingBag className="h-4 w-4 shrink-0" aria-hidden />
-      {inCart > 0 ? `${label} (${inCart})` : label}
+      <ShoppingBag className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      <span className="truncate">
+        {inCart > 0 ? `${label} (${inCart})` : label}
+      </span>
     </button>
   )
 }

@@ -146,7 +146,7 @@ const STRINGS = {
     newArrivalsHint: 'تازە گەیشتووە',
     onSale: 'داشکاندن',
     onSaleHint: 'نرخی تایبەت',
-    availableNow: 'ئێستا بەردەستە',
+    availableNow: 'بەرهەمە بەردەستەکان',
     availableNowHint: 'دڵخواز · سەبەتە · هاوشێوە — تێکەڵاو',
     myFavorites: 'دڵخوازەکانم',
     myFavoritesHint: 'لیستی تۆ',

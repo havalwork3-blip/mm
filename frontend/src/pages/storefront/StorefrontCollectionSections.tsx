@@ -12,7 +12,12 @@ import {
 import { StorefrontProductCardCompact } from './StorefrontProductCardCompact'
 import { StorefrontSectionPanel } from './StorefrontSectionPanel'
 import type { StorefrontSectionKey } from './storefrontSectionTheme'
-import { accentAlpha, SF_SECTION_PRODUCT_WIDTH, SF_SECTION_SCROLL_ROW } from './storefrontTheme'
+import {
+  accentAlpha,
+  SF_COLLECTION_GRID,
+  SF_SECTION_PRODUCT_WIDTH,
+  SF_SECTION_SCROLL_ROW,
+} from './storefrontTheme'
 
 const COLLECTION_META = {
   bestsellers: { icon: Flame, titleKey: 'bestsellers' as const, hintKey: 'bestsellersHint' as const },
@@ -61,8 +66,10 @@ type Props = {
 }
 
 function useCollectionPreviewCount(): number {
+  const isXl = useMediaQuery('(min-width: 1280px)')
   const isLg = useMediaQuery('(min-width: 1024px)')
   const isMd = useMediaQuery('(min-width: 768px)')
+  if (isXl) return 10
   if (isLg) return 8
   if (isMd) return 6
   return COLLECTION_PREVIEW_COUNT
@@ -81,6 +88,7 @@ export function StorefrontCollectionSections({
   onOpenProduct,
 }: Props) {
   const previewCount = useCollectionPreviewCount()
+  const isLg = useMediaQuery('(min-width: 1024px)')
 
   const sections = useMemo(() => {
     return STOREFRONT_HOME_COLLECTIONS.map((id) => {
@@ -125,7 +133,13 @@ export function StorefrontCollectionSections({
             subtitle={hint}
             headerAside={viewAllBtn}
           >
-            <ul className={SF_SECTION_SCROLL_ROW}>
+            <ul
+              className={
+                isLg
+                  ? SF_COLLECTION_GRID
+                  : SF_SECTION_SCROLL_ROW
+              }
+            >
               {preview.map(({ product, categoryName }) => (
                 <StorefrontProductCardCompact
                   key={product.id}
@@ -138,7 +152,7 @@ export function StorefrontCollectionSections({
                   addToCart={labels.addToCart}
                   addToFavorites={labels.addToFavorites}
                   removeFromFavorites={labels.removeFromFavorites}
-                  className={SF_SECTION_PRODUCT_WIDTH}
+                  className={isLg ? undefined : SF_SECTION_PRODUCT_WIDTH}
                 />
               ))}
             </ul>

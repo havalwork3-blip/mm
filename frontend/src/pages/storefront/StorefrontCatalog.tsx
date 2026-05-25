@@ -42,6 +42,7 @@ import {
   type ProductSortKey,
 } from './storefrontProductSort'
 import { readProductIdFromUrl } from './storefrontProductUrl'
+import { StorefrontDesktopSidebar } from './StorefrontDesktopSidebar'
 import { StorefrontProductToolbar } from './StorefrontProductToolbar'
 import {
   EMPTY_RECENT_IDS,
@@ -64,6 +65,7 @@ export function StorefrontCatalog() {
     selectCategory,
     showAllProducts,
     showCollection,
+    backToCategories,
     openProduct,
     backFromProduct,
     setSearchActive,
@@ -338,8 +340,28 @@ export function StorefrontCatalog() {
 
   return (
     <>
-    <div className="sf-catalog w-full pb-4 sm:pb-6">
+    <div className="sf-catalog w-full pb-4 sm:pb-6 lg:pb-10">
+      <div className="sf-catalog-layout lg:flex lg:items-start lg:gap-6 xl:gap-8">
+        {totalProducts > 0 && !loading && !error ? (
+          <StorefrontDesktopSidebar
+            accent={accent}
+            appearance={appearance}
+            strings={s}
+            categories={categories.filter((c) => c.products.length > 0)}
+            view={view}
+            selectedCategoryId={selectedCategoryId}
+            productCollection={productCollection}
+            onHome={backToCategories}
+            onAllProducts={showAllProducts}
+            onSelectCategory={selectCategory}
+            onSelectCollection={showCollection}
+            onFavorites={() => showCollection('favorites')}
+          />
+        ) : null}
+
+        <div className="sf-catalog-main min-w-0 flex-1">
       {showBrowseChrome ? (
+        <div className="sf-hero-desktop-wrap">
         <StorefrontHeroCarousel
           banners={banners}
           accent={accent}
@@ -348,6 +370,7 @@ export function StorefrontCatalog() {
           fallbackSubtitle={appearance.catalog_subtitle || ''}
           onCategoryClick={selectCategory}
         />
+        </div>
       ) : null}
 
       {loading ? (
@@ -517,6 +540,8 @@ export function StorefrontCatalog() {
         </div>
       )}
 
+        </div>
+      </div>
     </div>
     {typeof document !== 'undefined' && productOverlay
       ? createPortal(productOverlay, document.body)

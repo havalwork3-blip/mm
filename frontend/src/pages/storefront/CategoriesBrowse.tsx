@@ -79,14 +79,16 @@ export function CategoriesBrowse({
 }: Props) {
   return (
     <section className={`${SF_INSET_X} sf-view-panel mt-2 sm:mt-4 lg:mt-6`}>
-      <StorefrontMobileCategories
-        categories={categories}
-        accent={accent}
-        title={labels.shopCategories}
-        subtitle={labels.pickCategoryHint}
-        productCountLabel={(n) => labels.productCount.replace('{n}', String(n))}
-        onSelect={onSelectCategory}
-      />
+      <div className="lg:hidden">
+        <StorefrontMobileCategories
+          categories={categories}
+          accent={accent}
+          title={labels.shopCategories}
+          subtitle={labels.pickCategoryHint}
+          productCountLabel={(n) => labels.productCount.replace('{n}', String(n))}
+          onSelect={onSelectCategory}
+        />
+      </div>
 
       {recentRows.length > 0 ? (
         <StorefrontRecentlyViewedSection

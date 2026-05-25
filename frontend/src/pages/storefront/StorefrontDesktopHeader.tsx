@@ -185,7 +185,7 @@ export function StorefrontDesktopHeader({
         </div>
       </div>
 
-      <nav className="sf-desktop-nav border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
+      <nav className="sf-desktop-nav hidden border-b border-slate-200/70 bg-white/85 backdrop-blur-md" aria-hidden>
         <div className={`${SF_DESKTOP_SHELL} flex items-center gap-2 py-2.5 xl:py-3`}>
           <button
             type="button"

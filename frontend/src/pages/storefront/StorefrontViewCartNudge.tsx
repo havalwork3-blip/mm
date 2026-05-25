@@ -56,7 +56,7 @@ export function StorefrontViewCartNudge({ accent, onOpenCart, cartOpen }: Props)
   return (
     <div
       className={[
-        'sf-view-cart-nudge pointer-events-none fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] flex justify-center px-4',
+        'sf-view-cart-nudge pointer-events-none fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] flex justify-center px-4 lg:hidden',
         overProduct ? 'sf-view-cart-nudge--over-product' : 'z-40',
       ].join(' ')}
       role="status"

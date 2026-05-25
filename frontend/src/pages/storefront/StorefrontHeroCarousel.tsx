@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { PublicStorefrontBanner } from '../../api/storefrontApi'
 import { resolveMediaUrl } from '../../lib/api'
@@ -12,6 +12,9 @@ type Props = {
   fallbackSubtitle: string
   onCategoryClick?: (categoryId: number) => void
 }
+
+const SWIPE_THRESHOLD_RATIO = 0.16
+const EDGE_RESISTANCE = 0.32
 
 function SlideContent({
   slide,
@@ -30,6 +33,7 @@ function SlideContent({
           src={img}
           alt={slide.title || ''}
           className="sf-hero-img h-full w-full object-contain object-center"
+          draggable={false}
           decoding="async"
         />
         {hasCaption ? (
@@ -61,6 +65,10 @@ function SlideContent({
   )
 }
 
+function isRtl(): boolean {
+  return document.documentElement.dir === 'rtl'
+}
+
 export function StorefrontHeroCarousel({
   banners,
   accent,
@@ -71,7 +79,16 @@ export function StorefrontHeroCarousel({
 }: Props) {
   const slides = banners.filter((b) => b.image_url || b.title || b.subtitle)
   const [index, setIndex] = useState(0)
+  const [dragPx, setDragPx] = useState(0)
+  const [snap, setSnap] = useState(true)
+  const [autoPaused, setAutoPaused] = useState(false)
+  const frameRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef({ active: false, startX: 0, startIndex: 0, moved: false })
   const count = slides.length
+
+  const pauseAuto = useCallback(() => {
+    setAutoPaused(true)
+  }, [])
 
   const next = useCallback(() => {
     if (count <= 1) return
@@ -80,14 +97,74 @@ export function StorefrontHeroCarousel({
 
   useEffect(() => {
     setIndex(0)
+    setDragPx(0)
   }, [count])
 
   useEffect(() => {
-    if (count <= 1) return
+    if (count <= 1 || autoPaused) return
     const ms = Math.max(2, Math.min(60, rotateSeconds)) * 1000
     const id = window.setInterval(next, ms)
     return () => window.clearInterval(id)
-  }, [count, rotateSeconds, next])
+  }, [count, rotateSeconds, next, autoPaused])
+
+  useEffect(() => {
+    if (!autoPaused) return
+    const id = window.setTimeout(() => setAutoPaused(false), 8000)
+    return () => window.clearTimeout(id)
+  }, [autoPaused, index])
+
+  function resolveSwipeTarget(startIndex: number, deltaX: number, width: number): number {
+    const threshold = width * SWIPE_THRESHOLD_RATIO
+    if (Math.abs(deltaX) < threshold) return startIndex
+    const rtl = isRtl()
+    const towardNext = rtl ? deltaX > 0 : deltaX < 0
+    if (towardNext) return Math.min(count - 1, startIndex + 1)
+    return Math.max(0, startIndex - 1)
+  }
+
+  function clampDrag(startIndex: number, deltaX: number): number {
+    if (startIndex === 0 && deltaX > 0) return deltaX * EDGE_RESISTANCE
+    if (startIndex === count - 1 && deltaX < 0) return deltaX * EDGE_RESISTANCE
+    return deltaX
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (count <= 1) return
+    frameRef.current?.setPointerCapture(e.pointerId)
+    dragRef.current = { active: true, startX: e.clientX, startIndex: index, moved: false }
+    setSnap(false)
+    pauseAuto()
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragRef.current.active) return
+    const raw = e.clientX - dragRef.current.startX
+    if (Math.abs(raw) > 6) dragRef.current.moved = true
+    setDragPx(clampDrag(dragRef.current.startIndex, raw))
+  }
+
+  function finishPointer(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragRef.current.active) return
+    if (frameRef.current?.hasPointerCapture(e.pointerId)) {
+      frameRef.current.releasePointerCapture(e.pointerId)
+    }
+    const width = frameRef.current?.offsetWidth ?? 1
+    const deltaX = e.clientX - dragRef.current.startX
+    const target = resolveSwipeTarget(dragRef.current.startIndex, deltaX, width)
+    setIndex(target)
+    setDragPx(0)
+    setSnap(true)
+    dragRef.current.active = false
+    pauseAuto()
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    finishPointer(e)
+  }
+
+  function onPointerCancel(e: React.PointerEvent<HTMLDivElement>) {
+    finishPointer(e)
+  }
 
   if (count === 0) {
     return (
@@ -107,6 +184,7 @@ export function StorefrontHeroCarousel({
   }
 
   function handleClick(slide: PublicStorefrontBanner) {
+    if (dragRef.current.moved) return
     if (slide.link_type === 'url' && slide.link_url) {
       window.open(slide.link_url, '_blank', 'noopener,noreferrer')
       return
@@ -116,56 +194,72 @@ export function StorefrontHeroCarousel({
     }
   }
 
+  const trackTransform = `translateX(calc(${-index * 100}% + ${dragPx}px))`
+
   return (
     <div className={`relative ${SF_INSET_X} mt-3 sm:mt-4 lg:mt-5`}>
-      <div className="sf-hero-frame relative aspect-[2.15/1] w-full overflow-hidden rounded-2xl bg-slate-900 sm:aspect-[2.35/1] sm:rounded-3xl md:aspect-[2.5/1] lg:aspect-[2.6/1] lg:rounded-2xl xl:aspect-[2.75/1]">
-        {slides.map((slide, i) => {
-          const img = resolveMediaUrl(slide.image_url)
-          const clickable = slide.link_type === 'url' || slide.link_type === 'category'
-          const isActive = i === index
-          return (
-            <div
-              key={slide.id}
-              role={clickable ? 'button' : undefined}
-              tabIndex={clickable && isActive ? 0 : undefined}
-              onClick={clickable && isActive ? () => handleClick(slide) : undefined}
-              onKeyDown={
-                clickable && isActive
-                  ? (e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        handleClick(slide)
+      <div
+        ref={frameRef}
+        className={[
+          'sf-hero-frame sf-hero-swipe relative aspect-[2.15/1] w-full overflow-hidden rounded-2xl bg-slate-900 sm:aspect-[2.35/1] sm:rounded-3xl md:aspect-[2.5/1] lg:aspect-[2.6/1] lg:rounded-2xl xl:aspect-[2.75/1]',
+          count > 1 ? 'sf-hero-swipe-active cursor-grab active:cursor-grabbing' : '',
+        ].join(' ')}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+        style={{ touchAction: 'pan-y' }}
+        aria-roledescription="carousel"
+        aria-label={slides[index]?.title || fallbackTitle}
+      >
+        <div
+          className={['sf-hero-track flex h-full w-full', snap ? 'sf-hero-track-snap' : ''].join(' ')}
+          style={{ transform: trackTransform }}
+        >
+          {slides.map((slide) => {
+            const img = resolveMediaUrl(slide.image_url)
+            const clickable = slide.link_type === 'url' || slide.link_type === 'category'
+            return (
+              <div
+                key={slide.id}
+                role={clickable ? 'button' : undefined}
+                tabIndex={clickable ? 0 : undefined}
+                onClick={clickable ? () => handleClick(slide) : undefined}
+                onKeyDown={
+                  clickable
+                    ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleClick(slide)
+                        }
                       }
-                    }
-                  : undefined
-              }
-              className={[
-                'sf-hero-slide absolute inset-0 transition-opacity duration-700 ease-in-out',
-                isActive ? 'sf-hero-slide-active z-10 opacity-100' : 'z-0 opacity-0',
-                clickable && isActive ? 'cursor-pointer' : 'pointer-events-none',
-              ].join(' ')}
-              aria-hidden={!isActive}
-            >
-              <SlideContent slide={slide} accent={accent} img={img} />
-            </div>
-          )
-        })}
+                    : undefined
+                }
+                className={[
+                  'sf-hero-slide relative h-full w-full shrink-0 grow-0 basis-full select-none',
+                  clickable ? 'cursor-pointer' : '',
+                ].join(' ')}
+              >
+                <SlideContent slide={slide} accent={accent} img={img} />
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {count > 1 ? (
-        <div className="mt-3 flex justify-center gap-2">
+        <div
+          className="mt-3 flex justify-center gap-2"
+          aria-hidden
+        >
           {slides.map((b, i) => (
-            <button
+            <span
               key={b.id}
-              type="button"
-              onClick={() => setIndex(i)}
               className="h-2 rounded-full transition-all duration-500"
               style={{
                 width: i === index ? 24 : 8,
                 backgroundColor: i === index ? accent : accentAlpha(accent, 0.3),
               }}
-              aria-label={`Slide ${i + 1}`}
-              aria-current={i === index ? 'true' : undefined}
             />
           ))}
         </div>

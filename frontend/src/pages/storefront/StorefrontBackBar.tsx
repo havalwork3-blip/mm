@@ -20,7 +20,7 @@ export function StorefrontBackBar({
   return (
     <div
       className={[
-        sticky ? 'sf-back-bar-wrap sticky z-[25] -mx-1 mb-2 py-1 top-[calc(3.75rem+env(safe-area-inset-top))] lg:top-[7.25rem]' : 'mb-2',
+        sticky ? 'sf-back-bar-wrap sticky z-[25] -mx-1 mb-2 py-1 top-[calc(3.75rem+env(safe-area-inset-top))] lg:top-[5.5rem]' : 'mb-2',
         className,
       ].join(' ')}
     >

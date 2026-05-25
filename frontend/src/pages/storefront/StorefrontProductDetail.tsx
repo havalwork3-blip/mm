@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Minus, PackageOpen, Plus, ShoppingBag } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Minus, PackageOpen, Plus, ShoppingBag, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { PublicStorefrontProduct } from '../../api/storefrontApi'
@@ -114,239 +114,261 @@ export function StorefrontProductDetail({
 
   return (
     <div
-      className="sf-product-sheet fixed inset-0 z-[110] flex flex-col bg-[#fafbfc]"
+      className="sf-product-sheet fixed inset-0 z-[110] flex flex-col"
       role="dialog"
       aria-modal="true"
       aria-label={product.name}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onBack()
+      }}
     >
-      <header
-        className="sf-product-sheet-header sf-glass-strong relative z-20 flex shrink-0 items-center gap-3 border-b border-white/60 px-4 py-3.5 pt-[max(0.75rem,env(safe-area-inset-top))]"
-      >
-        <StorefrontBackButton
-          label={labels.back}
-          onClick={onBack}
-          variant="accent"
-          accent={accent}
-          showLabel
-        />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-slate-900">{product.name}</p>
-          {categoryName ? (
-            <p className="truncate text-xs text-slate-500">{categoryName}</p>
-          ) : null}
-        </div>
-        <StorefrontFavoriteButton
-          shopId={shopId}
-          productId={product.id}
-          accent={accent}
-          addLabel={labels.addToFavorites}
-          removeLabel={labels.removeFromFavorites}
-        />
-      </header>
-
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className="relative mx-auto w-full max-w-lg">
-          <div className="relative aspect-square w-full max-h-[min(55vh,420px)] bg-gradient-to-br from-slate-50 via-white to-[#faf8f5]">
-            {activeSrc ? (
-              <img
-                src={activeSrc}
-                alt={product.name}
-                className={[
-                  'h-full w-full object-contain p-4',
-                  !available ? 'grayscale-[0.7] opacity-90' : '',
-                ].join(' ')}
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-slate-300">
-                <PackageOpen className="h-20 w-20" strokeWidth={1} aria-hidden />
-              </div>
-            )}
-            {allImages.length > 1 ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setActiveImage((i) => (i <= 0 ? allImages.length - 1 : i - 1))
-                  }
-                  className="absolute start-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-md"
-                  aria-label="Previous"
-                >
-                  <ChevronLeft className="h-5 w-5 rtl:rotate-180" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setActiveImage((i) => (i >= allImages.length - 1 ? 0 : i + 1))
-                  }
-                  className="absolute end-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-md"
-                  aria-label="Next"
-                >
-                  <ChevronRight className="h-5 w-5 rtl:rotate-180" aria-hidden />
-                </button>
-              </>
-            ) : null}
-          </div>
-          {allImages.length > 1 ? (
-            <div className="flex gap-2 overflow-x-auto px-4 py-3">
-              {allImages.map((src, idx) => (
-                <button
-                  key={src}
-                  type="button"
-                  onClick={() => setActiveImage(idx)}
-                  className={[
-                    'h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 transition',
-                    idx === activeImage
-                      ? 'border-slate-800 shadow-sm dark:border-white'
-                      : 'border-transparent opacity-70 hover:opacity-100',
-                  ].join(' ')}
-                >
-                  <img src={src} alt="" className="h-full w-full object-cover" />
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="px-4 py-5 sm:mx-auto sm:max-w-lg">
-          {categoryName ? (
-            <span
-              className="mb-2 inline-block rounded-full px-3 py-1 text-xs font-bold"
-              style={{ backgroundColor: accentAlpha(accent, 0.12), color: accent }}
-            >
-              {categoryName}
-            </span>
-          ) : null}
-          <h1 className="text-2xl font-extrabold leading-snug tracking-tight text-slate-900">
-            {product.name}
-          </h1>
-          <p
-            className={[
-              'mt-3 text-3xl font-extrabold tracking-tight',
-              !available ? 'text-slate-400 line-through' : '',
-            ].join(' ')}
-            style={available ? { color: accent } : undefined}
-          >
-            {formatPrice(price)}
-          </p>
-          {inCart > 0 && available ? (
-            <p className="mt-2 text-sm font-medium text-slate-500">
-              {labels.inCart}: <span style={{ color: accent }}>{inCart}</span>
-            </p>
-          ) : null}
-
-          <div className="mt-4">
-            <StorefrontShareProductButton
-              productId={product.id}
-              productName={product.name}
+      <div className="sf-product-sheet-panel flex min-h-0 w-full flex-1 flex-col lg:max-h-[min(90dvh,52rem)] lg:flex-none">
+        <header className="sf-product-sheet-header sf-glass-strong relative z-20 flex shrink-0 items-center gap-3 border-b border-slate-200/80 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:rounded-t-[1.5rem] lg:bg-white lg:pt-4">
+          <div className="lg:hidden">
+            <StorefrontBackButton
+              label={labels.back}
+              onClick={onBack}
+              variant="accent"
               accent={accent}
-              shareLabel={labels.shareProduct}
-              linkCopiedLabel={labels.linkCopied}
+              showLabel
             />
           </div>
-
-          {description ? (
-            <section className="mt-5 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
-              <h2 className="mb-2 text-sm font-bold text-slate-800">{labels.productDetails}</h2>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
-                {description}
-              </p>
-            </section>
-          ) : null}
-
-          {!available ? (
-            <div className="mt-5">
-              <UnavailableProductBanner
-                product={product}
-                labels={labels}
-                hint={labels.unavailableHint}
-              />
-            </div>
-          ) : null}
-
-          <div
-            className={[
-              'mt-6 flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70',
-              !available ? 'pointer-events-none opacity-50' : '',
-            ].join(' ')}
-          >
-            <span className="text-sm font-semibold text-slate-600">{labels.quantity}</span>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setQty((n) => Math.max(1, n - 1))}
-                className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition active:scale-95"
-                aria-label="-"
-              >
-                <Minus className="h-5 w-5" aria-hidden />
-              </button>
-              <span className="min-w-[2rem] text-center text-lg font-bold tabular-nums">{qty}</span>
-              <button
-                type="button"
-                onClick={() => setQty((n) => n + 1)}
-                className="flex h-11 w-11 items-center justify-center rounded-xl text-white transition active:scale-95"
-                style={{ backgroundColor: accent }}
-                aria-label="+"
-              >
-                <Plus className="h-5 w-5" aria-hidden />
-              </button>
-            </div>
-          </div>
-
-          {relatedProducts.length > 0 && onOpenRelated ? (
-            <section className="mt-8 border-t border-slate-200/80 pt-6">
-              <h2 className="mb-3 text-base font-extrabold text-slate-900">{labels.relatedProducts}</h2>
-              <ul className={SF_COLLECTION_GRID}>
-                {relatedProducts.map(({ product: rel, categoryName: relCat }) => (
-                  <StorefrontProductCardCompact
-                    key={rel.id}
-                    shopId={shopId}
-                    product={rel}
-                    accent={accent}
-                    inCart={0}
-                    onOpen={() => onOpenRelated(rel, relCat)}
-                    onAddToCart={() => onAddRelatedToCart?.(rel)}
-                    addToCart={labels.addToCart}
-                    addToFavorites={labels.addToFavorites}
-                    removeFromFavorites={labels.removeFromFavorites}
-                  />
-                ))}
-              </ul>
-            </section>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="sf-product-footer relative z-20 shrink-0 border-t border-slate-200/80 bg-white/95 p-4 shadow-[0_-8px_32px_rgba(15,23,42,0.08)] backdrop-blur-md pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-        {available ? (
           <button
-            ref={orderBtnRef}
             type="button"
-            onClick={handleOrder}
-            className={[
-              'sf-order-btn flex w-full items-center justify-center gap-2.5 rounded-3xl py-4.5 text-base font-extrabold text-white transition active:scale-[0.98] sm:mx-auto sm:max-w-lg',
-              ordered ? 'sf-order-btn-success' : 'sf-order-btn-ready',
-            ].join(' ')}
-            style={{
-              background: ordered
-                ? 'linear-gradient(135deg, #10b981, #059669)'
-                : `linear-gradient(135deg, ${accent}, ${accent}dd)`,
-              boxShadow: ordered
-                ? '0 8px 24px rgba(16,185,129,0.4)'
-                : `0 10px 32px ${accentAlpha(accent, 0.45)}`,
-            }}
+            onClick={onBack}
+            className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:flex"
+            aria-label={labels.back}
           >
-            <ShoppingBag className="h-5 w-5" aria-hidden />
-            {ordered ? labels.added : labels.orderNow}
+            <X className="h-5 w-5" aria-hidden />
           </button>
-        ) : (
-          <div
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-100 py-4 text-base font-bold text-slate-500 sm:mx-auto sm:max-w-lg"
-            role="status"
-          >
-            <ShoppingBag className="h-5 w-5 opacity-50" aria-hidden />
-            {labels.cannotOrder}
+          <div className="min-w-0 flex-1 lg:hidden">
+            <p className="truncate text-sm font-bold text-slate-900">{product.name}</p>
+            {categoryName ? (
+              <p className="truncate text-xs text-slate-500">{categoryName}</p>
+            ) : null}
           </div>
-        )}
+          <p className="hidden min-w-0 flex-1 truncate text-base font-extrabold text-slate-900 lg:block">
+            {product.name}
+          </p>
+          <StorefrontFavoriteButton
+            shopId={shopId}
+            productId={product.id}
+            accent={accent}
+            addLabel={labels.addToFavorites}
+            removeLabel={labels.removeFromFavorites}
+          />
+        </header>
+
+        <div className="sf-product-sheet-body min-h-0 flex-1 overflow-y-auto overscroll-contain lg:flex lg:overflow-hidden">
+          <div className="sf-product-gallery-col shrink-0 lg:w-[52%] lg:overflow-y-auto">
+            <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
+              <div className="relative aspect-square w-full max-h-[min(55vh,420px)] bg-gradient-to-br from-slate-50 via-white to-[#faf8f5] lg:max-h-none lg:min-h-[18rem]">
+                {activeSrc ? (
+                  <img
+                    src={activeSrc}
+                    alt={product.name}
+                    className={[
+                      'h-full w-full object-contain p-4 lg:p-8',
+                      !available ? 'grayscale-[0.7] opacity-90' : '',
+                    ].join(' ')}
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-slate-300">
+                    <PackageOpen className="h-20 w-20" strokeWidth={1} aria-hidden />
+                  </div>
+                )}
+                {allImages.length > 1 ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActiveImage((i) => (i <= 0 ? allImages.length - 1 : i - 1))
+                      }
+                      className="absolute start-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-md"
+                      aria-label="Previous"
+                    >
+                      <ChevronLeft className="h-5 w-5 rtl:rotate-180" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActiveImage((i) => (i >= allImages.length - 1 ? 0 : i + 1))
+                      }
+                      className="absolute end-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-md"
+                      aria-label="Next"
+                    >
+                      <ChevronRight className="h-5 w-5 rtl:rotate-180" aria-hidden />
+                    </button>
+                  </>
+                ) : null}
+              </div>
+              {allImages.length > 1 ? (
+                <div className="flex gap-2 overflow-x-auto px-4 py-3 lg:px-6">
+                  {allImages.map((src, idx) => (
+                    <button
+                      key={src}
+                      type="button"
+                      onClick={() => setActiveImage(idx)}
+                      className={[
+                        'h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 transition',
+                        idx === activeImage
+                          ? 'border-slate-800 shadow-sm'
+                          : 'border-transparent opacity-70 hover:opacity-100',
+                      ].join(' ')}
+                    >
+                      <img src={src} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="sf-product-info-col flex min-w-0 flex-1 flex-col lg:w-[48%] lg:border-s lg:border-slate-200/80">
+            <div className="sf-product-info-scroll flex-1 px-4 py-5 lg:overflow-y-auto lg:px-5">
+              {categoryName ? (
+                <span
+                  className="mb-2 inline-block rounded-full px-3 py-1 text-xs font-bold"
+                  style={{ backgroundColor: accentAlpha(accent, 0.12), color: accent }}
+                >
+                  {categoryName}
+                </span>
+              ) : null}
+              <h1 className="text-xl font-extrabold leading-snug tracking-tight text-slate-900 lg:text-2xl">
+                {product.name}
+              </h1>
+              <p
+                className={[
+                  'mt-2 text-2xl font-extrabold tracking-tight lg:text-3xl',
+                  !available ? 'text-slate-400 line-through' : '',
+                ].join(' ')}
+                style={available ? { color: accent } : undefined}
+              >
+                {formatPrice(price)}
+              </p>
+              {inCart > 0 && available ? (
+                <p className="mt-2 text-sm font-medium text-slate-500">
+                  {labels.inCart}: <span style={{ color: accent }}>{inCart}</span>
+                </p>
+              ) : null}
+
+              <div className="mt-3">
+                <StorefrontShareProductButton
+                  productId={product.id}
+                  productName={product.name}
+                  accent={accent}
+                  shareLabel={labels.shareProduct}
+                  linkCopiedLabel={labels.linkCopied}
+                />
+              </div>
+
+              {description ? (
+                <section className="mt-4 rounded-2xl bg-slate-50/90 p-4 ring-1 ring-slate-200/70">
+                  <h2 className="mb-2 text-sm font-bold text-slate-800">{labels.productDetails}</h2>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
+                    {description}
+                  </p>
+                </section>
+              ) : null}
+
+              {!available ? (
+                <div className="mt-4">
+                  <UnavailableProductBanner
+                    product={product}
+                    labels={labels}
+                    hint={labels.unavailableHint}
+                  />
+                </div>
+              ) : null}
+
+              <div
+                className={[
+                  'mt-4 flex items-center justify-between rounded-2xl bg-slate-50/90 p-3.5 ring-1 ring-slate-200/70',
+                  !available ? 'pointer-events-none opacity-50' : '',
+                ].join(' ')}
+              >
+                <span className="text-sm font-semibold text-slate-600">{labels.quantity}</span>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setQty((n) => Math.max(1, n - 1))}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200/80 transition active:scale-95"
+                    aria-label="-"
+                  >
+                    <Minus className="h-4 w-4" aria-hidden />
+                  </button>
+                  <span className="min-w-[2rem] text-center text-lg font-bold tabular-nums">{qty}</span>
+                  <button
+                    type="button"
+                    onClick={() => setQty((n) => n + 1)}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl text-white transition active:scale-95"
+                    style={{ backgroundColor: accent }}
+                    aria-label="+"
+                  >
+                    <Plus className="h-4 w-4" aria-hidden />
+                  </button>
+                </div>
+              </div>
+
+              {relatedProducts.length > 0 && onOpenRelated ? (
+                <section className="mt-6 border-t border-slate-200/80 pt-5 lg:mt-8">
+                  <h2 className="mb-3 text-base font-extrabold text-slate-900">
+                    {labels.relatedProducts}
+                  </h2>
+                  <ul className={SF_COLLECTION_GRID}>
+                    {relatedProducts.map(({ product: rel, categoryName: relCat }) => (
+                      <StorefrontProductCardCompact
+                        key={rel.id}
+                        shopId={shopId}
+                        product={rel}
+                        accent={accent}
+                        inCart={0}
+                        onOpen={() => onOpenRelated(rel, relCat)}
+                        onAddToCart={() => onAddRelatedToCart?.(rel)}
+                        addToCart={labels.addToCart}
+                        addToFavorites={labels.addToFavorites}
+                        removeFromFavorites={labels.removeFromFavorites}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+            </div>
+
+            <div className="sf-product-footer relative z-20 shrink-0 border-t border-slate-200/80 bg-white/95 p-4 shadow-[0_-8px_32px_rgba(15,23,42,0.08)] backdrop-blur-md pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:px-5 lg:pb-5 lg:shadow-none">
+              {available ? (
+                <button
+                  ref={orderBtnRef}
+                  type="button"
+                  onClick={handleOrder}
+                  className={[
+                    'sf-order-btn flex w-full items-center justify-center gap-2.5 rounded-2xl py-3.5 text-sm font-extrabold text-white transition active:scale-[0.98] lg:mx-0 lg:max-w-none lg:rounded-xl lg:py-3',
+                    ordered ? 'sf-order-btn-success' : 'sf-order-btn-ready',
+                  ].join(' ')}
+                  style={{
+                    background: ordered
+                      ? 'linear-gradient(135deg, #10b981, #059669)'
+                      : `linear-gradient(135deg, ${accent}, ${accent}dd)`,
+                    boxShadow: ordered
+                      ? '0 8px 24px rgba(16,185,129,0.4)'
+                      : `0 8px 24px ${accentAlpha(accent, 0.38)}`,
+                  }}
+                >
+                  <ShoppingBag className="h-5 w-5" aria-hidden />
+                  {ordered ? labels.added : labels.orderNow}
+                </button>
+              ) : (
+                <div
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-100 py-3.5 text-sm font-bold text-slate-500 lg:rounded-xl"
+                  role="status"
+                >
+                  <ShoppingBag className="h-5 w-5 opacity-50" aria-hidden />
+                  {labels.cannotOrder}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
