@@ -35,7 +35,6 @@ const COLLECTION_SECTION_KEY = {
 type CollectionLabels = {
   shopHighlights: string
   viewAll: string
-  viewAllProducts: string
   bestsellers: string
   bestsellersHint: string
   newArrivals: string
@@ -59,7 +58,6 @@ type Props = {
   labels: CollectionLabels & { addToCart: string }
   onSelectCollection: (id: StorefrontProductCollection) => void
   onOpenProduct: (product: PublicStorefrontProduct, categoryName: string) => void
-  onViewAllProducts: () => void
 }
 
 function useCollectionPreviewCount(): number {
@@ -81,7 +79,6 @@ export function StorefrontCollectionSections({
   labels,
   onSelectCollection,
   onOpenProduct,
-  onViewAllProducts,
 }: Props) {
   const previewCount = useCollectionPreviewCount()
 
@@ -160,19 +157,6 @@ export function StorefrontCollectionSections({
           </StorefrontSectionPanel>
         )
       })}
-
-      <button
-        type="button"
-        onClick={onViewAllProducts}
-        className="sf-cta-all mx-auto flex w-full max-w-md items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-extrabold text-white shadow-lg transition hover:brightness-105 active:scale-[0.99] sm:py-4 sm:text-[15px] lg:max-w-lg lg:rounded-2xl lg:py-4"
-        style={{
-          background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
-          boxShadow: `0 10px 28px ${accentAlpha(accent, 0.28)}`,
-        }}
-      >
-        {labels.viewAllProducts}
-        <ArrowLeft className="h-5 w-5 rotate-180 rtl:rotate-0" aria-hidden />
-      </button>
     </div>
   )
 }

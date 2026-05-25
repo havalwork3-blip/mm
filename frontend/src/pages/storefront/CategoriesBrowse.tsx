@@ -3,6 +3,7 @@ import type {
   PublicStorefrontProduct,
   StorefrontProductCollection,
 } from '../../api/storefrontApi'
+import { StorefrontAllProductsSection } from './StorefrontAllProductsSection'
 import { StorefrontMobileCategories } from './StorefrontMobileCategories'
 import { StorefrontCollectionSections } from './StorefrontCollectionSections'
 import type { CatalogProductRow } from './storefrontCollections'
@@ -42,6 +43,18 @@ type Props = {
   onSelectCollection: (id: StorefrontProductCollection) => void
   onOpenProduct: (product: PublicStorefrontProduct, categoryName: string) => void
   onViewAllProducts: () => void
+  allProductRows: CatalogProductRow[]
+  allProductsTitle: string
+  cardLabels: {
+    viewProduct: string
+    addToCart: string
+    usd: string
+    outOfStock: string
+    discontinued: string
+    unavailable: string
+    addToFavorites: string
+    removeFromFavorites: string
+  }
   recentRows: CatalogProductRow[]
   recentTitle: string
 }
@@ -60,6 +73,9 @@ export function CategoriesBrowse({
   onSelectCollection,
   onOpenProduct,
   onViewAllProducts,
+  allProductRows,
+  allProductsTitle,
+  cardLabels,
   recentRows,
   recentTitle,
 }: Props) {
@@ -100,7 +116,18 @@ export function CategoriesBrowse({
         labels={labels}
         onSelectCollection={onSelectCollection}
         onOpenProduct={onOpenProduct}
-        onViewAllProducts={onViewAllProducts}
+      />
+
+      <StorefrontAllProductsSection
+        shopId={shopId}
+        accent={accent}
+        rows={allProductRows}
+        title={allProductsTitle}
+        productCountLabel={labels.productCount.replace('{n}', String(allProductRows.length))}
+        qtyInCart={qtyInCart}
+        cardLabels={cardLabels}
+        onOpenProduct={onOpenProduct}
+        onAddToCart={onAddToCart}
       />
     </section>
   )

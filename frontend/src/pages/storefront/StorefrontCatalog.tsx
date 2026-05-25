@@ -401,6 +401,9 @@ export function StorefrontCatalog() {
                 onSelectCollection={showCollection}
                 onOpenProduct={handleOpenProduct}
                 onViewAllProducts={showAllProducts}
+                allProductRows={allCatalogRows}
+                allProductsTitle={s.allProducts}
+                cardLabels={cardLabels}
                 recentRows={recentRows}
                 recentTitle={s.recentlyViewed}
               />
