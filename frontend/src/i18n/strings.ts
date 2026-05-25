@@ -426,6 +426,10 @@ const en: Record<string, string> = {
   'qrAdmin.managerTelegramChatIdHint':
     'Your Telegram chat ID (e.g. from @userinfobot). The bot will send reports here.',
   'qrAdmin.managerTelegramSendTime': 'Send time (local / Baghdad)',
+  'qrAdmin.managerTelegramHour': 'Hour',
+  'qrAdmin.managerTelegramMinute': 'Minute',
+  'qrAdmin.managerTelegramAm': 'AM',
+  'qrAdmin.managerTelegramPm': 'PM',
   'qrAdmin.managerTelegramReportDate': 'Report data date',
   'qrAdmin.managerTelegramReportDateHint':
     'Used for “Send report now”. Scheduled daily sends always use today (Baghdad).',
@@ -1479,6 +1483,10 @@ const ar: Record<string, string> = {
   'qrAdmin.managerTelegramChatId': 'معرّف محادثة المدير',
   'qrAdmin.managerTelegramChatIdHint': 'Chat ID من تيليجرام (مثل @userinfobot).',
   'qrAdmin.managerTelegramSendTime': 'وقت الإرسال (محلي / بغداد)',
+  'qrAdmin.managerTelegramHour': 'الساعة',
+  'qrAdmin.managerTelegramMinute': 'الدقيقة',
+  'qrAdmin.managerTelegramAm': 'ص',
+  'qrAdmin.managerTelegramPm': 'م',
   'qrAdmin.managerTelegramReportDate': 'تاريخ بيانات التقرير',
   'qrAdmin.managerTelegramReportDateHint':
     'للإرسال اليدوي «إرسال تقرير اليوم الآن». الإرسال اليومي التلقائي يستخدم تاريخ اليوم (بغداد).',
@@ -2701,6 +2709,10 @@ const ku: Record<string, string> = {
   'qrAdmin.managerTelegramChatIdHint':
     'ژمارەی چاتەکەت لە تیلیگرام (وەک @userinfobot). ڕاپۆرتەکان بۆ ئێرە دەنێردرێن.',
   'qrAdmin.managerTelegramSendTime': 'کاتی ناردن (کاتی ناوخۆیی / بەغدا)',
+  'qrAdmin.managerTelegramHour': 'کاتژمێر',
+  'qrAdmin.managerTelegramMinute': 'خولەک',
+  'qrAdmin.managerTelegramAm': 'AM',
+  'qrAdmin.managerTelegramPm': 'PM',
   'qrAdmin.managerTelegramReportDate': 'بەرواری داتای ڕاپۆرت',
   'qrAdmin.managerTelegramReportDateHint':
     'بۆ «ناردنی ڕاپۆرت ئێستا». ناردنی ڕۆژانەی خۆکار هەر ڕۆژ بەرواری ئەمڕۆ (بەغدا) بەکاردەهێنێت.',

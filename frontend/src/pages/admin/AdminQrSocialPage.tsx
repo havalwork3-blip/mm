@@ -7,6 +7,14 @@ import { useLocale } from '../../context/LocaleContext'
 import { useSubmitLock } from '../../hooks/useSubmitLock'
 import { apiFetch, apiJson, resolveMediaUrl } from '../../lib/api'
 import { getQrLandingPageUrl } from '../../lib/storefrontConfig'
+import {
+  clampMinute,
+  formatMinuteOption,
+  from24Hour,
+  HOUR12_OPTIONS,
+  MINUTE_OPTIONS,
+  to24Hour,
+} from '../../lib/time12h'
 import type {
   QrLandingAdminResponse,
   QrLandingCustomLinkRow,
@@ -735,48 +743,86 @@ export function AdminQrSocialPage() {
                     <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
                       {t('qrAdmin.managerTelegramSendTime')}
                     </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <input
-                        type="number"
-                        min={0}
-                        max={23}
-                        value={cfg.manager_telegram_send_hour}
-                        onChange={(e) =>
-                          setCfg((c) =>
-                            c
-                              ? {
-                                  ...c,
-                                  manager_telegram_send_hour: Math.min(
-                                    23,
-                                    Math.max(0, Number.parseInt(e.target.value, 10) || 0),
-                                  ),
-                                }
-                              : c,
-                          )
-                        }
-                        className="min-h-11 w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
-                      />
-                      <span className="text-slate-500">:</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={59}
-                        value={cfg.manager_telegram_send_minute}
-                        onChange={(e) =>
-                          setCfg((c) =>
-                            c
-                              ? {
-                                  ...c,
-                                  manager_telegram_send_minute: Math.min(
-                                    59,
-                                    Math.max(0, Number.parseInt(e.target.value, 10) || 0),
-                                  ),
-                                }
-                              : c,
-                          )
-                        }
-                        className="min-h-11 w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
-                      />
+                    <div className="mt-1 flex flex-wrap items-end gap-2" dir="ltr">
+                      <label className="flex min-w-[4.5rem] flex-col gap-1">
+                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                          {t('qrAdmin.managerTelegramHour')}
+                        </span>
+                        <select
+                          value={from24Hour(cfg.manager_telegram_send_hour).hour12}
+                          onChange={(e) => {
+                            const hour12 = Number.parseInt(e.target.value, 10)
+                            const { ampm } = from24Hour(cfg.manager_telegram_send_hour)
+                            setCfg((c) =>
+                              c
+                                ? {
+                                    ...c,
+                                    manager_telegram_send_hour: to24Hour(hour12, ampm),
+                                  }
+                                : c,
+                            )
+                          }}
+                          className="min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+                        >
+                          {HOUR12_OPTIONS.map((h) => (
+                            <option key={h} value={h}>
+                              {h}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <span className="pb-3 text-lg font-medium text-slate-400">:</span>
+                      <label className="flex min-w-[4.5rem] flex-col gap-1">
+                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                          {t('qrAdmin.managerTelegramMinute')}
+                        </span>
+                        <select
+                          value={clampMinute(cfg.manager_telegram_send_minute)}
+                          onChange={(e) =>
+                            setCfg((c) =>
+                              c
+                                ? {
+                                    ...c,
+                                    manager_telegram_send_minute: clampMinute(
+                                      Number.parseInt(e.target.value, 10),
+                                    ),
+                                  }
+                                : c,
+                            )
+                          }
+                          className="min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm tabular-nums dark:border-slate-600 dark:bg-slate-900"
+                        >
+                          {MINUTE_OPTIONS.map((m) => (
+                            <option key={m} value={m}>
+                              {formatMinuteOption(m)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="flex min-w-[5rem] flex-col gap-1">
+                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                          AM / PM
+                        </span>
+                        <select
+                          value={from24Hour(cfg.manager_telegram_send_hour).ampm}
+                          onChange={(e) => {
+                            const ampm = e.target.value === 'PM' ? 'PM' : 'AM'
+                            const { hour12 } = from24Hour(cfg.manager_telegram_send_hour)
+                            setCfg((c) =>
+                              c
+                                ? {
+                                    ...c,
+                                    manager_telegram_send_hour: to24Hour(hour12, ampm),
+                                  }
+                                : c,
+                            )
+                          }}
+                          className="min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+                        >
+                          <option value="AM">{t('qrAdmin.managerTelegramAm')}</option>
+                          <option value="PM">{t('qrAdmin.managerTelegramPm')}</option>
+                        </select>
+                      </label>
                     </div>
                     {cfg.manager_telegram_last_sent_date ? (
                       <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
