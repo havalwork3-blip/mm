@@ -400,7 +400,6 @@ export function StorefrontCatalog() {
                 onSelectCategory={selectCategory}
                 onSelectCollection={showCollection}
                 onOpenProduct={handleOpenProduct}
-                onViewAllProducts={showAllProducts}
                 allProductRows={allCatalogRows}
                 allProductsTitle={s.allProducts}
                 cardLabels={cardLabels}

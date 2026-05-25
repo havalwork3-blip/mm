@@ -42,7 +42,6 @@ type Props = {
   onSelectCategory: (id: number) => void
   onSelectCollection: (id: StorefrontProductCollection) => void
   onOpenProduct: (product: PublicStorefrontProduct, categoryName: string) => void
-  onViewAllProducts: () => void
   allProductRows: CatalogProductRow[]
   allProductsTitle: string
   cardLabels: {
@@ -72,7 +71,6 @@ export function CategoriesBrowse({
   onSelectCategory,
   onSelectCollection,
   onOpenProduct,
-  onViewAllProducts,
   allProductRows,
   allProductsTitle,
   cardLabels,
@@ -84,10 +82,9 @@ export function CategoriesBrowse({
       <StorefrontMobileCategories
         categories={categories}
         title={labels.shopCategories}
+        subtitle={labels.pickCategoryHint}
         productCountLabel={(n) => labels.productCount.replace('{n}', String(n))}
-        viewAllLabel={labels.viewAllProducts}
         onSelect={onSelectCategory}
-        onViewAll={onViewAllProducts}
       />
 
       {recentRows.length > 0 ? (

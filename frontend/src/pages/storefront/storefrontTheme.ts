@@ -81,3 +81,7 @@ export const SF_SECTION_SCROLL_ROW =
 export const SF_SECTION_PRODUCT_WIDTH = 'w-[9.25rem] shrink-0 sm:w-[10rem] lg:w-[10.75rem]'
 
 export const SF_SECTION_CAT_WIDTH = 'w-[7rem] shrink-0 min-[380px]:w-[7.5rem] sm:w-[8rem] lg:w-[8.5rem]'
+
+/** Main shop categories — responsive grid (no horizontal scroll). */
+export const SF_CATEGORY_GRID =
+  'sf-category-grid grid grid-cols-2 gap-3 min-[380px]:gap-3.5 sm:grid-cols-3 sm:gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:gap-5'
