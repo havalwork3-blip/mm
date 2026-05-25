@@ -16,6 +16,7 @@ import { resolveMediaUrl } from '../../lib/api'
 import { sortStorefrontCategories } from './storefrontCategoryCardTheme'
 import { storefrontCollectionLabel } from './storefrontDisplay'
 import type { PublicStorefrontAppearance } from '../../api/storefrontApi'
+import type { StorefrontStrings } from './storefrontStrings'
 import { accentAlpha } from './storefrontTheme'
 
 const COLLECTION_LINKS: {
