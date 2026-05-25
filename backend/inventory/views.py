@@ -150,8 +150,10 @@ class ProductViewSet(ShopScopedViewSet):
     queryset = Product.objects.select_related("category", "shop").all()
     serializer_class = ProductSerializer
     pagination_class = ProductPagination
-    filter_backends = [filters.SearchFilter]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["name", "sku", "barcode"]
+    ordering_fields = ["current_stock_quantity", "name", "id"]
+    ordering = ["-current_stock_quantity"]
 
     def get_queryset(self):
         qs = super().get_queryset()

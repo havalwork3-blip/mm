@@ -1,9 +1,10 @@
 """Send daily jard + stats digest to the configured manager Telegram chat."""
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from shops.manager_daily_telegram import (
     business_today,
+    parse_report_date_param,
     send_manager_daily_digest,
     should_run_scheduled_send,
 )
@@ -24,6 +25,12 @@ class Command(BaseCommand):
             action="store_true",
             help="Only send when local time passed configured send time and not sent today.",
         )
+        parser.add_argument(
+            "--date",
+            type=str,
+            default="",
+            help="Report date YYYY-MM-DD (default: business today in DJANGO_BUSINESS_TZ).",
+        )
 
     def handle(self, *args, **options):
         settings = QrLandingSettings.load()
@@ -35,9 +42,18 @@ class Command(BaseCommand):
                 self.stdout.write("Skipped (not due or already sent today).")
                 return
 
+        report_date = business_today()
+        if options.get("date"):
+            try:
+                report_date = parse_report_date_param(options["date"])
+            except ValueError as exc:
+                raise CommandError(str(exc)) from exc
+            if report_date is None:
+                raise CommandError("Invalid --date; use YYYY-MM-DD.")
+
         result = send_manager_daily_digest(
             settings,
-            report_date=business_today(),
+            report_date=report_date,
             force=force,
         )
         failed = result.get("failed") or []

@@ -150,6 +150,10 @@ export function HomePage() {
   useEffect(() => {
     if (!me?.is_superuser) return
     syncSuperuserScope()
+  }, [me?.is_superuser, syncSuperuserScope])
+
+  useEffect(() => {
+    if (!showSuperuserScopeCard) return
     void (async () => {
       try {
         const data = await apiJson<ShopRow[] | { results: ShopRow[] }>('/api/shops/')
@@ -158,7 +162,7 @@ export function HomePage() {
         setScopeShops([])
       }
     })()
-  }, [me?.is_superuser, syncSuperuserScope])
+  }, [showSuperuserScopeCard])
 
   const applySuperuserScopeShop = useCallback(() => {
     const v = scopeShopId.trim()
@@ -206,6 +210,11 @@ export function HomePage() {
     setStatsForbidden(false)
   }, [me?.id, dFrom, dTo])
 
+  /** Prefer fresh `stats.top_selling_products` after main date filter changes. */
+  useEffect(() => {
+    setTopSellingProducts([])
+  }, [dFrom, dTo])
+
   const fetchStats = useCallback(async () => {
     if (!shouldFetchStats || statsForbidden) return
     if (me?.is_superuser && !getGlobalView() && !getPersistedSuperuserShopId()) {
@@ -231,11 +240,16 @@ export function HomePage() {
         setStats(data)
         setGlobalAdminStats(null)
         if (me?.is_superuser) {
-          try {
-            const g = await apiJson<AdminGlobalStats>(`/api/admin/stats/${q}`)
-            setSuperuserShopRankings(g)
-          } catch {
-            setSuperuserShopRankings(null)
+          setSuperuserShopRankings(null)
+          const loadRankings = () => {
+            void apiJson<AdminGlobalStats>(`/api/admin/stats/${q}`)
+              .then(setSuperuserShopRankings)
+              .catch(() => setSuperuserShopRankings(null))
+          }
+          if (typeof requestIdleCallback === 'function') {
+            requestIdleCallback(loadRankings, { timeout: 4000 })
+          } else {
+            window.setTimeout(loadRankings, 600)
           }
         } else {
           setSuperuserShopRankings(null)
@@ -252,7 +266,7 @@ export function HomePage() {
     } finally {
       setLoadingStats(false)
     }
-  }, [shouldFetchStats, statsForbidden, me?.is_superuser, dFrom, dTo, t])
+  }, [shouldFetchStats, statsForbidden, me?.is_superuser, dFrom, dTo])
 
   const fetchTopSellingProducts = useCallback(async () => {
     if (!me || getGlobalView()) return
@@ -276,12 +290,11 @@ export function HomePage() {
     setLoadingStockProducts(true)
     try {
       const data = await apiJson<Paginated<ProductRow> | ProductRow[]>(
-        '/api/products/?page_size=200&exclude_discontinued=1',
+        '/api/products/?page_size=20&exclude_discontinued=1&ordering=-current_stock_quantity',
+        { shopScoped: Boolean(me.is_superuser) },
       )
       const items = Array.isArray(data) ? data : data.results ?? []
-      const sorted = [...items]
-        .sort((a, b) => Number(b.current_stock_quantity ?? 0) - Number(a.current_stock_quantity ?? 0))
-      setStockProducts(sorted.slice(0, 20))
+      setStockProducts(items.slice(0, 20))
     } catch {
       setStockProducts([])
     } finally {
@@ -320,9 +333,11 @@ export function HomePage() {
   }, [me, shouldFetchStats, statsForbidden, fetchStats])
 
   useEffect(() => {
-    if (me?.online_storefront_enabled && shouldFetchStats && !statsForbidden) {
+    if (!me?.online_storefront_enabled || !shouldFetchStats || statsForbidden) return
+    const deferId = window.setTimeout(() => {
       void fetchOnlineStats()
-    }
+    }, 150)
+    return () => window.clearTimeout(deferId)
   }, [me?.online_storefront_enabled, shouldFetchStats, statsForbidden, fetchOnlineStats])
 
   useEffect(() => {
@@ -333,16 +348,12 @@ export function HomePage() {
       }
       return
     }
-    void fetchTopSellingProducts()
-    void fetchStockProducts()
-    void fetchShopSettings()
-  }, [
-    me,
-    canFetchShopDashboardExtras,
-    fetchTopSellingProducts,
-    fetchStockProducts,
-    fetchShopSettings,
-  ])
+    const deferId = window.setTimeout(() => {
+      void fetchStockProducts()
+      void fetchShopSettings()
+    }, 80)
+    return () => window.clearTimeout(deferId)
+  }, [me, canFetchShopDashboardExtras, fetchStockProducts, fetchShopSettings])
 
   useEffect(() => {
     const onRefresh = () => {
@@ -354,9 +365,10 @@ export function HomePage() {
       const shopScoped =
         me && !getGlobalView() && (!me.is_superuser || Boolean(getPersistedSuperuserShopId()))
       if (shopScoped) {
-        void fetchTopSellingProducts()
-        void fetchStockProducts()
-        void fetchShopSettings()
+        window.setTimeout(() => {
+          void fetchStockProducts()
+          void fetchShopSettings()
+        }, 80)
       }
     }
     window.addEventListener('mm-dashboard-refresh', onRefresh)

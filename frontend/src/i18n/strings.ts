@@ -425,7 +425,14 @@ const en: Record<string, string> = {
   'qrAdmin.managerTelegramChatIdHint':
     'Your Telegram chat ID (e.g. from @userinfobot). The bot will send reports here.',
   'qrAdmin.managerTelegramSendTime': 'Send time (local / Baghdad)',
+  'qrAdmin.managerTelegramReportDate': 'Report data date',
+  'qrAdmin.managerTelegramReportDateHint':
+    'Used for “Send report now”. Scheduled daily sends always use today (Baghdad).',
+  'qrAdmin.managerTelegramSchedulerHint':
+    'After you save settings, the server sends automatically once per day at the chosen time (no cron required).',
   'qrAdmin.managerTelegramLastSent': 'Last sent',
+  'qrAdmin.managerTelegramClearLock': 'Reset daily send lock',
+  'qrAdmin.managerTelegramClearLockOk': 'Daily send lock cleared — report can be sent again today.',
   'qrAdmin.managerTelegramTest': 'Test connection',
   'qrAdmin.managerTelegramSendNow': 'Send today’s report now',
   'qrAdmin.managerTelegramTestOk': 'Test message sent.',
@@ -437,7 +444,7 @@ const en: Record<string, string> = {
     'Sent {ok}/{shops} shops; failed: {failed}.',
   'qrAdmin.managerTelegramSendFail': 'Send failed. Check settings.',
   'qrAdmin.managerTelegramCronHint':
-    'On the server, schedule: python manage.py send_manager_daily_jard_telegram --scheduled',
+    'Optional backup cron (every 5 min): */5 * * * * cd backend && ./venv/bin/python manage.py send_manager_daily_jard_telegram --scheduled',
   'qrAdmin.platform.instagram': 'Instagram',
   'qrAdmin.platform.facebook': 'Facebook',
   'qrAdmin.platform.tiktok': 'TikTok',
@@ -1463,7 +1470,14 @@ const ar: Record<string, string> = {
   'qrAdmin.managerTelegramChatId': 'معرّف محادثة المدير',
   'qrAdmin.managerTelegramChatIdHint': 'Chat ID من تيليجرام (مثل @userinfobot).',
   'qrAdmin.managerTelegramSendTime': 'وقت الإرسال (محلي / بغداد)',
+  'qrAdmin.managerTelegramReportDate': 'تاريخ بيانات التقرير',
+  'qrAdmin.managerTelegramReportDateHint':
+    'للإرسال اليدوي «إرسال تقرير اليوم الآن». الإرسال اليومي التلقائي يستخدم تاريخ اليوم (بغداد).',
+  'qrAdmin.managerTelegramSchedulerHint':
+    'بعد الحفظ، يرسل السيرفر تلقائياً مرة يومياً في الوقت المحدد (بدون cron).',
   'qrAdmin.managerTelegramLastSent': 'آخر إرسال',
+  'qrAdmin.managerTelegramClearLock': 'إعادة ضبط قفل الإرسال اليومي',
+  'qrAdmin.managerTelegramClearLockOk': 'تم مسح قفل اليوم — يمكن الإرسال مرة أخرى اليوم.',
   'qrAdmin.managerTelegramTest': 'اختبار الاتصال',
   'qrAdmin.managerTelegramSendNow': 'إرسال تقرير اليوم الآن',
   'qrAdmin.managerTelegramTestOk': 'تم إرسال رسالة الاختبار.',
@@ -1474,7 +1488,7 @@ const ar: Record<string, string> = {
   'qrAdmin.managerTelegramSendPartial': 'أُرسل {ok}/{shops}؛ فشل: {failed}.',
   'qrAdmin.managerTelegramSendFail': 'فشل الإرسال.',
   'qrAdmin.managerTelegramCronHint':
-    'على الخادم: python manage.py send_manager_daily_jard_telegram --scheduled',
+    'cron اختياري (كل 5 دقائق): */5 * * * * cd backend && ./venv/bin/python manage.py send_manager_daily_jard_telegram --scheduled',
   'qrAdmin.platform.instagram': 'إنستغرام',
   'qrAdmin.platform.facebook': 'فيسبوك',
   'qrAdmin.platform.tiktok': 'تيك توك',
@@ -2670,7 +2684,14 @@ const ku: Record<string, string> = {
   'qrAdmin.managerTelegramChatIdHint':
     'ژمارەی چاتەکەت لە تیلیگرام (وەک @userinfobot). ڕاپۆرتەکان بۆ ئێرە دەنێردرێن.',
   'qrAdmin.managerTelegramSendTime': 'کاتی ناردن (کاتی ناوخۆیی / بەغدا)',
+  'qrAdmin.managerTelegramReportDate': 'بەرواری داتای ڕاپۆرت',
+  'qrAdmin.managerTelegramReportDateHint':
+    'بۆ «ناردنی ڕاپۆرت ئێستا». ناردنی ڕۆژانەی خۆکار هەر ڕۆژ بەرواری ئەمڕۆ (بەغدا) بەکاردەهێنێت.',
+  'qrAdmin.managerTelegramSchedulerHint':
+    'دوای پاشەکەوتکردن، سێرڤەر ڕۆژانە یەکجار لە کاتی دیاریکراو نامە دەنێرێت (پێویست بە cron نییە).',
   'qrAdmin.managerTelegramLastSent': 'دوایین ناردن',
+  'qrAdmin.managerTelegramClearLock': 'سڕینەوەی قفڵی ناردنی ڕۆژانە',
+  'qrAdmin.managerTelegramClearLockOk': 'قفڵی ئەمڕۆ سڕایەوە — دەتوانیت دووبارە ئەمڕۆ ڕاپۆرت بنێریت.',
   'qrAdmin.managerTelegramTest': 'تاقیکردنەوەی پەیوەندی',
   'qrAdmin.managerTelegramSendNow': 'ناردنی ڕاپۆرتی ئەمڕۆ ئێستا',
   'qrAdmin.managerTelegramTestOk': 'پەیامی تاقیکردنەوە نێردرا.',
@@ -2681,7 +2702,7 @@ const ku: Record<string, string> = {
   'qrAdmin.managerTelegramSendPartial': '{ok}/{shops} نێردرا؛ شکست: {failed}.',
   'qrAdmin.managerTelegramSendFail': 'ناردن سەرکەوتوو نەبوو.',
   'qrAdmin.managerTelegramCronHint':
-    'لە سێرڤەر cron: python manage.py send_manager_daily_jard_telegram --scheduled',
+    'cron ئیختیاری (هەر 5 خولەک): */5 * * * * cd backend && ./venv/bin/python manage.py send_manager_daily_jard_telegram --scheduled',
   'qrAdmin.platform.instagram': 'ئینستاگرام',
   'qrAdmin.platform.facebook': 'فەیسبووک',
   'qrAdmin.platform.tiktok': 'تیکتۆک',

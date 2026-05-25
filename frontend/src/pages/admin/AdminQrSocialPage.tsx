@@ -95,6 +95,9 @@ export function AdminQrSocialPage() {
   const primaryLogoPreviewRef = useRef<string | null>(null)
 
   const [managerTokenInput, setManagerTokenInput] = useState('')
+  const [managerReportDate, setManagerReportDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  )
   const [managerTelegramTesting, setManagerTelegramTesting] = useState(false)
   const [managerTelegramSending, setManagerTelegramSending] = useState(false)
   const [managerTelegramMsg, setManagerTelegramMsg] = useState<string | null>(null)
@@ -226,6 +229,21 @@ export function AdminQrSocialPage() {
     }
   }
 
+  async function clearManagerTelegramScheduleLock() {
+    setManagerTelegramMsg(null)
+    try {
+      await apiJson<QrLandingAdminResponse>('/api/admin/qr-landing/', {
+        method: 'PATCH',
+        omitShopScope: true,
+        body: JSON.stringify({ manager_telegram_clear_last_sent: true }),
+      })
+      await load({ silent: true })
+      setManagerTelegramMsg(t('qrAdmin.managerTelegramClearLockOk'))
+    } catch (e) {
+      setManagerTelegramMsg(e instanceof Error ? e.message : t('common.error'))
+    }
+  }
+
   async function sendManagerTelegramNow() {
     setManagerTelegramSending(true)
     setManagerTelegramMsg(null)
@@ -240,6 +258,7 @@ export function AdminQrSocialPage() {
       }>('/api/admin/qr-landing/manager-telegram-send-now/', {
         method: 'POST',
         omitShopScope: true,
+        body: JSON.stringify({ report_date: managerReportDate }),
       })
       if (res.failed?.length) {
         const names = res.failed.map((f) => f.name).join(', ')
@@ -762,10 +781,35 @@ export function AdminQrSocialPage() {
                       />
                     </div>
                     {cfg.manager_telegram_last_sent_date ? (
-                      <p className="mt-2 text-xs text-slate-500">
-                        {t('qrAdmin.managerTelegramLastSent')}: {cfg.manager_telegram_last_sent_date}
+                      <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <span>
+                          {t('qrAdmin.managerTelegramLastSent')}: {cfg.manager_telegram_last_sent_date}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void clearManagerTelegramScheduleLock()}
+                          className="text-violet-700 underline hover:text-violet-900 dark:text-violet-300"
+                        >
+                          {t('qrAdmin.managerTelegramClearLock')}
+                        </button>
                       </p>
                     ) : null}
+                    <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">
+                      {t('qrAdmin.managerTelegramSchedulerHint')}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                      {t('qrAdmin.managerTelegramReportDate')}
+                    </label>
+                    <input
+                      type="date"
+                      dir="ltr"
+                      value={managerReportDate}
+                      onChange={(e) => setManagerReportDate(e.target.value)}
+                      className="mt-1 min-h-11 w-full max-w-xs rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+                    />
+                    <p className="mt-1 text-xs text-slate-500">{t('qrAdmin.managerTelegramReportDateHint')}</p>
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     <button
@@ -805,6 +849,9 @@ export function AdminQrSocialPage() {
                   {managerTelegramMsg ? (
                     <p className="text-xs text-slate-600 dark:text-slate-300">{managerTelegramMsg}</p>
                   ) : null}
+                  <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                    {t('qrAdmin.managerTelegramCronHint')}
+                  </p>
                 </div>
               ) : null}
             </form>

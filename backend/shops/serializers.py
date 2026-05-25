@@ -543,6 +543,7 @@ class QrLandingAdminPatchSerializer(serializers.Serializer):
         min_value=0,
         max_value=59,
     )
+    manager_telegram_clear_last_sent = serializers.BooleanField(required=False, default=False)
 
     def validate_preset_links(self, value):
         out = []

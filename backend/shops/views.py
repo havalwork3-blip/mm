@@ -230,6 +230,8 @@ class QrLandingAdminView(APIView):
             s.manager_telegram_send_hour = int(data["manager_telegram_send_hour"])
         if "manager_telegram_send_minute" in data:
             s.manager_telegram_send_minute = int(data["manager_telegram_send_minute"])
+        if data.get("manager_telegram_clear_last_sent"):
+            s.manager_telegram_last_sent_date = None
         s.save()
         return self.get(request)
 
@@ -253,10 +255,23 @@ class QrLandingManagerTelegramSendNowView(APIView):
     permission_classes = [IsAuthenticated, IsSuperuser]
 
     def post(self, request):
-        from shops.manager_daily_telegram import send_manager_daily_digest
+        from shops.manager_daily_telegram import (
+            business_today,
+            parse_report_date_param,
+            send_manager_daily_digest,
+        )
 
         s = QrLandingSettings.load()
-        result = send_manager_daily_digest(s, force=True)
+        report_date = business_today()
+        raw_date = request.data.get("report_date") if isinstance(request.data, dict) else None
+        if raw_date:
+            try:
+                parsed = parse_report_date_param(raw_date)
+            except ValueError as exc:
+                return Response({"detail": str(exc)}, status=400)
+            if parsed is not None:
+                report_date = parsed
+        result = send_manager_daily_digest(s, report_date=report_date, force=True)
         return Response(
             {
                 "ok": result.get("shop_ok", 0) > 0 or result.get("sent", 0) > 0,
@@ -265,6 +280,7 @@ class QrLandingManagerTelegramSendNowView(APIView):
                 "shop_ok": result.get("shop_ok", 0),
                 "messages": result.get("messages", 0),
                 "failed": result.get("failed", []),
+                "report_date": result.get("report_date") or report_date.isoformat(),
             },
         )
 

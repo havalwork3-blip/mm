@@ -68,29 +68,35 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (!restoreSessionAuth()) return
       try {
         const me = await apiJson<{ is_superuser: boolean; shop: number | null }>('/api/users/me/')
-        if (me.is_superuser || me.shop !== null) {
-          const shops = await apiJson<ShopRow[] | { results: ShopRow[] }>('/api/shops/')
-          const list = Array.isArray(shops) ? shops : shops.results
-          if (!list[0]) return
-          if (me.is_superuser) {
-            const scoped = localStorage.getItem('pos_shop_id')?.trim()
-            if (!scoped) {
-              const fallback = String(list[0].id)
-              localStorage.setItem('pos_shop_id', fallback)
-              setSuperuserShopId(fallback)
-            }
+        if (!me.is_superuser && me.shop === null) return
+
+        if (me.is_superuser) {
+          const scoped = localStorage.getItem('pos_shop_id')?.trim()
+          if (!scoped) {
+            const shops = await apiJson<ShopRow[] | { results: ShopRow[] }>('/api/shops/')
+            const list = Array.isArray(shops) ? shops : shops.results
+            if (!list[0]) return
+            const fallback = String(list[0].id)
+            localStorage.setItem('pos_shop_id', fallback)
+            setSuperuserShopId(fallback)
           }
-          const settings = await apiJson<ShopSettingsRow>('/api/shop-settings/')
-          setPalette(paletteFromShopSettings(settings))
-          if (settings.default_mode && settings.default_mode !== 'system') {
-            setMode(settings.default_mode)
-          }
+        }
+
+        const settings = await apiJson<ShopSettingsRow>('/api/shop-settings/', {
+          shopScoped: me.is_superuser,
+        })
+        setPalette(paletteFromShopSettings(settings))
+        if (settings.default_mode && settings.default_mode !== 'system') {
+          setMode(settings.default_mode)
         }
       } catch {
         // Fail silently; local theme remains active.
       }
     }
-    void loadFromApi()
+    const deferId = window.setTimeout(() => {
+      void loadFromApi()
+    }, 120)
+    return () => window.clearTimeout(deferId)
   }, [])
 
   const value = useMemo(

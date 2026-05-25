@@ -258,8 +258,16 @@ def send_manager_daily_digest(
         time.sleep(TELEGRAM_SEND_DELAY_SEC)
 
     result["sent"] = sent
-    settings.manager_telegram_last_sent_date = d
-    settings.save(update_fields=["manager_telegram_last_sent_date", "updated_at"])
+    result["report_date"] = d.isoformat()
+    if sent > 0:
+        settings.manager_telegram_last_sent_date = d
+        settings.save(update_fields=["manager_telegram_last_sent_date", "updated_at"])
+    else:
+        logger.warning(
+            "Manager daily Telegram: no messages delivered for %s (%s shops)",
+            d,
+            result["shops"],
+        )
     return result
 
 
@@ -299,4 +307,19 @@ def should_run_scheduled_send(settings) -> bool:
         hour=int(settings.manager_telegram_send_hour or 8) % 24,
         minute=int(settings.manager_telegram_send_minute or 0) % 60,
     )
+    # Scheduler runs every ~60s; send once local time is at or past the configured clock.
     return now.time() >= target
+
+
+def parse_report_date_param(raw: object) -> date | None:
+    from django.utils.dateparse import parse_date
+
+    if raw is None:
+        return None
+    text = str(raw).strip()
+    if not text:
+        return None
+    parsed = parse_date(text)
+    if parsed is None:
+        raise ValueError("Invalid report_date; use YYYY-MM-DD.")
+    return parsed
