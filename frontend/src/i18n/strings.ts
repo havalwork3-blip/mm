@@ -103,6 +103,7 @@ const en: Record<string, string> = {
   'nav.globalView': 'Global view',
   'nav.backToHome': 'Back to home',
   'nav.openMenu': 'Open menu',
+  'nav.switchingShop': 'Loading shop data…',
   'nav.closeMenu': 'Close menu',
   'nav.collapseSidebar': 'Collapse sidebar',
   'nav.expandSidebar': 'Expand sidebar',
@@ -429,7 +430,9 @@ const en: Record<string, string> = {
   'qrAdmin.managerTelegramReportDateHint':
     'Used for “Send report now”. Scheduled daily sends always use today (Baghdad).',
   'qrAdmin.managerTelegramSchedulerHint':
-    'After you save settings, the server sends automatically once per day at the chosen time (no cron required).',
+    'After you save settings, the server sends automatically once per day at the chosen time (Baghdad). Manual send does not block the daily schedule.',
+  'qrAdmin.managerTelegramNextRun': 'Next automatic send',
+  'qrAdmin.managerTelegramSentToday': 'Scheduled report already sent today',
   'qrAdmin.managerTelegramLastSent': 'Last sent',
   'qrAdmin.managerTelegramClearLock': 'Reset daily send lock',
   'qrAdmin.managerTelegramClearLockOk': 'Daily send lock cleared — report can be sent again today.',
@@ -1405,6 +1408,7 @@ const en: Record<string, string> = {
 const ar: Record<string, string> = {
   ...en,
   'nav.backToHome': 'العودة للرئيسية',
+  'nav.switchingShop': 'جاري تحميل بيانات المحل…',
   'admin.systemTitle': 'إدارة النظام',
   'admin.systemAdmin': 'إدارة النظام',
   'admin.overview': 'نظرة عامة',
@@ -1474,7 +1478,9 @@ const ar: Record<string, string> = {
   'qrAdmin.managerTelegramReportDateHint':
     'للإرسال اليدوي «إرسال تقرير اليوم الآن». الإرسال اليومي التلقائي يستخدم تاريخ اليوم (بغداد).',
   'qrAdmin.managerTelegramSchedulerHint':
-    'بعد الحفظ، يرسل السيرفر تلقائياً مرة يومياً في الوقت المحدد (بدون cron).',
+    'بعد الحفظ، يرسل السيرفر تلقائياً مرة يومياً في الوقت المحدد (بغداد). الإرسال اليدوي لا يمنع الإرسال اليومي.',
+  'qrAdmin.managerTelegramNextRun': 'التشغيل التلقائي التالي',
+  'qrAdmin.managerTelegramSentToday': 'تم إرسال تقرير اليوم المجدول',
   'qrAdmin.managerTelegramLastSent': 'آخر إرسال',
   'qrAdmin.managerTelegramClearLock': 'إعادة ضبط قفل الإرسال اليومي',
   'qrAdmin.managerTelegramClearLockOk': 'تم مسح قفل اليوم — يمكن الإرسال مرة أخرى اليوم.',
@@ -2614,6 +2620,7 @@ const ku: Record<string, string> = {
   ...en,
   'nav.backToHome': 'گەڕانەوە بۆ سەرەتا',
   'nav.openMenu': 'کردنەوەی لیست',
+  'nav.switchingShop': 'داتای فرۆشگا بار دەکرێت…',
   'nav.closeMenu': 'داخستنی لیست',
   'nav.collapseSidebar': 'بچوککردنەوەی لیست',
   'nav.expandSidebar': 'فراوانکردنەوەی لیست',
@@ -2688,7 +2695,9 @@ const ku: Record<string, string> = {
   'qrAdmin.managerTelegramReportDateHint':
     'بۆ «ناردنی ڕاپۆرت ئێستا». ناردنی ڕۆژانەی خۆکار هەر ڕۆژ بەرواری ئەمڕۆ (بەغدا) بەکاردەهێنێت.',
   'qrAdmin.managerTelegramSchedulerHint':
-    'دوای پاشەکەوتکردن، سێرڤەر ڕۆژانە یەکجار لە کاتی دیاریکراو نامە دەنێرێت (پێویست بە cron نییە).',
+    'دوای پاشەکەوتکردن، سێرڤەر ڕۆژانە یەکجار لە کاتی دیاریکراو (بەغدا) نامە دەنێرێت. ناردنی دەستی ڕێگری لە ناردنی خۆکار ناکات.',
+  'qrAdmin.managerTelegramNextRun': 'ناردنی خۆکاری داهاتوو',
+  'qrAdmin.managerTelegramSentToday': 'ڕاپۆرتی خۆکاری ئەمڕۆ پێشتر نێردراوە',
   'qrAdmin.managerTelegramLastSent': 'دوایین ناردن',
   'qrAdmin.managerTelegramClearLock': 'سڕینەوەی قفڵی ناردنی ڕۆژانە',
   'qrAdmin.managerTelegramClearLockOk': 'قفڵی ئەمڕۆ سڕایەوە — دەتوانیت دووبارە ئەمڕۆ ڕاپۆرت بنێریت.',

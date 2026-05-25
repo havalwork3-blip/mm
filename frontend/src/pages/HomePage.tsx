@@ -38,6 +38,7 @@ import {
 import { LangSwitcher } from '../components/LangSwitcher'
 import { SuperuserDashboardScopeCard } from '../components/SuperuserDashboardScopeCard'
 import { useLocale } from '../context/LocaleContext'
+import { useShopSwitchOptional } from '../context/ShopSwitchContext'
 import { useSession } from '../context/SessionContext'
 import { getPersistedSuperuserShopId, readPosShopIdFromStorage } from '../lib/activeShop'
 import {
@@ -94,6 +95,7 @@ type TopSellingProductRow = DashboardStats['top_selling_products'][number]
 export function HomePage() {
   const { lang, setLang, t } = useLocale()
   const { me, login } = useSession()
+  const shopSwitch = useShopSwitchOptional()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -167,24 +169,36 @@ export function HomePage() {
   const applySuperuserScopeShop = useCallback(() => {
     const v = scopeShopId.trim()
     if (!v) return
-    setGlobalView(false)
-    setSuperuserShopId(v)
-    localStorage.setItem('pos_shop_id', v)
-    setScopeGlobalView(false)
-    setScopeShopId(v)
-    window.dispatchEvent(new Event('mm-dashboard-refresh'))
-    window.dispatchEvent(new Event('mm-session-refresh'))
-  }, [scopeShopId])
+    const work = () => {
+      setGlobalView(false)
+      setSuperuserShopId(v)
+      localStorage.setItem('pos_shop_id', v)
+      setScopeGlobalView(false)
+      setScopeShopId(v)
+    }
+    if (shopSwitch) void shopSwitch.runShopSwitch(work)
+    else {
+      work()
+      window.dispatchEvent(new Event('mm-dashboard-refresh'))
+      window.dispatchEvent(new Event('mm-session-refresh'))
+    }
+  }, [scopeShopId, shopSwitch])
 
   const enableSuperuserScopeGlobalView = useCallback(() => {
-    setGlobalView(true)
-    setSuperuserShopId(null)
-    localStorage.removeItem('pos_shop_id')
-    setScopeGlobalView(true)
-    setScopeShopId('')
-    window.dispatchEvent(new Event('mm-dashboard-refresh'))
-    window.dispatchEvent(new Event('mm-session-refresh'))
-  }, [])
+    const work = () => {
+      setGlobalView(true)
+      setSuperuserShopId(null)
+      localStorage.removeItem('pos_shop_id')
+      setScopeGlobalView(true)
+      setScopeShopId('')
+    }
+    if (shopSwitch) void shopSwitch.runShopSwitch(work)
+    else {
+      work()
+      window.dispatchEvent(new Event('mm-dashboard-refresh'))
+      window.dispatchEvent(new Event('mm-session-refresh'))
+    }
+  }, [shopSwitch])
 
   const preserveScrollPosition = useCallback(() => {
     preservedScrollY.current = window.scrollY

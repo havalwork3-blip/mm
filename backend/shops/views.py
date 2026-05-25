@@ -191,9 +191,19 @@ class QrLandingAdminView(APIView):
                     if s.manager_telegram_last_sent_date
                     else None
                 ),
+                "manager_telegram_schedule": self._manager_schedule_status(),
                 "updated_at": s.updated_at.isoformat() if s.updated_at else None,
             }
         )
+
+    @staticmethod
+    def _manager_schedule_status() -> dict:
+        try:
+            from shops.manager_telegram_scheduler import schedule_status
+
+            return schedule_status()
+        except Exception:
+            return {"scheduler_enabled": False}
 
     def patch(self, request):
         try:
@@ -233,6 +243,16 @@ class QrLandingAdminView(APIView):
         if data.get("manager_telegram_clear_last_sent"):
             s.manager_telegram_last_sent_date = None
         s.save()
+        try:
+            from shops.manager_telegram_scheduler import refresh_manager_telegram_schedule
+
+            refresh_manager_telegram_schedule()
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception(
+                "Could not refresh manager Telegram schedule after save",
+            )
         return self.get(request)
 
 
@@ -737,6 +757,29 @@ class MerchantStorefrontDeliveryZonesView(APIView):
         StorefrontDeliveryZone.objects.filter(shop_id=shop_id).exclude(pk__in=keep_ids).delete()
 
         return self._delivery_config_response(request, shop_id)
+
+
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])
+def cron_manager_telegram_tick(request):
+    """
+    Backup scheduled send — call every 5 minutes from system cron.
+    Header: X-Cron-Secret: <CRON_SECRET> or ?key=<CRON_SECRET>
+    """
+    import os
+
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (
+        request.headers.get("X-Cron-Secret")
+        or request.query_params.get("key")
+        or ""
+    ).strip()
+    if not expected or provided != expected:
+        return Response({"detail": "Forbidden"}, status=403)
+    from shops.manager_telegram_scheduler import run_scheduled_manager_digest
+
+    result = run_scheduled_manager_digest()
+    return Response(result)
 
 
 @api_view(["POST"])

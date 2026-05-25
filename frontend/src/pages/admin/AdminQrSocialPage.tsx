@@ -6,6 +6,7 @@ import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { useLocale } from '../../context/LocaleContext'
 import { useSubmitLock } from '../../hooks/useSubmitLock'
 import { apiFetch, apiJson, resolveMediaUrl } from '../../lib/api'
+import { getQrLandingPageUrl } from '../../lib/storefrontConfig'
 import type {
   QrLandingAdminResponse,
   QrLandingCustomLinkRow,
@@ -110,10 +111,7 @@ export function AdminQrSocialPage() {
     logoFile: null as File | null,
   })
 
-  const landingUrl = useMemo(() => {
-    if (typeof window === 'undefined') return ''
-    return new URL('/qr-code', window.location.origin).href
-  }, [])
+  const landingUrl = useMemo(() => getQrLandingPageUrl(), [])
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true)
@@ -797,6 +795,22 @@ export function AdminQrSocialPage() {
                     <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">
                       {t('qrAdmin.managerTelegramSchedulerHint')}
                     </p>
+                    {cfg.manager_telegram_schedule?.next_run_at ? (
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                        {t('qrAdmin.managerTelegramNextRun')}:{' '}
+                        <span dir="ltr" className="font-mono">
+                          {cfg.manager_telegram_schedule.next_run_at}
+                        </span>
+                        {cfg.manager_telegram_schedule.timezone
+                          ? ` (${cfg.manager_telegram_schedule.timezone})`
+                          : null}
+                      </p>
+                    ) : null}
+                    {cfg.manager_telegram_schedule?.sent_today ? (
+                      <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                        {t('qrAdmin.managerTelegramSentToday')}
+                      </p>
+                    ) : null}
                   </div>
                   <div>
                     <label className="text-xs font-medium text-slate-600 dark:text-slate-400">

@@ -6,8 +6,8 @@ from shops.manager_daily_telegram import (
     business_today,
     parse_report_date_param,
     send_manager_daily_digest,
-    should_run_scheduled_send,
 )
+from shops.manager_telegram_scheduler import run_scheduled_manager_digest
 from shops.models import QrLandingSettings
 
 
@@ -38,9 +38,24 @@ class Command(BaseCommand):
         scheduled = bool(options["scheduled"])
 
         if scheduled and not force:
-            if not should_run_scheduled_send(settings):
-                self.stdout.write("Skipped (not due or already sent today).")
+            result = run_scheduled_manager_digest()
+            if result.get("skipped"):
+                self.stdout.write(
+                    f"Skipped ({result.get('reason', 'not_due')}).",
+                )
                 return
+            failed = result.get("failed") or []
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Manager Telegram: {result.get('sent')} message(s), "
+                    f"{result.get('shop_ok')}/{result.get('shops')} shop(s) OK.",
+                ),
+            )
+            for row in failed:
+                self.stdout.write(
+                    self.style.WARNING(f"  Failed: {row.get('name')} — {row.get('error')}"),
+                )
+            return
 
         report_date = business_today()
         if options.get("date"):

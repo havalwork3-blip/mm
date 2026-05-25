@@ -28,6 +28,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { LangSwitcher } from '../components/LangSwitcher'
 import { OnlineOrderNotificationLayer } from '../components/OnlineOrderNotificationLayer'
 import { useLocale } from '../context/LocaleContext'
+import { ShopSwitchLoadingOverlay, ShopSwitchProvider, useShopSwitch } from '../context/ShopSwitchContext'
 import { useSession } from '../context/SessionContext'
 import { useTheme } from '../context/ThemeContext'
 import { useOnlineOrdersPendingCount } from '../hooks/useOnlineOrdersPendingCount'
@@ -389,8 +390,17 @@ function NavLinkWithOptionalBadge({
 }
 
 export function MainLayout() {
+  return (
+    <ShopSwitchProvider>
+      <MainLayoutShell />
+    </ShopSwitchProvider>
+  )
+}
+
+function MainLayoutShell() {
   const { t, lang, setLang } = useLocale()
   const { me, loading, logout } = useSession()
+  const { runShopSwitch, switching: shopSwitching } = useShopSwitch()
   const { resolvedMode, toggleTheme } = useTheme()
   const loc = useLocation()
   const navigate = useNavigate()
@@ -467,30 +477,30 @@ export function MainLayout() {
   const pendingOnlineOrders = useOnlineOrdersPendingCount(onlineOrdersBadgeEnabled)
 
   function applyShop(nextShopId?: string) {
-    const v = (nextShopId ?? shopOverride).trim()
-    setGlobalView(false)
-    setGlobalViewOn(false)
-    setSuperuserShopId(v || null)
-    if (!v) localStorage.removeItem('pos_shop_id')
-    else localStorage.setItem('pos_shop_id', v)
-    setShopOverride(v)
-    setShopTick((n) => n + 1)
-    window.dispatchEvent(new Event('mm-dashboard-refresh'))
-    window.dispatchEvent(new Event('mm-session-refresh'))
+    void runShopSwitch(async () => {
+      const v = (nextShopId ?? shopOverride).trim()
+      setGlobalView(false)
+      setGlobalViewOn(false)
+      setSuperuserShopId(v || null)
+      if (!v) localStorage.removeItem('pos_shop_id')
+      else localStorage.setItem('pos_shop_id', v)
+      setShopOverride(v)
+      setShopTick((n) => n + 1)
+    })
   }
 
   function toggleGlobalView(checked: boolean) {
-    setGlobalView(checked)
-    setGlobalViewOn(checked)
-    if (checked) {
-      setSuperuserShopId(null)
-    } else {
-      const v = (shopOverride || localStorage.getItem('pos_shop_id') || '').trim()
-      setSuperuserShopId(v || null)
-    }
-    setShopTick((n) => n + 1)
-    window.dispatchEvent(new Event('mm-dashboard-refresh'))
-    window.dispatchEvent(new Event('mm-session-refresh'))
+    void runShopSwitch(async () => {
+      setGlobalView(checked)
+      setGlobalViewOn(checked)
+      if (checked) {
+        setSuperuserShopId(null)
+      } else {
+        const v = (shopOverride || localStorage.getItem('pos_shop_id') || '').trim()
+        setSuperuserShopId(v || null)
+      }
+      setShopTick((n) => n + 1)
+    })
   }
 
   const showSidebar = Boolean(me)
@@ -583,8 +593,9 @@ export function MainLayout() {
                 </label>
                 <div className="mt-2 flex min-h-[44px] items-center gap-2">
                   <select
-                    className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-600 bg-slate-900/80 px-3 py-2 text-sm text-slate-100"
+                    className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-600 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 disabled:opacity-60"
                     value={shopOverride}
+                    disabled={shopSwitching}
                     onChange={(e) => applyShop(e.target.value)}
                   >
                     <option value="">{t('settings.noShop')}</option>
@@ -760,8 +771,9 @@ export function MainLayout() {
                   </label>
                   <div className="flex items-center gap-1">
                     <select
-                      className="min-h-9 min-w-0 flex-1 rounded border border-slate-600 bg-slate-900/80 px-1.5 py-2 text-[11px] text-slate-100"
+                      className="min-h-9 min-w-0 flex-1 rounded border border-slate-600 bg-slate-900/80 px-1.5 py-2 text-[11px] text-slate-100 disabled:opacity-60"
                       value={shopOverride}
+                      disabled={shopSwitching}
                       onChange={(e) => applyShop(e.target.value)}
                     >
                       <option value="">{t('settings.noShop')}</option>
@@ -854,7 +866,8 @@ export function MainLayout() {
           } as React.CSSProperties
         }
       >
-        <main className="min-h-dvh min-w-0 overflow-x-hidden overflow-y-auto">
+        <main className="relative min-h-dvh min-w-0 overflow-x-hidden overflow-y-auto">
+          <ShopSwitchLoadingOverlay />
           <Outlet />
         </main>
       </div>

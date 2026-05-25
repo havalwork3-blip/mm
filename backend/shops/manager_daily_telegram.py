@@ -259,7 +259,8 @@ def send_manager_daily_digest(
 
     result["sent"] = sent
     result["report_date"] = d.isoformat()
-    if sent > 0:
+    # Manual "send now" (force) must not block the automatic daily send.
+    if sent > 0 and not force:
         settings.manager_telegram_last_sent_date = d
         settings.save(update_fields=["manager_telegram_last_sent_date", "updated_at"])
     else:

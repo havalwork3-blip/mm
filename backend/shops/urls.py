@@ -13,6 +13,11 @@ router.register(
 )
 
 urlpatterns = [
+    path(
+        "internal/cron/manager-telegram/",
+        views.cron_manager_telegram_tick,
+        name="cron-manager-telegram",
+    ),
     path("public/telegram/webhook/", views.public_telegram_webhook, name="public-telegram-webhook"),
     path("public/qr-landing/", views.public_qr_landing, name="public-qr-landing"),
     path("admin/qr-landing/", views.QrLandingAdminView.as_view(), name="admin-qr-landing"),

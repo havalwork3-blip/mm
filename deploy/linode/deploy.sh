@@ -30,6 +30,14 @@ git -C "${REPO_ROOT}" pull --ff-only
 echo "==> Python dependencies"
 "${PIP}" install -r "${BACKEND}/requirements.txt"
 
+CRON_SCRIPT="${BACKEND}/scripts/cron_manager_telegram.sh"
+if [[ -f "${BACKEND}/.env" ]] && grep -q '^CRON_SECRET=.\+' "${BACKEND}/.env" 2>/dev/null && [[ -x "${CRON_SCRIPT}" || -f "${CRON_SCRIPT}" ]]; then
+  chmod +x "${CRON_SCRIPT}"
+  CRON_LINE="*/5 * * * * ${CRON_SCRIPT}"
+  (crontab -l 2>/dev/null | grep -v 'cron_manager_telegram' || true; echo "${CRON_LINE}") | crontab -
+  echo "==> Installed backup cron for manager Telegram (every 5 min)"
+fi
+
 echo "==> Frontend build"
 if [[ -f "${FRONTEND}/package-lock.json" ]]; then
   (cd "${FRONTEND}" && npm ci && npm run build)

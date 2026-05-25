@@ -6,3 +6,4 @@ djangorestframework>=3.15,<4
 django-cors-headers>=4.3,<5
 psycopg2-binary>=2.9,<3
 Pillow>=10,<12
+APScheduler>=3.10,<4
