@@ -39,6 +39,7 @@ import { LangSwitcher } from '../components/LangSwitcher'
 import { SuperuserDashboardScopeCard } from '../components/SuperuserDashboardScopeCard'
 import { useLocale } from '../context/LocaleContext'
 import { useSession } from '../context/SessionContext'
+import { getPersistedSuperuserShopId, readPosShopIdFromStorage } from '../lib/activeShop'
 import {
   apiJson,
   getGlobalView,
@@ -124,21 +125,26 @@ export function HomePage() {
   const [scopeGlobalView, setScopeGlobalView] = useState(() => getGlobalView())
   const [scopeShops, setScopeShops] = useState<ShopRow[]>([])
 
+  const persistedSuperuserShopId = getPersistedSuperuserShopId()
+
   const showSuperuserScopeCard = Boolean(
-    me?.is_superuser && !scopeGlobalView && !scopeShopId.trim(),
+    me?.is_superuser && !getGlobalView() && !persistedSuperuserShopId,
   )
 
   const canFetchShopDashboardExtras = useMemo(() => {
     if (!me || getGlobalView()) return false
     if (me.is_superuser) {
-      return Boolean(scopeShopId.trim() || getSuperuserShopId())
+      return Boolean(getPersistedSuperuserShopId())
     }
     return true
-  }, [me, scopeShopId])
+  }, [me, persistedSuperuserShopId])
 
   const syncSuperuserScope = useCallback(() => {
-    setScopeShopId(localStorage.getItem('pos_shop_id') ?? '')
+    const stored = readPosShopIdFromStorage() ?? ''
+    const resolved = (getSuperuserShopId()?.trim() || stored).trim()
+    setScopeShopId(resolved)
     setScopeGlobalView(getGlobalView())
+    if (resolved) setSuperuserShopId(resolved)
   }, [])
 
   useEffect(() => {
@@ -156,13 +162,14 @@ export function HomePage() {
 
   const applySuperuserScopeShop = useCallback(() => {
     const v = scopeShopId.trim()
+    if (!v) return
     setGlobalView(false)
-    setSuperuserShopId(v || null)
-    if (v) localStorage.setItem('pos_shop_id', v)
-    else localStorage.removeItem('pos_shop_id')
+    setSuperuserShopId(v)
+    localStorage.setItem('pos_shop_id', v)
     setScopeGlobalView(false)
     setScopeShopId(v)
     window.dispatchEvent(new Event('mm-dashboard-refresh'))
+    window.dispatchEvent(new Event('mm-session-refresh'))
   }, [scopeShopId])
 
   const enableSuperuserScopeGlobalView = useCallback(() => {
@@ -172,6 +179,7 @@ export function HomePage() {
     setScopeGlobalView(true)
     setScopeShopId('')
     window.dispatchEvent(new Event('mm-dashboard-refresh'))
+    window.dispatchEvent(new Event('mm-session-refresh'))
   }, [])
 
   const preserveScrollPosition = useCallback(() => {
@@ -200,6 +208,12 @@ export function HomePage() {
 
   const fetchStats = useCallback(async () => {
     if (!shouldFetchStats || statsForbidden) return
+    if (me?.is_superuser && !getGlobalView() && !getPersistedSuperuserShopId()) {
+      setStats(null)
+      setGlobalAdminStats(null)
+      setSuperuserShopRankings(null)
+      return
+    }
     setLoadingStats(true)
     setError(null)
     try {
@@ -210,7 +224,10 @@ export function HomePage() {
         setStats(null)
         setSuperuserShopRankings(null)
       } else {
-        const data = await apiJson<DashboardStats>(`/api/dashboard/stats/${q}`)
+        const shopScoped = Boolean(me?.is_superuser)
+        const data = await apiJson<DashboardStats>(`/api/dashboard/stats/${q}`, {
+          shopScoped,
+        })
         setStats(data)
         setGlobalAdminStats(null)
         if (me?.is_superuser) {
@@ -239,17 +256,13 @@ export function HomePage() {
 
   const fetchTopSellingProducts = useCallback(async () => {
     if (!me || getGlobalView()) return
-    if (
-      me.is_superuser &&
-      !getSuperuserShopId() &&
-      !localStorage.getItem('pos_shop_id')?.trim()
-    ) {
-      return
-    }
+    if (me.is_superuser && !getPersistedSuperuserShopId()) return
     setLoadingTopSelling(true)
     try {
       const q = `?from=${encodeURIComponent(topSellingFrom)}&to=${encodeURIComponent(topSellingTo)}`
-      const data = await apiJson<DashboardStats>(`/api/dashboard/stats/${q}`)
+      const data = await apiJson<DashboardStats>(`/api/dashboard/stats/${q}`, {
+        shopScoped: true,
+      })
       setTopSellingProducts(data.top_selling_products ?? [])
     } catch {
       setTopSellingProducts([])
@@ -339,9 +352,7 @@ export function HomePage() {
         void fetchOnlineStats()
       }
       const shopScoped =
-        me &&
-        !getGlobalView() &&
-        (!me.is_superuser || Boolean(localStorage.getItem('pos_shop_id')?.trim() || getSuperuserShopId()))
+        me && !getGlobalView() && (!me.is_superuser || Boolean(getPersistedSuperuserShopId()))
       if (shopScoped) {
         void fetchTopSellingProducts()
         void fetchStockProducts()

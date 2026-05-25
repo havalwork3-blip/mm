@@ -1,4 +1,10 @@
+import { getSuperuserShopId } from './api'
 import type { Me } from '../types/api'
+
+/** Superuser shop scope saved in memory or localStorage (not the dashboard modal draft). */
+export function getPersistedSuperuserShopId(): string {
+  return (getSuperuserShopId()?.trim() || readPosShopIdFromStorage() || '').trim()
+}
 
 export function readPosShopIdFromStorage(): string | null {
   try {
