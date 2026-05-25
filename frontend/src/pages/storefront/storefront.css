@@ -574,41 +574,41 @@ html.sf-mode select {
   background: transparent;
 }
 
-/* Main shop categories — featured grid tiles */
+/* Main shop categories — clean minimal grid */
+.sf-shop-categories {
+  margin-bottom: 0.25rem;
+}
+
 .sf-category-grid {
   position: relative;
-  z-index: 1;
 }
 
-.sf-category-feature-card {
+.sf-category-simple-card {
   -webkit-tap-highlight-color: transparent;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.sf-category-simple-media {
   box-shadow:
-    0 4px 14px rgba(15, 23, 42, 0.12),
-    0 1px 3px rgba(15, 23, 42, 0.06);
+    0 1px 3px rgba(15, 23, 42, 0.06),
+    0 0 0 1px rgba(226, 232, 240, 0.9);
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
-.sf-category-feature-card:hover {
+.sf-category-simple-card:hover .sf-category-simple-media {
+  transform: translateY(-2px);
   box-shadow:
-    0 10px 28px rgba(15, 23, 42, 0.18),
-    0 2px 6px rgba(15, 23, 42, 0.08);
-  transform: translateY(-2px);
+    0 8px 20px rgba(15, 23, 42, 0.08),
+    0 0 0 1px color-mix(in srgb, var(--sf-cat-accent, #7c3aed) 28%, #e2e8f0);
 }
 
-.sf-category-feature-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
-  pointer-events: none;
-}
-
-.sf-category-feature-media {
-  transition: transform 0.35s ease;
-}
-
-.sf-category-feature-card:hover .sf-category-feature-media {
-  transform: translateY(-2px);
+.sf-category-simple-card:active .sf-category-simple-media {
+  transform: translateY(0);
 }
 
 .sf-section-panel-fade {
@@ -853,10 +853,23 @@ html.sf-mode select {
   filter: brightness(0.97);
 }
 
-.sf-root.sf-dark .sf-category-feature-card {
+.sf-root.sf-dark .sf-shop-categories .sf-heading {
+  color: #f1f5f9;
+}
+
+.sf-root.sf-dark .sf-shop-categories header p {
+  color: #94a3b8;
+}
+
+.sf-root.sf-dark .sf-category-simple-card p {
+  color: #e2e8f0;
+}
+
+.sf-root.sf-dark .sf-category-simple-media {
+  background: #1e293b;
   box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.35),
-    0 1px 3px rgba(0, 0, 0, 0.2);
+    0 1px 3px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(51, 65, 85, 0.8);
 }
 
 .sf-root.sf-dark .sf-mobile-cat-card,

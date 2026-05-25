@@ -81,6 +81,7 @@ export function CategoriesBrowse({
     <section className={`${SF_INSET_X} sf-view-panel mt-2 sm:mt-4 lg:mt-6`}>
       <StorefrontMobileCategories
         categories={categories}
+        accent={accent}
         title={labels.shopCategories}
         subtitle={labels.pickCategoryHint}
         productCountLabel={(n) => labels.productCount.replace('{n}', String(n))}
