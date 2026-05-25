@@ -795,11 +795,15 @@ export function AdminQrSocialPage() {
                     <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">
                       {t('qrAdmin.managerTelegramSchedulerHint')}
                     </p>
-                    {cfg.manager_telegram_schedule?.next_run_at ? (
+                    {cfg.manager_telegram_schedule?.due_now ? (
+                      <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                        {t('qrAdmin.managerTelegramDueNow')}
+                      </p>
+                    ) : cfg.manager_telegram_schedule?.next_run_at ? (
                       <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                         {t('qrAdmin.managerTelegramNextRun')}:{' '}
                         <span dir="ltr" className="font-mono">
-                          {cfg.manager_telegram_schedule.next_run_at}
+                          {cfg.manager_telegram_schedule.next_run_at.replace('T', ' ').slice(0, 16)}
                         </span>
                         {cfg.manager_telegram_schedule.timezone
                           ? ` (${cfg.manager_telegram_schedule.timezone})`
@@ -809,6 +813,19 @@ export function AdminQrSocialPage() {
                     {cfg.manager_telegram_schedule?.sent_today ? (
                       <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
                         {t('qrAdmin.managerTelegramSentToday')}
+                      </p>
+                    ) : null}
+                    {cfg.manager_telegram_notify_enabled &&
+                    cfg.manager_telegram_schedule?.schedule_ready === false ? (
+                      <p className="mt-1 text-xs text-rose-700 dark:text-rose-300">
+                        {t('qrAdmin.managerTelegramMissingCredentials')}
+                      </p>
+                    ) : null}
+                    {cfg.manager_telegram_notify_enabled &&
+                    cfg.manager_telegram_schedule?.scheduler_enabled &&
+                    !cfg.manager_telegram_schedule?.scheduler_running ? (
+                      <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+                        {t('qrAdmin.managerTelegramSchedulerOff')}
                       </p>
                     ) : null}
                   </div>

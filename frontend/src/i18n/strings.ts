@@ -432,6 +432,11 @@ const en: Record<string, string> = {
   'qrAdmin.managerTelegramSchedulerHint':
     'After you save settings, the server sends automatically once per day at the chosen time (Baghdad). Manual send does not block the daily schedule.',
   'qrAdmin.managerTelegramNextRun': 'Next automatic send',
+  'qrAdmin.managerTelegramDueNow':
+    'Send time has passed — the report will go out within about 5 minutes (server cron).',
+  'qrAdmin.managerTelegramMissingCredentials': 'Enter bot token and chat ID, then save.',
+  'qrAdmin.managerTelegramSchedulerOff':
+    'In-process scheduler is not running on this server — rely on cron after deploy, or restart Gunicorn with MANAGER_TELEGRAM_SCHEDULER=1.',
   'qrAdmin.managerTelegramSentToday': 'Scheduled report already sent today',
   'qrAdmin.managerTelegramLastSent': 'Last sent',
   'qrAdmin.managerTelegramClearLock': 'Reset daily send lock',
@@ -447,7 +452,7 @@ const en: Record<string, string> = {
     'Sent {ok}/{shops} shops; failed: {failed}.',
   'qrAdmin.managerTelegramSendFail': 'Send failed. Check settings.',
   'qrAdmin.managerTelegramCronHint':
-    'Optional backup cron (every 5 min): */5 * * * * cd backend && ./venv/bin/python manage.py send_manager_daily_jard_telegram --scheduled',
+    'Server cron (every 5 min) checks the clock and sends once per day after your chosen time. Run deploy.sh on the server to install it.',
   'qrAdmin.platform.instagram': 'Instagram',
   'qrAdmin.platform.facebook': 'Facebook',
   'qrAdmin.platform.tiktok': 'TikTok',
@@ -1480,6 +1485,11 @@ const ar: Record<string, string> = {
   'qrAdmin.managerTelegramSchedulerHint':
     'بعد الحفظ، يرسل السيرفر تلقائياً مرة يومياً في الوقت المحدد (بغداد). الإرسال اليدوي لا يمنع الإرسال اليومي.',
   'qrAdmin.managerTelegramNextRun': 'التشغيل التلقائي التالي',
+  'qrAdmin.managerTelegramDueNow':
+    'حان وقت الإرسال — سيُرسل التقرير خلال نحو 5 دقائق (cron على السيرفر).',
+  'qrAdmin.managerTelegramMissingCredentials': 'أدخل رمز البوت و Chat ID ثم احفظ.',
+  'qrAdmin.managerTelegramSchedulerOff':
+    'المجدول الداخلي غير شغّال — اعتمد على cron بعد النشر، أو أعد تشغيل Gunicorn مع MANAGER_TELEGRAM_SCHEDULER=1.',
   'qrAdmin.managerTelegramSentToday': 'تم إرسال تقرير اليوم المجدول',
   'qrAdmin.managerTelegramLastSent': 'آخر إرسال',
   'qrAdmin.managerTelegramClearLock': 'إعادة ضبط قفل الإرسال اليومي',
@@ -1494,7 +1504,7 @@ const ar: Record<string, string> = {
   'qrAdmin.managerTelegramSendPartial': 'أُرسل {ok}/{shops}؛ فشل: {failed}.',
   'qrAdmin.managerTelegramSendFail': 'فشل الإرسال.',
   'qrAdmin.managerTelegramCronHint':
-    'cron اختياري (كل 5 دقائق): */5 * * * * cd backend && ./venv/bin/python manage.py send_manager_daily_jard_telegram --scheduled',
+    'cron على السيرفر (كل 5 دقائق) يتحقق من الساعة ويرسل مرة يومياً بعد الوقت المحدد. شغّل deploy.sh على السيرفر لتثبيته.',
   'qrAdmin.platform.instagram': 'إنستغرام',
   'qrAdmin.platform.facebook': 'فيسبوك',
   'qrAdmin.platform.tiktok': 'تيك توك',
@@ -2697,6 +2707,11 @@ const ku: Record<string, string> = {
   'qrAdmin.managerTelegramSchedulerHint':
     'دوای پاشەکەوتکردن، سێرڤەر ڕۆژانە یەکجار لە کاتی دیاریکراو (بەغدا) نامە دەنێرێت. ناردنی دەستی ڕێگری لە ناردنی خۆکار ناکات.',
   'qrAdmin.managerTelegramNextRun': 'ناردنی خۆکاری داهاتوو',
+  'qrAdmin.managerTelegramDueNow':
+    'کاتی ناردن تێپەڕیوە — ڕاپۆرت لە ماوەی نزیکەی ٥ خولەکدا دەنێردرێت (cron لە سێرڤەر).',
+  'qrAdmin.managerTelegramMissingCredentials': 'تۆکێنی بۆت و Chat ID بنووسە و پاشەکەوت بکە.',
+  'qrAdmin.managerTelegramSchedulerOff':
+    'خشتەی ناو سێرڤەر کار ناکات — پاش deploy.sh cron بەکاربهێنە، یان Gunicorn دووبارە دەستپێبکەرەوە بە MANAGER_TELEGRAM_SCHEDULER=1.',
   'qrAdmin.managerTelegramSentToday': 'ڕاپۆرتی خۆکاری ئەمڕۆ پێشتر نێردراوە',
   'qrAdmin.managerTelegramLastSent': 'دوایین ناردن',
   'qrAdmin.managerTelegramClearLock': 'سڕینەوەی قفڵی ناردنی ڕۆژانە',
@@ -2711,7 +2726,7 @@ const ku: Record<string, string> = {
   'qrAdmin.managerTelegramSendPartial': '{ok}/{shops} نێردرا؛ شکست: {failed}.',
   'qrAdmin.managerTelegramSendFail': 'ناردن سەرکەوتوو نەبوو.',
   'qrAdmin.managerTelegramCronHint':
-    'cron ئیختیاری (هەر 5 خولەک): */5 * * * * cd backend && ./venv/bin/python manage.py send_manager_daily_jard_telegram --scheduled',
+    'cron لە سێرڤەر (هەر 5 خولەک) کاتژمێر دەپشکنێت و ڕۆژانە یەکجار دوای کاتی دیاریکراو نامە دەنێرێت. لە سێرڤەر deploy.sh جێبەجێ بکە بۆ دامەزراندن.',
   'qrAdmin.platform.instagram': 'ئینستاگرام',
   'qrAdmin.platform.facebook': 'فەیسبووک',
   'qrAdmin.platform.tiktok': 'تیکتۆک',

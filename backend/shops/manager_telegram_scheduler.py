@@ -1,4 +1,4 @@
-"""Daily manager Telegram — APScheduler at configured local time + backup checks."""
+"""Daily manager Telegram — in-process tick (reads send time from DB) + system cron backup."""
 
 from __future__ import annotations
 
@@ -21,6 +21,14 @@ def scheduler_enabled() -> bool:
     from django.conf import settings
 
     return not settings.DEBUG
+
+
+def _tick_interval_seconds() -> int:
+    try:
+        sec = int(os.environ.get("MANAGER_TELEGRAM_SCHEDULER_INTERVAL_SEC", "60"))
+    except ValueError:
+        sec = 60
+    return max(30, min(sec, 300))
 
 
 def _acquire_leader_lock():
@@ -60,7 +68,7 @@ def run_scheduled_manager_digest() -> dict:
     skipped = {"skipped": True, "reason": "not_due"}
     with transaction.atomic():
         try:
-            settings = QrLandingSettings.objects.select_for_update(nowait=True).get(pk=1)
+            settings = QrLandingSettings.objects.select_for_update().get(pk=1)
         except OperationalError:
             return {"skipped": True, "reason": "lock_busy"}
         if not should_run_scheduled_send(settings):
@@ -73,49 +81,20 @@ def run_scheduled_manager_digest() -> dict:
 
 
 def refresh_manager_telegram_schedule() -> None:
-    """Apply send hour/minute from DB to the daily cron job."""
+    """No-op: send time is read from DB on every tick (safe across Gunicorn workers)."""
     if _scheduler is None:
         return
-
-    from apscheduler.jobstores.base import JobLookupError
-    from apscheduler.triggers.cron import CronTrigger
-
-    from shops.manager_daily_telegram import _business_tz
-    from shops.models import QrLandingSettings
-
-    s = QrLandingSettings.load()
-    job_id = "manager_telegram_daily"
-    if not s.manager_telegram_notify_enabled:
-        try:
-            _scheduler.remove_job(job_id)
-        except JobLookupError:
-            pass
-        logger.info("Manager Telegram daily job removed (disabled)")
-        return
-
-    hour = int(s.manager_telegram_send_hour or 8) % 24
-    minute = int(s.manager_telegram_send_minute or 0) % 60
-    tz = _business_tz()
-    _scheduler.add_job(
-        run_scheduled_manager_digest,
-        CronTrigger(hour=hour, minute=minute, timezone=tz),
-        id=job_id,
-        replace_existing=True,
-        misfire_grace_time=7200,
-        coalesce=True,
-        max_instances=1,
-    )
-    logger.info(
-        "Manager Telegram daily job at %02d:%02d (%s)",
-        hour,
-        minute,
-        tz,
-    )
+    logger.debug("Manager Telegram schedule uses DB send time on each tick")
 
 
 def schedule_status() -> dict:
     """For admin UI — next run hint."""
-    from shops.manager_daily_telegram import _business_tz, business_today
+    from shops.manager_daily_telegram import (
+        _business_tz,
+        business_today,
+        next_scheduled_send_at,
+        schedule_ready,
+    )
     from shops.models import QrLandingSettings
 
     s = QrLandingSettings.load()
@@ -123,11 +102,15 @@ def schedule_status() -> dict:
     hour = int(s.manager_telegram_send_hour or 8)
     minute = int(s.manager_telegram_send_minute or 0)
     enabled = bool(s.manager_telegram_notify_enabled)
+    ready = schedule_ready(s)
     out = {
         "scheduler_enabled": scheduler_enabled(),
+        "scheduler_running": _scheduler is not None and _started,
         "notify_enabled": enabled,
+        "schedule_ready": ready,
         "send_time_local": f"{hour:02d}:{minute:02d}",
         "timezone": str(tz),
+        "tick_interval_sec": _tick_interval_seconds(),
         "last_scheduled_sent_date": (
             s.manager_telegram_last_sent_date.isoformat()
             if s.manager_telegram_last_sent_date
@@ -135,12 +118,13 @@ def schedule_status() -> dict:
         ),
         "leader_worker": _lock_file is not None,
     }
-    if _scheduler is not None:
-        job = _scheduler.get_job("manager_telegram_daily")
-        if job and job.next_run_time:
-            out["next_run_at"] = job.next_run_time.isoformat()
+    nxt = next_scheduled_send_at(s)
+    if nxt is not None:
+        out["next_run_at"] = nxt.isoformat()
     if enabled and s.manager_telegram_last_sent_date == business_today():
         out["sent_today"] = True
+    if enabled and ready and not out.get("next_run_at") and not out.get("sent_today"):
+        out["due_now"] = True
     return out
 
 
@@ -163,20 +147,23 @@ def start_manager_telegram_scheduler() -> None:
         _lock_file = lock
         _started = True
         tz = _business_tz()
+        interval = _tick_interval_seconds()
         _scheduler = BackgroundScheduler(timezone=tz)
         _scheduler.start()
-        refresh_manager_telegram_schedule()
-        # Backup if exact cron misfired (server sleep, deploy at send time, etc.)
         _scheduler.add_job(
             run_scheduled_manager_digest,
-            IntervalTrigger(minutes=5),
-            id="manager_telegram_backup",
+            IntervalTrigger(seconds=interval),
+            id="manager_telegram_tick",
             replace_existing=True,
-            misfire_grace_time=300,
+            misfire_grace_time=interval * 2,
             coalesce=True,
             max_instances=1,
         )
-        logger.info("Manager Telegram scheduler started (leader pid %s)", os.getpid())
+        logger.info(
+            "Manager Telegram scheduler started (leader pid %s, tick every %ss)",
+            os.getpid(),
+            interval,
+        )
     except Exception:
         logger.exception("Failed to start Manager Telegram scheduler")
         _started = False

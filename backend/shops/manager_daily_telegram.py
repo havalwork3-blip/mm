@@ -6,7 +6,7 @@ import html
 import logging
 import os
 import time
-from datetime import date
+from datetime import date, datetime, time as dt_time
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -263,7 +263,7 @@ def send_manager_daily_digest(
     if sent > 0 and not force:
         settings.manager_telegram_last_sent_date = d
         settings.save(update_fields=["manager_telegram_last_sent_date", "updated_at"])
-    else:
+    elif sent == 0:
         logger.warning(
             "Manager daily Telegram: no messages delivered for %s (%s shops)",
             d,
@@ -290,26 +290,49 @@ def send_manager_test_message(settings) -> bool:
     return send_message(token, chat_id, text)
 
 
-def should_run_scheduled_send(settings) -> bool:
-    from datetime import time as dt_time
+def configured_send_time(settings) -> dt_time:
+    return dt_time(
+        hour=int(settings.manager_telegram_send_hour or 8) % 24,
+        minute=int(settings.manager_telegram_send_minute or 0) % 60,
+    )
 
+
+def schedule_ready(settings) -> bool:
     if not settings.manager_telegram_notify_enabled:
         return False
     if not (settings.manager_telegram_bot_token or "").strip():
         return False
     if not (settings.manager_telegram_chat_id or "").strip():
         return False
+    return True
+
+
+def should_run_scheduled_send(settings) -> bool:
+    if not schedule_ready(settings):
+        return False
     tz = _business_tz()
     now = timezone.now().astimezone(tz)
     today = now.date()
     if settings.manager_telegram_last_sent_date == today:
         return False
-    target = dt_time(
-        hour=int(settings.manager_telegram_send_hour or 8) % 24,
-        minute=int(settings.manager_telegram_send_minute or 0) % 60,
-    )
-    # Scheduler runs every ~60s; send once local time is at or past the configured clock.
-    return now.time() >= target
+    # Tick runs every minute; send once local time is at or past the configured clock.
+    return now.time() >= configured_send_time(settings)
+
+
+def next_scheduled_send_at(settings) -> datetime | None:
+    """Next automatic send (Baghdad/local business TZ), or None if disabled / already sent today."""
+    if not schedule_ready(settings):
+        return None
+    tz = _business_tz()
+    now = timezone.now().astimezone(tz)
+    today = now.date()
+    if settings.manager_telegram_last_sent_date == today:
+        return None
+    target = configured_send_time(settings)
+    candidate = datetime.combine(today, target, tzinfo=tz)
+    if now < candidate:
+        return candidate
+    return now
 
 
 def parse_report_date_param(raw: object) -> date | None:

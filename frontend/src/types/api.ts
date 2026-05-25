@@ -69,12 +69,16 @@ export type QrLandingAdminResponse = {
   manager_telegram_last_sent_date: string | null
   manager_telegram_schedule?: {
     scheduler_enabled?: boolean
+    scheduler_running?: boolean
+    schedule_ready?: boolean
     notify_enabled?: boolean
     send_time_local?: string
     timezone?: string
+    tick_interval_sec?: number
     next_run_at?: string | null
     last_scheduled_sent_date?: string | null
     sent_today?: boolean
+    due_now?: boolean
     leader_worker?: boolean
   }
   updated_at: string | null
