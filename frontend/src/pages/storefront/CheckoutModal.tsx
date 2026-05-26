@@ -6,7 +6,6 @@ import { ApiError } from '../../lib/api'
 import {
   buildAddressFromCoords,
   googleMapsUrl,
-  parseCoordsFromAddress,
   reverseGeocodeAddress,
   type GeoCoords,
 } from '../../lib/geolocation'
