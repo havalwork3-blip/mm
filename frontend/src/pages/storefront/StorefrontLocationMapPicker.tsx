@@ -1,15 +1,10 @@
-import { Crosshair, Loader2 } from 'lucide-react'
 import L from 'leaflet'
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png'
 import iconUrl from 'leaflet/dist/images/marker-icon.png'
 import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { Lang } from '../../i18n/strings'
 import {
-  buildAddressFromCoords,
-  getCurrentCoords,
-  parseCoordsFromAddress,
   reverseGeocodeAddress,
   type GeoCoords,
 } from '../../lib/geolocation'
@@ -32,34 +27,21 @@ L.Icon.Default.mergeOptions({
 type Labels = {
   mapPickHint: string
   mapDragHint: string
-  useGps: string
   locating: string
-  locationDenied: string
-  locationTimeout: string
-  locationUnsupported: string
   locationUnavailable: string
 }
 
 type Props = {
-  address: string
-  onAddressChange: (value: string) => void
-  lang: Lang
+  coords: GeoCoords | null
+  onCoordsChange: (coords: GeoCoords, resolvedLabel?: string | null) => void
   accent: string
   disabled?: boolean
   labels: Labels
 }
 
-function locationErrorMessage(labels: Labels, code: string): string {
-  if (code === 'denied') return labels.locationDenied
-  if (code === 'timeout') return labels.locationTimeout
-  if (code === 'unsupported') return labels.locationUnsupported
-  return labels.locationUnavailable
-}
-
 export function StorefrontLocationMapPicker({
-  address,
-  onAddressChange,
-  lang,
+  coords,
+  onCoordsChange,
   accent,
   disabled = false,
   labels,
@@ -68,17 +50,13 @@ export function StorefrontLocationMapPicker({
   const mapRef = useRef<L.Map | null>(null)
   const markerRef = useRef<L.Marker | null>(null)
   const resolvingRef = useRef(false)
-  const langRef = useRef(lang)
   const disabledRef = useRef(disabled)
-  const onAddressChangeRef = useRef(onAddressChange)
-  langRef.current = lang
   disabledRef.current = disabled
-  onAddressChangeRef.current = onAddressChange
 
-  const [coords, setCoords] = useState<GeoCoords | null>(() => parseCoordsFromAddress(address))
+  const [localCoords, setLocalCoords] = useState<GeoCoords | null>(coords)
   const [resolving, setResolving] = useState(false)
   const [mapError, setMapError] = useState<string | null>(null)
-  const [hasPin, setHasPin] = useState(() => parseCoordsFromAddress(address) != null)
+  const [hasPin, setHasPin] = useState(Boolean(coords))
 
   const applyCoords = useCallback(async (next: GeoCoords) => {
     if (resolvingRef.current) return
@@ -86,10 +64,9 @@ export function StorefrontLocationMapPicker({
     setResolving(true)
     setMapError(null)
     try {
-      const label = await reverseGeocodeAddress(next, langRef.current)
-      const text = await buildAddressFromCoords(next, langRef.current, label)
-      onAddressChangeRef.current(text)
-      setCoords(next)
+      const label = await reverseGeocodeAddress(next, 'en')
+      onCoordsChange(next, label)
+      setLocalCoords(next)
       setHasPin(true)
       const map = mapRef.current
       if (map) {
@@ -112,15 +89,14 @@ export function StorefrontLocationMapPicker({
       resolvingRef.current = false
       setResolving(false)
     }
-  }, [labels.locationUnavailable])
+  }, [labels.locationUnavailable, onCoordsChange])
 
   useEffect(() => {
     const el = containerRef.current
     if (!el || mapRef.current) return
 
-    const parsed = parseCoordsFromAddress(address)
-    const initial = parsed ?? DEFAULT_CENTER
-    const zoom = parsed ? PIN_ZOOM : DEFAULT_ZOOM
+    const initial = coords ?? DEFAULT_CENTER
+    const zoom = coords ? PIN_ZOOM : DEFAULT_ZOOM
 
     const map = L.map(el, {
       center: [initial.lat, initial.lon],
@@ -142,8 +118,8 @@ export function StorefrontLocationMapPicker({
 
     mapRef.current = map
 
-    if (parsed) {
-      const marker = L.marker([parsed.lat, parsed.lon], { draggable: !disabledRef.current })
+    if (coords) {
+      const marker = L.marker([coords.lat, coords.lon], { draggable: !disabledRef.current })
       marker.on('dragend', () => {
         const pos = marker.getLatLng()
         void applyCoords({ lat: pos.lat, lon: pos.lng })
@@ -161,16 +137,15 @@ export function StorefrontLocationMapPicker({
   }, [])
 
   useEffect(() => {
-    const parsed = parseCoordsFromAddress(address)
-    if (!parsed) return
-    setCoords(parsed)
+    if (!coords) return
+    setLocalCoords(coords)
     setHasPin(true)
     const map = mapRef.current
     if (!map) return
     if (markerRef.current) {
-      markerRef.current.setLatLng([parsed.lat, parsed.lon])
+      markerRef.current.setLatLng([coords.lat, coords.lon])
     } else {
-      const marker = L.marker([parsed.lat, parsed.lon], { draggable: !disabledRef.current })
+      const marker = L.marker([coords.lat, coords.lon], { draggable: !disabledRef.current })
       marker.on('dragend', () => {
         const pos = marker.getLatLng()
         void applyCoords({ lat: pos.lat, lon: pos.lng })
@@ -178,8 +153,8 @@ export function StorefrontLocationMapPicker({
       marker.addTo(map)
       markerRef.current = marker
     }
-    map.setView([parsed.lat, parsed.lon], PIN_ZOOM, { animate: false })
-  }, [address, applyCoords])
+    map.setView([coords.lat, coords.lon], PIN_ZOOM, { animate: false })
+  }, [coords, applyCoords])
 
   useEffect(() => {
     const map = mapRef.current
@@ -200,21 +175,6 @@ export function StorefrontLocationMapPicker({
     }
   }, [disabled])
 
-  async function handleGps() {
-    if (disabled || resolving) return
-    setMapError(null)
-    setResolving(true)
-    try {
-      const next = await getCurrentCoords()
-      await applyCoords(next)
-    } catch (e) {
-      const code = e instanceof Error ? e.message : 'unavailable'
-      setMapError(locationErrorMessage(labels, code))
-    } finally {
-      setResolving(false)
-    }
-  }
-
   return (
     <div className="sf-location-map-picker space-y-2">
       <p className="text-xs font-medium text-slate-500">
@@ -233,23 +193,11 @@ export function StorefrontLocationMapPicker({
               className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold text-white shadow-md"
               style={{ backgroundColor: accent }}
             >
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/60 border-t-white" aria-hidden />
               {labels.locating}
             </span>
           </div>
         ) : null}
-
-        <button
-          type="button"
-          onClick={() => void handleGps()}
-          disabled={disabled || resolving}
-          className="absolute end-3 top-3 z-[1000] flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-700 shadow-md ring-1 ring-slate-200/90 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-          style={{ color: accent }}
-          title={labels.useGps}
-          aria-label={labels.useGps}
-        >
-          <Crosshair className="h-5 w-5" aria-hidden />
-        </button>
       </div>
 
       {mapError ? (
@@ -258,9 +206,9 @@ export function StorefrontLocationMapPicker({
         </p>
       ) : null}
 
-      {coords && hasPin ? (
+      {localCoords && hasPin ? (
         <p className="text-[11px] font-medium tabular-nums text-slate-500" dir="ltr">
-          {coords.lat.toFixed(5)}, {coords.lon.toFixed(5)}
+          {localCoords.lat.toFixed(5)}, {localCoords.lon.toFixed(5)}
         </p>
       ) : null}
     </div>

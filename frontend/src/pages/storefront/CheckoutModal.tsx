@@ -1,9 +1,15 @@
-import { CheckCircle2, ExternalLink, Loader2, MessageCircle, User, MapPin, Phone } from 'lucide-react'
+import { CheckCircle2, ExternalLink, Loader2, MessageCircle, User, MapPin, Phone, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { submitPublicOrder, type StorefrontOrderResponse } from '../../api/storefrontApi'
 import { ApiError } from '../../lib/api'
-import { googleMapsUrl, parseCoordsFromAddress } from '../../lib/geolocation'
+import {
+  buildAddressFromCoords,
+  googleMapsUrl,
+  parseCoordsFromAddress,
+  reverseGeocodeAddress,
+  type GeoCoords,
+} from '../../lib/geolocation'
 import { useLocale } from '../../context/LocaleContext'
 import {
   cartActiveLines,
@@ -46,7 +52,10 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
-  const [address, setAddress] = useState('')
+  const [addressDetails, setAddressDetails] = useState('')
+  const [coords, setCoords] = useState<GeoCoords | null>(null)
+  const [coordsLabel, setCoordsLabel] = useState<string | null>(null)
+  const [mapPreviewOpen, setMapPreviewOpen] = useState(false)
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,13 +63,9 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
   const [placedOrder, setPlacedOrder] = useState<StorefrontOrderResponse | null>(null)
 
   const mapsLink = useMemo(() => {
-    const m = address.match(/https:\/\/www\.google\.com\/maps\?q=([-\d.]+),([-\d.]+)/i)
-    if (!m) return null
-    const lat = Number.parseFloat(m[1])
-    const lon = Number.parseFloat(m[2])
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
-    return googleMapsUrl({ lat, lon })
-  }, [address])
+    if (!coords) return null
+    return googleMapsUrl(coords)
+  }, [coords])
 
   const whatsappUrl = useMemo(() => {
     if (!placedOrder) return null
@@ -84,6 +89,7 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
       setSuccess(false)
       setPlacedOrder(null)
       setSubmitting(false)
+      setMapPreviewOpen(false)
     }
   }, [open])
 
@@ -94,13 +100,13 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
     setError(null)
     const trimmedName = name.trim()
     const trimmedPhone = phone.trim()
-    const trimmedAddress = address.trim()
+    const trimmedDetails = addressDetails.trim()
     const trimmedNotes = notes.trim()
-    if (!trimmedName || !trimmedPhone || !trimmedAddress) {
+    if (!trimmedName || !trimmedPhone) {
       setError(s.required)
       return
     }
-    if (!parseCoordsFromAddress(trimmedAddress)) {
+    if (!coords) {
       setError(s.mapPickHint)
       return
     }
@@ -119,11 +125,13 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
 
     setSubmitting(true)
     try {
+      const addressBlock = await buildAddressFromCoords(coords, lang, coordsLabel)
+      const finalAddress = trimmedDetails ? `${trimmedDetails}\n\n${addressBlock}` : addressBlock
       const order = await submitPublicOrder({
         shop: shopId,
         customer_name: trimmedName,
         customer_phone: trimmedPhone,
-        customer_address: trimmedAddress,
+        customer_address: finalAddress,
         customer_notes: trimmedNotes || undefined,
         delivery_zone_id: hasZones ? deliveryZoneId : undefined,
         items: orderLines.map((l) => ({ product: l.productId, quantity: l.quantity })),
@@ -131,7 +139,9 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
       clearCart()
       setName('')
       setPhone('')
-      setAddress('')
+      setAddressDetails('')
+      setCoords(null)
+      setCoordsLabel(null)
       setNotes('')
       setPlacedOrder(order)
       setSuccess(true)
@@ -148,10 +158,18 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
     onClose()
   }
 
-  const hasMapPin = parseCoordsFromAddress(address) != null
+  const hasMapPin = coords != null
 
   const inputClass =
     'w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pe-4 ps-11 text-base text-slate-800 outline-none transition focus:border-transparent focus:bg-white focus:ring-2'
+
+  async function handlePickCoords(next: GeoCoords) {
+    setError(null)
+    setCoords(next)
+    const label = await reverseGeocodeAddress(next, lang)
+    setCoordsLabel(label)
+    setMapPreviewOpen(true)
+  }
 
   return (
     <div
@@ -295,19 +313,14 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
                   <span className="font-medium text-slate-700">{s.customerAddress}</span>
 
                   <StorefrontLocationMapPicker
-                    address={address}
-                    onAddressChange={setAddress}
-                    lang={lang}
+                    coords={coords}
+                    onCoordsChange={(c) => void handlePickCoords(c)}
                     accent={accent}
                     disabled={submitting}
                     labels={{
                       mapPickHint: s.mapPickHint,
                       mapDragHint: s.mapDragHint,
-                      useGps: s.useMyLocation,
                       locating: s.locating,
-                      locationDenied: s.locationDenied,
-                      locationTimeout: s.locationTimeout,
-                      locationUnsupported: s.locationUnsupported,
                       locationUnavailable: s.locationUnavailable,
                     }}
                   />
@@ -318,8 +331,8 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
                       aria-hidden
                     />
                     <textarea
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
+                      value={addressDetails}
+                      onChange={(e) => setAddressDetails(e.target.value)}
                       rows={3}
                       placeholder={s.addressDetailsPlaceholder}
                       autoComplete="street-address"
@@ -390,6 +403,51 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
           )}
         </div>
       </div>
+
+      {mapPreviewOpen && coords ? (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+            onClick={() => setMapPreviewOpen(false)}
+            aria-label={s.close}
+          />
+          <div className="relative w-full max-w-[100%] overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-w-3xl sm:rounded-3xl">
+            <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+              <p className="text-sm font-extrabold text-slate-900">Google Maps</p>
+              <button
+                type="button"
+                onClick={() => setMapPreviewOpen(false)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-600 ring-1 ring-slate-200/80 transition hover:bg-slate-100"
+                aria-label={s.close}
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+            </div>
+            <div className="aspect-[4/3] w-full sm:aspect-[16/9]">
+              <iframe
+                title="Google Maps preview"
+                className="h-full w-full"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                src={`https://www.google.com/maps?q=${coords.lat},${coords.lon}&z=16&output=embed`}
+              />
+            </div>
+            {mapsLink ? (
+              <a
+                href={mapsLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 border-t border-slate-200 px-4 py-3 text-sm font-bold"
+                style={{ color: accent }}
+              >
+                <ExternalLink className="h-4 w-4" aria-hidden />
+                {s.openOnMap}
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
