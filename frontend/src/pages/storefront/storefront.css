@@ -676,28 +676,27 @@ html.sf-mode select {
   background: transparent;
 }
 
-/* Main shop categories — clean bento grid, large product imagery */
+/* Main shop categories — compact bento (like screenshot 2) */
 .sf-shop-categories {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .sf-category-bento-grid {
   list-style: none;
   padding: 0;
   margin: 0;
-  align-items: stretch;
 }
 
 .sf-category-bento-card {
   position: relative;
-  align-items: stretch;
+  display: block;
+  width: 100%;
   overflow: hidden;
-  border-radius: 1.2rem;
+  border-radius: 1.15rem;
   background: #ffffff;
   box-shadow:
-    0 1px 3px rgba(15, 23, 42, 0.04),
-    0 4px 14px rgba(15, 23, 42, 0.05);
-  outline: 1px solid rgba(226, 232, 240, 0.9);
+    0 2px 8px rgba(15, 23, 42, 0.05),
+    0 0 0 1px rgba(226, 232, 240, 0.85);
   -webkit-tap-highlight-color: transparent;
   transition:
     transform 0.22s ease,
@@ -707,87 +706,65 @@ html.sf-mode select {
 .sf-category-bento-card:hover {
   transform: translateY(-2px);
   box-shadow:
-    0 8px 24px rgba(15, 23, 42, 0.09),
-    0 0 0 1px rgba(226, 232, 240, 1);
+    0 10px 24px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(226, 232, 240, 0.95);
 }
 
 .sf-category-bento-card:active {
-  transform: scale(0.985);
+  transform: scale(0.99);
 }
 
-.sf-category-bento-card--featured {
-  min-height: 6.25rem;
+.sf-category-bento-card--wide {
+  min-height: 5.75rem;
 }
 
-.sf-category-bento-card--standard {
-  min-height: 6.75rem;
+.sf-category-bento-card--tile {
   aspect-ratio: 1;
 }
 
-.sf-category-bento-copy {
+.sf-category-bento-card--hero {
+  min-height: 6.25rem;
+}
+
+.sf-category-bento-content {
   position: relative;
   z-index: 2;
+  max-width: 60%;
 }
 
-.sf-category-bento-title {
-  font-size: 0.8125rem;
+.sf-category-bento-media {
+  position: absolute;
+  z-index: 1;
+  inset-inline-end: -0.25rem;
+  bottom: -0.15rem;
+  width: 54%;
+  height: 78%;
+  pointer-events: none;
 }
 
-.sf-category-bento-card--featured .sf-category-bento-title {
-  font-size: 0.9375rem;
-}
-
-.sf-category-bento-visual {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  width: 46%;
-  min-width: 4.5rem;
-  max-width: 9rem;
-  background: linear-gradient(145deg, #f8fafc 0%, #eef2f7 55%, #ffffff 100%);
-  border-inline-start: 1px solid rgba(241, 245, 249, 0.9);
-}
-
-.sf-category-bento-card--featured .sf-category-bento-visual {
-  width: 42%;
-  min-width: 5.5rem;
-  max-width: 10.5rem;
-}
-
-.sf-category-bento-card--standard .sf-category-bento-visual {
-  width: 50%;
-  min-width: 3.75rem;
+.sf-category-bento-card--tile .sf-category-bento-media {
+  width: 62%;
+  height: 70%;
+  inset-inline-end: -0.35rem;
+  bottom: -0.25rem;
 }
 
 .sf-category-bento-img {
   display: block;
-  width: auto;
-  height: auto;
-  max-width: 118%;
-  max-height: 112%;
-  margin-bottom: -0.15rem;
-  margin-inline-end: -0.2rem;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  object-position: bottom center;
-  filter: drop-shadow(0 8px 16px rgba(15, 23, 42, 0.16));
-  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  object-position: bottom end;
+  filter: drop-shadow(0 6px 14px rgba(15, 23, 42, 0.14));
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .sf-category-bento-card:hover .sf-category-bento-img {
-  transform: scale(1.06) translateY(-3px);
+  transform: scale(1.04) translateY(-2px);
 }
 
 .sf-category-bento-fallback {
-  display: flex;
-  height: 100%;
-  min-height: 4rem;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  font-size: 2.25rem;
-  font-weight: 900;
-  opacity: 0.35;
+  opacity: 0.55;
 }
 
 @media (min-width: 640px) {
@@ -795,35 +772,26 @@ html.sf-mode select {
     border-radius: 1.35rem;
   }
 
-  .sf-category-bento-card--featured {
-    min-height: 6.75rem;
+  .sf-category-bento-card--wide {
+    min-height: 6.5rem;
   }
 
-  .sf-category-bento-card--standard {
-    min-height: 7.25rem;
-  }
-
-  .sf-category-bento-title {
-    font-size: 0.875rem;
-  }
-
-  .sf-category-bento-card--featured .sf-category-bento-title {
-    font-size: 1rem;
+  .sf-category-bento-card--hero {
+    min-height: 7rem;
   }
 }
 
 @media (min-width: 1024px) {
-  .sf-category-bento-card--featured {
-    min-height: 7.5rem;
+  .sf-category-bento-card--wide {
+    min-height: 7.25rem;
   }
 
-  .sf-category-bento-card--standard {
+  .sf-category-bento-card--hero {
     min-height: 7.75rem;
   }
 
-  .sf-category-bento-img {
-    max-width: 125%;
-    max-height: 118%;
+  .sf-category-bento-content {
+    max-width: 58%;
   }
 }
 
@@ -1154,13 +1122,8 @@ html.sf-mode select {
   color: #f1f5f9;
 }
 
-.sf-root.sf-dark .sf-category-bento-copy p:last-child {
+.sf-root.sf-dark .sf-category-bento-content p:last-child {
   color: #94a3b8;
-}
-
-.sf-root.sf-dark .sf-category-bento-visual {
-  background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
-  border-inline-start-color: rgba(51, 65, 85, 0.8);
 }
 
 .sf-root.sf-dark .sf-mobile-cat-card,
