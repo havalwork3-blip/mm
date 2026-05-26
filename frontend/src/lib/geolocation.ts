@@ -63,6 +63,41 @@ export function googleMapsUrl(coords: GeoCoords): string {
   return `https://www.google.com/maps?q=${coords.lat},${coords.lon}`
 }
 
+/** Parse coordinates saved in order address (Google Maps link or pin line). */
+export function parseCoordsFromAddress(text: string): GeoCoords | null {
+  const trimmed = text.trim()
+  if (!trimmed) return null
+
+  const maps = trimmed.match(
+    /https:\/\/www\.google\.com\/maps\?q=([-\d.]+),([-\d.]+)/i,
+  )
+  if (maps) {
+    const lat = Number.parseFloat(maps[1])
+    const lon = Number.parseFloat(maps[2])
+    if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon }
+  }
+
+  const pin = trimmed.match(/📍\s*([-\d.]+),\s*([-\d.]+)/)
+  if (pin) {
+    const lat = Number.parseFloat(pin[1])
+    const lon = Number.parseFloat(pin[2])
+    if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon }
+  }
+
+  return null
+}
+
+export async function buildAddressFromCoords(
+  coords: GeoCoords,
+  lang: Lang,
+  label?: string | null,
+): Promise<string> {
+  const maps = googleMapsUrl(coords)
+  const resolved = label ?? (await reverseGeocodeAddress(coords, lang))
+  const base = resolved || `${coords.lat.toFixed(6)}, ${coords.lon.toFixed(6)}`
+  return `${base}${coordsFooter(coords, maps)}`
+}
+
 /** Text block appended so the shop can open the pin on a map. */
 export function coordsFooter(coords: GeoCoords, mapsUrl: string): string {
   return `\n📍 ${coords.lat.toFixed(6)}, ${coords.lon.toFixed(6)}\n${mapsUrl}`
@@ -71,7 +106,5 @@ export function coordsFooter(coords: GeoCoords, mapsUrl: string): string {
 export async function resolveAddressFromDevice(lang: Lang): Promise<string> {
   const coords = await getCurrentCoords()
   const label = await reverseGeocodeAddress(coords, lang)
-  const maps = googleMapsUrl(coords)
-  const base = label || `${coords.lat.toFixed(6)}, ${coords.lon.toFixed(6)}`
-  return `${base}${coordsFooter(coords, maps)}`
+  return buildAddressFromCoords(coords, lang, label)
 }

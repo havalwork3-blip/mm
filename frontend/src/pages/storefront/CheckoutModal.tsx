@@ -1,9 +1,9 @@
-import { CheckCircle2, Crosshair, ExternalLink, Loader2, MessageCircle, User, MapPin, Phone } from 'lucide-react'
+import { CheckCircle2, ExternalLink, Loader2, MessageCircle, User, MapPin, Phone } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { submitPublicOrder, type StorefrontOrderResponse } from '../../api/storefrontApi'
 import { ApiError } from '../../lib/api'
-import { googleMapsUrl, resolveAddressFromDevice } from '../../lib/geolocation'
+import { googleMapsUrl, parseCoordsFromAddress } from '../../lib/geolocation'
 import { useLocale } from '../../context/LocaleContext'
 import {
   cartActiveLines,
@@ -18,6 +18,7 @@ import { storefrontStrings } from './storefrontStrings'
 import { useStorefrontPriceLabel } from './useStorefrontPriceLabel'
 import { buildCustomerOrderWhatsAppUrl } from './storefrontOrderWhatsApp'
 import { StorefrontBackButton } from './StorefrontBackButton'
+import { StorefrontLocationMapPicker } from './StorefrontLocationMapPicker'
 import { accentAlpha } from './storefrontTheme'
 
 type Props = {
@@ -48,7 +49,6 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
   const [address, setAddress] = useState('')
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [locating, setLocating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [placedOrder, setPlacedOrder] = useState<StorefrontOrderResponse | null>(null)
@@ -84,7 +84,6 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
       setSuccess(false)
       setPlacedOrder(null)
       setSubmitting(false)
-      setLocating(false)
     }
   }, [open])
 
@@ -99,6 +98,10 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
     const trimmedNotes = notes.trim()
     if (!trimmedName || !trimmedPhone || !trimmedAddress) {
       setError(s.required)
+      return
+    }
+    if (!parseCoordsFromAddress(trimmedAddress)) {
+      setError(s.mapPickHint)
       return
     }
     if (hasZones && deliveryZoneId == null) {
@@ -141,37 +144,11 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
   }
 
   function handleClose() {
-    if (submitting || locating) return
+    if (submitting) return
     onClose()
   }
 
-  function locationErrorMessage(code: string): string {
-    if (code === 'denied') return s.locationDenied
-    if (code === 'timeout') return s.locationTimeout
-    if (code === 'unsupported') return s.locationUnsupported
-    return s.locationUnavailable
-  }
-
-  async function handleUseMyLocation() {
-    setError(null)
-    setLocating(true)
-    try {
-      const resolved = await resolveAddressFromDevice(lang)
-      const trimmed = address.trim()
-      if (!trimmed) {
-        setAddress(resolved)
-      } else if (!trimmed.includes(resolved.split('\n')[0])) {
-        setAddress(`${trimmed}\n\n${resolved}`)
-      } else {
-        setAddress(resolved)
-      }
-    } catch (e) {
-      const code = e instanceof Error ? e.message : 'unavailable'
-      setError(locationErrorMessage(code))
-    } finally {
-      setLocating(false)
-    }
-  }
+  const hasMapPin = parseCoordsFromAddress(address) != null
 
   const inputClass =
     'w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pe-4 ps-11 text-base text-slate-800 outline-none transition focus:border-transparent focus:bg-white focus:ring-2'
@@ -314,24 +291,27 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
                     disabled={submitting}
                   />
                 </label>
-                <div className="flex flex-col gap-1.5 text-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-medium text-slate-700">{s.customerAddress}</span>
-                    <button
-                      type="button"
-                      onClick={() => void handleUseMyLocation()}
-                      disabled={submitting || locating}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      style={{ borderColor: accentAlpha(accent, 0.35), color: accent }}
-                    >
-                      {locating ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                      ) : (
-                        <Crosshair className="h-3.5 w-3.5" aria-hidden />
-                      )}
-                      {locating ? s.locating : s.useMyLocation}
-                    </button>
-                  </div>
+                <div className="flex flex-col gap-2 text-sm">
+                  <span className="font-medium text-slate-700">{s.customerAddress}</span>
+
+                  <StorefrontLocationMapPicker
+                    address={address}
+                    onAddressChange={setAddress}
+                    lang={lang}
+                    accent={accent}
+                    disabled={submitting}
+                    labels={{
+                      mapPickHint: s.mapPickHint,
+                      mapDragHint: s.mapDragHint,
+                      useGps: s.useMyLocation,
+                      locating: s.locating,
+                      locationDenied: s.locationDenied,
+                      locationTimeout: s.locationTimeout,
+                      locationUnsupported: s.locationUnsupported,
+                      locationUnavailable: s.locationUnavailable,
+                    }}
+                  />
+
                   <div className="relative">
                     <MapPin
                       className="pointer-events-none absolute start-3 top-3.5 h-4 w-4 text-slate-400"
@@ -340,14 +320,15 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
                     <textarea
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      rows={4}
-                      placeholder={s.customerAddress}
+                      rows={3}
+                      placeholder={s.addressDetailsPlaceholder}
                       autoComplete="street-address"
                       className={`${inputClass} resize-none`}
                       style={{ ['--tw-ring-color' as string]: accentAlpha(accent, 0.35) }}
-                      disabled={submitting || locating}
+                      disabled={submitting}
                     />
                   </div>
+
                   {mapsLink ? (
                     <a
                       href={mapsLink}
@@ -385,9 +366,9 @@ export function CheckoutModal({ open, accent, onClose }: Props) {
                   type="submit"
                   disabled={
                     submitting ||
-                    locating ||
                     orderLines.length === 0 ||
-                    (hasZones && deliveryZoneId == null)
+                    (hasZones && deliveryZoneId == null) ||
+                    !hasMapPin
                   }
                   className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 font-bold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
                   style={{

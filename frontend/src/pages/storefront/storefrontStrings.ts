@@ -97,6 +97,9 @@ const STRINGS = {
     customerName: 'ناو',
     customerPhone: 'ژمارەی مۆبایل',
     customerAddress: 'ناونیشان',
+    mapPickHint: 'کلیک لەسەر نەخشە بکە بۆ دیاریکردنی شوێنی گەیاندن',
+    mapDragHint: 'مارکەرەکە ڕابکێشە یان کلیک بکە بۆ گۆڕینی شوێن',
+    addressDetailsPlaceholder: 'وردەکاری زیادە (ژمارەی خانوو، نهۆم…)',
     useMyLocation: 'شوێنەکەم دیاری بکە',
     locating: 'دیاریکردنی شوێن…',
     locationUnsupported: 'وێبگەڕەکەت پشتیوانی شوێن ناکات',
@@ -231,6 +234,9 @@ const STRINGS = {
     customerName: 'الاسم',
     customerPhone: 'رقم الهاتف',
     customerAddress: 'العنوان',
+    mapPickHint: 'انقر على الخريطة لتحديد موقع التوصيل',
+    mapDragHint: 'اسحب العلامة أو انقر لتغيير الموقع',
+    addressDetailsPlaceholder: 'تفاصيل إضافية (رقم المنزل، الطابق…)',
     useMyLocation: 'تحديد موقعي',
     locating: 'جارٍ تحديد الموقع…',
     locationUnsupported: 'المتصفح لا يدعم تحديد الموقع',
@@ -365,6 +371,9 @@ const STRINGS = {
     customerName: 'Name',
     customerPhone: 'Phone',
     customerAddress: 'Address',
+    mapPickHint: 'Tap the map to set your delivery location',
+    mapDragHint: 'Drag the marker or tap the map to change location',
+    addressDetailsPlaceholder: 'Extra details (building, floor…)',
     useMyLocation: 'Use my location',
     locating: 'Getting location…',
     locationUnsupported: 'Your browser does not support location',
@@ -501,6 +510,9 @@ export type StorefrontStrings = {
   customerName: string
   customerPhone: string
   customerAddress: string
+  mapPickHint: string
+  mapDragHint: string
+  addressDetailsPlaceholder: string
   useMyLocation: string
   locating: string
   locationUnsupported: string
