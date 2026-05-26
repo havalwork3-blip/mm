@@ -21,6 +21,11 @@ router.register(r"expenses", views.ExpenseViewSet, basename="expense")
 router.register(r"purchases", views.PurchaseViewSet, basename="purchase")
 router.register(r"sales", views.SaleViewSet, basename="sale")
 router.register(r"shareholders", views.ShareholderViewSet, basename="shareholder")
+router.register(
+    r"shareholder-payments",
+    views.ShareholderPaymentViewSet,
+    basename="shareholder-payment",
+)
 router.register(r"employee-debts", views.EmployeeDebtViewSet, basename="employee-debt")
 router.register(
     r"merchant/storefront-orders",

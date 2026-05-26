@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from shops.models import Shop
 
-from .models import Expense, Purchase, Sale, SaleLine, Shareholder
+from .models import Expense, Purchase, Sale, SaleLine, Shareholder, ShareholderPayment
 from .sale_line_flags import sale_line_flags
 from .serializers import latest_usd_to_iqd_for_shop
 
@@ -131,12 +131,29 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
     net_profit = sum_sale - sum_buy - total_expense_usd - cust_disc + company_disc
 
     shareholders = Shareholder.objects.filter(shop_id=shop_id).order_by("name")
+    sh_ids = [sh.id for sh in shareholders]
+    paid_by_sh: dict[int, Decimal] = {sid: Decimal("0") for sid in sh_ids}
+    if sh_ids:
+        for row in (
+            ShareholderPayment.objects.filter(
+                shop_id=shop_id,
+                shareholder_id__in=sh_ids,
+                period_from=d_from,
+                period_to=d_to,
+            )
+            .values("shareholder_id")
+            .annotate(total=Sum("amount_usd", output_field=dec))
+        ):
+            paid_by_sh[row["shareholder_id"]] = row["total"] or Decimal("0")
+
     profit_distribution = []
     for sh in shareholders:
         pct = (sh.share_percentage / Decimal("100")).quantize(Decimal("0.0001"))
         share_amt = (net_profit * pct).quantize(Decimal("0.0001"))
         cap = (sh.capital_contribution_usd or Decimal("0")).quantize(Decimal("0.0001"))
         after = (cap + share_amt).quantize(Decimal("0.0001"))
+        paid = paid_by_sh.get(sh.id, Decimal("0")).quantize(Decimal("0.0001"))
+        outstanding = (share_amt - paid).quantize(Decimal("0.0001"))
         profit_distribution.append(
             {
                 "shareholder_id": sh.id,
@@ -144,6 +161,8 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
                 "share_percentage": format(sh.share_percentage, "f"),
                 "capital_contribution_usd": format(cap, "f"),
                 "profit_share_usd": format(share_amt, "f"),
+                "total_paid_usd": format(paid, "f"),
+                "outstanding_usd": format(outstanding, "f"),
                 "position_after_period_usd": format(after, "f"),
             },
         )

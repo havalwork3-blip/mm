@@ -1,3 +1,4 @@
+import { History, Wallet } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageAuthLoading } from '../components/PageAuthLoading'
@@ -12,6 +13,7 @@ import type {
   CashierLedgerResponse,
   CashierSummaryResponse,
   ProfitReportResponse,
+  ShareholderPaymentRow,
 } from '../types/api'
 
 function parseUsdAmount(s: string): number {
@@ -34,6 +36,17 @@ function netProfitCellClass(usd: string) {
   if (n < 0) return 'text-rose-700 dark:text-rose-400'
   if (n > 0) return 'text-emerald-700 dark:text-emerald-400'
   return 'text-slate-800 dark:text-slate-200'
+}
+
+function shareholderOutstandingUsd(
+  row: ProfitReportResponse['profit_distribution'][number],
+): string {
+  if (row.outstanding_usd != null && String(row.outstanding_usd).trim() !== '') {
+    return row.outstanding_usd
+  }
+  const share = parseReportNumber(row.profit_share_usd)
+  const paid = parseReportNumber(row.total_paid_usd ?? '0')
+  return String(share - paid)
 }
 
 function formatIqdApprox(usdStr: string, usdToIqd: string): string | null {
@@ -328,6 +341,19 @@ export function CashierPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [contentOpen, setContentOpen] = useState(false)
+  const [payOpen, setPayOpen] = useState(false)
+  const [payShareholderId, setPayShareholderId] = useState<number | null>(null)
+  const [payShareholderName, setPayShareholderName] = useState('')
+  const [payAmountUsd, setPayAmountUsd] = useState('')
+  const [payNote, setPayNote] = useState('')
+  const [paySaving, setPaySaving] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
+  const [paySuccess, setPaySuccess] = useState<string | null>(null)
+  const [shPayHistoryOpen, setShPayHistoryOpen] = useState(false)
+  const [shPayHistoryRows, setShPayHistoryRows] = useState<ShareholderPaymentRow[]>([])
+  const [shPayHistoryLoading, setShPayHistoryLoading] = useState(false)
+  const [shPayHistoryFrom, setShPayHistoryFrom] = useState('')
+  const [shPayHistoryTo, setShPayHistoryTo] = useState('')
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -341,6 +367,9 @@ export function CashierPage() {
 
   const canUseCashier = Boolean(me && hasPerm(me, 'view_cashier'))
   const canViewProfitTables = Boolean(me && hasPerm(me, 'view_profitreport'))
+  const canPayShareholders = Boolean(
+    me && (hasPerm(me, 'change_shareholder') || hasPerm(me, 'view_profitreport')),
+  )
 
   const shareholderProfitUsdToIqd = useMemo(() => {
     const fromReport = profitReport?.usd_to_iqd && String(profitReport.usd_to_iqd).trim()
@@ -391,6 +420,85 @@ export function CashierPage() {
   }, [canUseCashier, refresh])
 
   const canEditOpening = Boolean(me && hasPerm(me, 'add_openingcash', 'change_openingcash', 'add_shopdayopeningcash', 'change_shopdayopeningcash'))
+
+  function openShareholderPay(row: ProfitReportResponse['profit_distribution'][number]) {
+    const outstanding = shareholderOutstandingUsd(row)
+    setPayShareholderId(row.shareholder_id)
+    setPayShareholderName(row.name)
+    setPayAmountUsd(parseReportNumber(outstanding) > 0 ? outstanding : '')
+    setPayNote('')
+    setPayError(null)
+    setPayOpen(true)
+  }
+
+  function closeShareholderPay() {
+    setPayOpen(false)
+    setPayShareholderId(null)
+    setPayShareholderName('')
+    setPayAmountUsd('')
+    setPayNote('')
+    setPayError(null)
+  }
+
+  async function submitShareholderPay(e: React.FormEvent) {
+    e.preventDefault()
+    if (payShareholderId == null) return
+    const amt = parseUsdAmount(payAmountUsd)
+    if (!(amt > 0)) {
+      setPayError(t('debts.enterValidAmount'))
+      return
+    }
+    setPaySaving(true)
+    setPayError(null)
+    try {
+      await apiJson('/api/shareholder-payments/', {
+        method: 'POST',
+        body: JSON.stringify({
+          shareholder: payShareholderId,
+          amount_usd: amt.toFixed(4),
+          paid_on: new Date().toISOString().slice(0, 10),
+          period_from: dFrom,
+          period_to: dTo,
+          note: payNote.trim(),
+        }),
+      })
+      closeShareholderPay()
+      setPaySuccess(t('cashier.shareholderPaySuccess'))
+      await refresh()
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : t('common.error'))
+    } finally {
+      setPaySaving(false)
+    }
+  }
+
+  const loadShareholderPaymentHistory = useCallback(
+    async (from: string, to: string) => {
+      setShPayHistoryLoading(true)
+      try {
+        const q = new URLSearchParams()
+        if (from) q.set('from', from)
+        if (to) q.set('to', to)
+        const suffix = q.toString() ? `?${q.toString()}` : ''
+        const data = await apiJson<ShareholderPaymentRow[] | { results: ShareholderPaymentRow[] }>(
+          `/api/shareholder-payments/${suffix}`,
+        )
+        setShPayHistoryRows(Array.isArray(data) ? data : data.results)
+      } catch {
+        setShPayHistoryRows([])
+      } finally {
+        setShPayHistoryLoading(false)
+      }
+    },
+    [],
+  )
+
+  async function openShareholderPaymentHistory() {
+    setShPayHistoryFrom('')
+    setShPayHistoryTo('')
+    setShPayHistoryOpen(true)
+    await loadShareholderPaymentHistory('', '')
+  }
 
   function ledgerKindLabel(kind: CashierLedgerEntry['kind']) {
     const key = `cashier.ledgerKind.${kind}` as const
@@ -761,16 +869,43 @@ export function CashierPage() {
 
           {profitReport && !profitReport.global_multi_shop && (
             <section className="rounded-2xl border border-violet-200 bg-violet-50/40 p-5 shadow-sm dark:border-violet-900/50 dark:bg-violet-950/25 sm:p-6">
-              <h3 className="text-start text-sm font-semibold uppercase tracking-wide text-violet-900 dark:text-violet-200">
-                {t('profit.dist')}
-              </h3>
-              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{t('profit.distHint')}</p>
-              <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-500">{t('profit.iqdRateFootnote')}</p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-start text-sm font-semibold uppercase tracking-wide text-violet-900 dark:text-violet-200">
+                    {t('profit.dist')}
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{t('profit.distHint')}</p>
+                  <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-500">
+                    {t('profit.iqdRateFootnote')}
+                  </p>
+                </div>
+                {canPayShareholders ? (
+                  <button
+                    type="button"
+                    onClick={() => void openShareholderPaymentHistory()}
+                    className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-sm font-medium text-violet-800 shadow-sm hover:bg-violet-50 dark:border-violet-700 dark:bg-slate-900 dark:text-violet-200 dark:hover:bg-violet-950/50"
+                  >
+                    <History className="h-4 w-4" aria-hidden />
+                    {t('cashier.shareholderPaymentsHistory')}
+                  </button>
+                ) : null}
+              </div>
+              {paySuccess ? (
+                <p
+                  className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-100"
+                  role="status"
+                >
+                  {paySuccess}
+                </p>
+              ) : null}
               <div className="mt-4 rounded-xl border border-violet-100 bg-white dark:border-violet-900/30 dark:bg-slate-900">
                 <ul className="divide-y divide-slate-100 dark:divide-slate-700/90">
                   {profitReport.profit_distribution.map((row, idx) => {
-                    const iqdStr = iqdIntegerStringFromUsd(row.profit_share_usd, shareholderProfitUsdToIqd)
-                    const tone = netProfitCellClass(row.profit_share_usd)
+                    const outstandingUsd = shareholderOutstandingUsd(row)
+                    const iqdStr = iqdIntegerStringFromUsd(outstandingUsd, shareholderProfitUsdToIqd)
+                    const tone = netProfitCellClass(outstandingUsd)
+                    const paidUsd = row.total_paid_usd ?? '0'
+                    const paidNum = parseReportNumber(paidUsd)
                     return (
                       <li
                         key={row.shareholder_id}
@@ -786,22 +921,48 @@ export function CashierPage() {
                               {row.share_percentage}%
                             </span>
                           </p>
-                        </div>
-                        <div className="shrink-0 text-end" dir="ltr">
-                          <p className={`font-mono text-lg font-semibold tabular-nums ${tone}`}>
-                            {formatMoneyCompact(row.profit_share_usd)}{' '}
-                            <span className="text-sm font-normal text-slate-500 dark:text-slate-400">USD</span>
-                          </p>
-                          {iqdStr != null ? (
-                            <p className="mt-1 font-mono text-sm tabular-nums text-slate-600 dark:text-slate-300">
-                              ≈ {iqdStr}{' '}
-                              <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
-                                {t('customerDebts.amountIqdShort')}
+                          {paidNum > 0.0001 ? (
+                            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                              {t('cashier.shareholderPeriodPaid')}:{' '}
+                              <span className="font-mono tabular-nums" dir="ltr">
+                                {formatMoneyCompact(paidUsd)} USD
                               </span>
                             </p>
-                          ) : (
-                            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{t('profit.iqdNoRate')}</p>
-                          )}
+                          ) : null}
+                        </div>
+                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                          <div className="text-end" dir="ltr">
+                            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                              {t('cashier.shareholderOutstanding')}
+                            </p>
+                            <p className={`font-mono text-lg font-semibold tabular-nums ${tone}`}>
+                              {formatMoneyCompact(outstandingUsd)}{' '}
+                              <span className="text-sm font-normal text-slate-500 dark:text-slate-400">USD</span>
+                            </p>
+                            {iqdStr != null ? (
+                              <p className="mt-1 font-mono text-sm tabular-nums text-slate-600 dark:text-slate-300">
+                                ≈ {iqdStr}{' '}
+                                <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+                                  {t('customerDebts.amountIqdShort')}
+                                </span>
+                              </p>
+                            ) : (
+                              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                                {t('profit.iqdNoRate')}
+                              </p>
+                            )}
+                          </div>
+                          {canPayShareholders ? (
+                            <button
+                              type="button"
+                              onClick={() => openShareholderPay(row)}
+                              className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500"
+                              title={t('cashier.shareholderPayBtn')}
+                            >
+                              <Wallet className="h-4 w-4" aria-hidden />
+                              <span className="hidden sm:inline">{t('cashier.shareholderPayBtn')}</span>
+                            </button>
+                          ) : null}
                         </div>
                       </li>
                     )
@@ -898,6 +1059,183 @@ export function CashierPage() {
           )}
         </div>
       )}
+
+      {payOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="presentation"
+          onClick={() => !paySaving && closeShareholderPay()}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-600 dark:bg-slate-900"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shareholder-pay-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              id="shareholder-pay-title"
+              className="text-start text-lg font-semibold text-slate-900 dark:text-slate-100"
+            >
+              {t('cashier.shareholderPayTitle')}
+            </h2>
+            <p className="mt-1 text-start text-sm text-slate-600 dark:text-slate-400">{payShareholderName}</p>
+            <form onSubmit={(e) => void submitShareholderPay(e)} className="mt-4 space-y-3">
+              <label className="block text-start">
+                <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+                  {t('cashier.shareholderPayAmount')}
+                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={payAmountUsd}
+                  onChange={(e) => setPayAmountUsd(e.target.value)}
+                  className="min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+                  dir="ltr"
+                  required
+                  autoFocus
+                />
+              </label>
+              <label className="block text-start">
+                <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+                  {t('cashier.shareholderPayNote')}
+                </span>
+                <input
+                  type="text"
+                  value={payNote}
+                  onChange={(e) => setPayNote(e.target.value)}
+                  className="min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </label>
+              {payError ? <p className="text-start text-sm text-red-600 dark:text-red-400">{payError}</p> : null}
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  disabled={paySaving}
+                  onClick={closeShareholderPay}
+                  className="min-h-9 rounded-lg border border-slate-200 px-4 py-2 text-sm dark:border-slate-600 dark:text-slate-200"
+                >
+                  {t('crud.cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={paySaving}
+                  className="min-h-9 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+                >
+                  {paySaving ? t('pos.saving') : t('cashier.shareholderPayConfirm')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {shPayHistoryOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="presentation"
+          onClick={() => setShPayHistoryOpen(false)}
+        >
+          <div
+            className="flex max-h-[min(90vh,720px)] w-full max-w-3xl flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-600 dark:bg-slate-900"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shareholder-payments-history-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2
+                id="shareholder-payments-history-title"
+                className="text-start text-base font-semibold text-slate-900 dark:text-slate-100"
+              >
+                {t('cashier.shareholderPaymentsHistoryTitle')}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShPayHistoryOpen(false)}
+                className="min-h-9 rounded-lg border border-slate-200 px-3 py-1.5 text-sm dark:border-slate-600 dark:text-slate-200"
+              >
+                {t('crud.cancel')}
+              </button>
+            </div>
+            <div className="mb-3 flex flex-wrap items-end gap-2">
+              <label>
+                <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+                  {t('dash.from')}
+                </span>
+                <input
+                  type="date"
+                  value={shPayHistoryFrom}
+                  onChange={(e) => setShPayHistoryFrom(e.target.value)}
+                  className="min-h-9 rounded-lg border border-slate-200 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </label>
+              <label>
+                <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+                  {t('dash.to')}
+                </span>
+                <input
+                  type="date"
+                  value={shPayHistoryTo}
+                  onChange={(e) => setShPayHistoryTo(e.target.value)}
+                  className="min-h-9 rounded-lg border border-slate-200 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </label>
+              <button
+                type="button"
+                disabled={shPayHistoryLoading}
+                onClick={() => void loadShareholderPaymentHistory(shPayHistoryFrom, shPayHistoryTo)}
+                className="min-h-9 rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+              >
+                {t('dash.apply')}
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-auto">
+              {shPayHistoryLoading ? (
+                <p className="py-6 text-sm text-slate-500">{t('common.loading')}</p>
+              ) : shPayHistoryRows.length === 0 ? (
+                <p className="py-6 text-sm text-slate-500">{t('crud.noRows')}</p>
+              ) : (
+                <table className="w-full min-w-[520px] text-start text-sm">
+                  <thead className="border-b border-slate-200 text-xs font-medium uppercase text-slate-500 dark:border-slate-700">
+                    <tr>
+                      <th className="px-2 py-2">{t('cashier.ledgerColDate')}</th>
+                      <th className="px-2 py-2">{t('profit.shName')}</th>
+                      <th className="px-2 py-2 text-end">{t('cashier.ledgerColAmount')}</th>
+                      <th className="px-2 py-2">{t('dash.from')}</th>
+                      <th className="px-2 py-2">{t('dash.to')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {shPayHistoryRows.map((r) => (
+                      <tr
+                        key={r.id}
+                        className="border-b border-slate-100 dark:border-slate-700/80"
+                      >
+                        <td className="px-2 py-2 tabular-nums" dir="ltr">
+                          {r.paid_on}
+                        </td>
+                        <td className="px-2 py-2 font-medium text-slate-900 dark:text-slate-100">
+                          {r.shareholder_name}
+                        </td>
+                        <td className="px-2 py-2 text-end font-mono tabular-nums" dir="ltr">
+                          {formatMoneyCompact(r.amount_usd)} USD
+                        </td>
+                        <td className="px-2 py-2 tabular-nums text-slate-600 dark:text-slate-400" dir="ltr">
+                          {r.period_from}
+                        </td>
+                        <td className="px-2 py-2 tabular-nums text-slate-600 dark:text-slate-400" dir="ltr">
+                          {r.period_to}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

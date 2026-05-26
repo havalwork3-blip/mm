@@ -53,6 +53,7 @@ from .models import (
     SaleLine,
     SaleReturnLine,
     Shareholder,
+    ShareholderPayment,
     StorefrontOrder,
     StorefrontOrderStatus,
     StorefrontOrderItem,
@@ -82,6 +83,7 @@ from .serializers import (
     PurchaseReturnCreateSerializer,
     SaleSerializer,
     SaleReturnCreateSerializer,
+    ShareholderPaymentSerializer,
     ShareholderSerializer,
     StorefrontOrderSerializer,
     latest_usd_to_iqd_for_shop,
@@ -801,6 +803,38 @@ class ShareholderViewSet(OwnerScopedViewSet):
         "PATCH": ("change_shareholder",),
         "DELETE": ("delete_shareholder",),
     }
+
+
+class ShareholderPaymentViewSet(OwnerScopedViewSet):
+    queryset = ShareholderPayment.objects.select_related("shareholder", "shop").all()
+    serializer_class = ShareholderPaymentSerializer
+    permission_classes = [IsAuthenticated, IsShopOwnerOrPermission]
+    permission_codenames_by_method = {
+        "GET": ("view_shareholder", "view_cashier", "view_profitreport"),
+        "POST": ("change_shareholder", "view_profitreport"),
+    }
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx["shop_id"] = get_shop_id_for_request(self.request)
+        return ctx
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        sh_id = self.request.query_params.get("shareholder")
+        if sh_id:
+            qs = qs.filter(shareholder_id=sh_id)
+        d_from = self.request.query_params.get("from")
+        d_to = self.request.query_params.get("to")
+        if d_from:
+            qs = qs.filter(paid_on__gte=d_from)
+        if d_to:
+            qs = qs.filter(paid_on__lte=d_to)
+        return qs
+
+    def perform_create(self, serializer):
+        shop_id = require_shop_id(self.request)
+        serializer.save(shop_id=shop_id)
 
 
 def _storefront_units_sold_by_product(shop_id: int) -> dict[int, int]:

@@ -91,6 +91,19 @@ export type ShareholderRow = {
   share_percentage: string
 }
 
+export type ShareholderPaymentRow = {
+  id: number
+  shop: number
+  shareholder: number
+  shareholder_name: string
+  amount_usd: string
+  paid_on: string
+  period_from: string
+  period_to: string
+  note: string
+  created_at: string
+}
+
 export type CashierSummaryResponse = {
   opening_cash_usd: string
   sales_cash_in_usd: string
@@ -484,6 +497,10 @@ export type ProfitReportResponse = {
     /** Partner capital recorded on the shareholder (USD). */
     capital_contribution_usd: string
     profit_share_usd: string
+    /** Sum of partner payouts recorded for this profit period (USD). */
+    total_paid_usd?: string
+    /** profit_share_usd − total_paid_usd for the selected period (USD). */
+    outstanding_usd?: string
     /** capital + profit_share for this period (informational). */
     position_after_period_usd: string
   }[]

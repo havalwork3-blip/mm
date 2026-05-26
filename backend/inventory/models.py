@@ -426,6 +426,36 @@ class Shareholder(ShopScopedModel):
         return f"{self.name} ({self.share_percentage}%)"
 
 
+class ShareholderPayment(ShopScopedModel):
+    """Cash paid to a partner; reduces outstanding profit share for a period."""
+
+    shareholder = models.ForeignKey(
+        Shareholder,
+        on_delete=models.CASCADE,
+        related_name="profit_payments",
+    )
+    amount_usd = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        validators=[MinValueValidator(Decimal("0.0001"))],
+    )
+    paid_on = models.DateField(db_index=True)
+    period_from = models.DateField(
+        help_text="Profit report period start when this payment was recorded.",
+    )
+    period_to = models.DateField(
+        help_text="Profit report period end when this payment was recorded.",
+    )
+    note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-paid_on", "-id"]
+
+    def __str__(self) -> str:
+        return f"{self.shareholder.name}: {self.amount_usd} USD"
+
+
 class EmployeeDebtType(models.TextChoices):
     TAKEN = "taken", "Taken"
     RETURNED = "returned", "Returned"

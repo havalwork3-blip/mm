@@ -32,6 +32,7 @@ from .models import (
     SaleReturn,
     SaleReturnLine,
     Shareholder,
+    ShareholderPayment,
     ShopDayOpeningCash,
     StorefrontOrder,
     StorefrontOrderItem,
@@ -1787,6 +1788,44 @@ class ShareholderSerializer(serializers.ModelSerializer):
         model = Shareholder
         fields = ["id", "shop", "name", "share_percentage", "capital_contribution_usd"]
         read_only_fields = ["id", "shop"]
+
+
+class ShareholderPaymentSerializer(serializers.ModelSerializer):
+    shareholder_name = serializers.CharField(source="shareholder.name", read_only=True)
+
+    class Meta:
+        model = ShareholderPayment
+        fields = [
+            "id",
+            "shop",
+            "shareholder",
+            "shareholder_name",
+            "amount_usd",
+            "paid_on",
+            "period_from",
+            "period_to",
+            "note",
+            "created_at",
+        ]
+        read_only_fields = ["id", "shop", "shareholder_name", "created_at"]
+
+    def validate_shareholder(self, value):
+        shop_id = self.context.get("shop_id")
+        if shop_id is not None and value.shop_id != shop_id:
+            raise serializers.ValidationError("Shareholder does not belong to this shop.")
+        return value
+
+    def validate(self, attrs):
+        pf = attrs.get("period_from") or getattr(self.instance, "period_from", None)
+        pt = attrs.get("period_to") or getattr(self.instance, "period_to", None)
+        if pf and pt and pf > pt:
+            raise serializers.ValidationError({"period_to": "End date must be on or after start date."})
+        paid = attrs.get("paid_on") or getattr(self.instance, "paid_on", None)
+        if paid and pf and paid < pf:
+            raise serializers.ValidationError(
+                {"paid_on": "Payment date cannot be before the profit period start."},
+            )
+        return attrs
 
 
 class EmployeeDebtSerializer(serializers.ModelSerializer):
