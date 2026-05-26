@@ -8,6 +8,7 @@ from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from django.db.models import DecimalField, Sum
+from django.db.utils import OperationalError, ProgrammingError
 from django.utils import timezone
 
 from shops.models import Shop
@@ -32,6 +33,35 @@ def total_inventory_loss_usd_for_expenses(expense_qs) -> Decimal:
         (e.amount_usd() for e in expense_qs if expense_is_inventory_loss(e)),
         Decimal("0"),
     )
+
+
+def _shareholder_paid_usd_by_period(
+    shop_id: int,
+    sh_ids: list[int],
+    d_from,
+    d_to,
+    *,
+    dec: DecimalField,
+) -> dict[int, Decimal]:
+    """Sum partner payouts for a profit period; empty if table not migrated yet."""
+    paid_by_sh: dict[int, Decimal] = {sid: Decimal("0") for sid in sh_ids}
+    if not sh_ids:
+        return paid_by_sh
+    try:
+        for row in (
+            ShareholderPayment.objects.filter(
+                shop_id=shop_id,
+                shareholder_id__in=sh_ids,
+                period_from=d_from,
+                period_to=d_to,
+            )
+            .values("shareholder_id")
+            .annotate(total=Sum("amount_usd", output_field=dec))
+        ):
+            paid_by_sh[row["shareholder_id"]] = row["total"] or Decimal("0")
+    except (ProgrammingError, OperationalError):
+        return paid_by_sh
+    return paid_by_sh
 
 
 def _range_bounds(d_from, d_to):
@@ -132,19 +162,7 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
 
     shareholders = Shareholder.objects.filter(shop_id=shop_id).order_by("name")
     sh_ids = [sh.id for sh in shareholders]
-    paid_by_sh: dict[int, Decimal] = {sid: Decimal("0") for sid in sh_ids}
-    if sh_ids:
-        for row in (
-            ShareholderPayment.objects.filter(
-                shop_id=shop_id,
-                shareholder_id__in=sh_ids,
-                period_from=d_from,
-                period_to=d_to,
-            )
-            .values("shareholder_id")
-            .annotate(total=Sum("amount_usd", output_field=dec))
-        ):
-            paid_by_sh[row["shareholder_id"]] = row["total"] or Decimal("0")
+    paid_by_sh = _shareholder_paid_usd_by_period(shop_id, sh_ids, d_from, d_to, dec=dec)
 
     profit_distribution = []
     for sh in shareholders:
