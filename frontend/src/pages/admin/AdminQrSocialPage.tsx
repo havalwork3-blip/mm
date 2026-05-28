@@ -796,10 +796,9 @@ export function AdminQrSocialPage() {
                       </p>
                     ) : null}
                     {cfg.manager_telegram_notify_enabled &&
-                    cfg.manager_telegram_schedule?.scheduler_enabled &&
-                    !cfg.manager_telegram_schedule?.scheduler_running ? (
+                    cfg.manager_telegram_schedule?.scheduler_enabled ? (
                       <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">
-                        {t('qrAdmin.managerTelegramSchedulerOff')}
+                        {t('qrAdmin.managerTelegramSchedulerOnWarn')}
                       </p>
                     ) : null}
                   </div>

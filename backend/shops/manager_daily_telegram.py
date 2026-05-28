@@ -184,9 +184,11 @@ def send_manager_daily_digest(
     *,
     report_date: date | None = None,
     force: bool = False,
+    record_last_sent: bool = True,
 ) -> dict:
     """
     Send one combined Telegram message (or 2+ only if text exceeds limit).
+    Scheduled runs claim last_sent_date before calling (record_last_sent=False).
     Returns {sent, shops, shop_ok, failed, messages}.
     """
     from shops.models import Shop
@@ -242,8 +244,19 @@ def send_manager_daily_digest(
             result["shop_ok"] += 1
         except Exception as exc:
             logger.exception("Manager daily digest failed for shop %s", shop.pk)
+            err_short = str(exc)[:120]
             result["failed"].append(
-                {"id": shop.pk, "name": shop.name, "error": str(exc)[:200]},
+                {"id": shop.pk, "name": shop.name, "error": err_short},
+            )
+            blocks.append(
+                "\n".join(
+                    [
+                        SECTION_RULE,
+                        f"<b>[{idx}/{shop_total}] 🏪 {_esc(shop.name)}</b>",
+                        f"<i>⚠️ نەتوانرا ئامار بار بکرێت</i>",
+                        f"<code>{_esc(err_short)}</code>",
+                    ],
+                ),
             )
 
     if not blocks:
@@ -260,7 +273,7 @@ def send_manager_daily_digest(
     result["sent"] = sent
     result["report_date"] = d.isoformat()
     # Manual "send now" (force) must not block the automatic daily send.
-    if sent > 0 and not force:
+    if sent > 0 and record_last_sent and not force:
         settings.manager_telegram_last_sent_date = d
         settings.save(update_fields=["manager_telegram_last_sent_date", "updated_at"])
     elif sent == 0:
@@ -310,12 +323,12 @@ def schedule_ready(settings) -> bool:
 def should_run_scheduled_send(settings) -> bool:
     if not schedule_ready(settings):
         return False
-    tz = _business_tz()
-    now = timezone.now().astimezone(tz)
-    today = now.date()
+    today = business_today()
     if settings.manager_telegram_last_sent_date == today:
         return False
-    # Tick runs every minute; send once local time is at or past the configured clock.
+    tz = _business_tz()
+    now = timezone.now().astimezone(tz)
+    # Cron/scheduler may tick every 5 min; send once local time is at or past the configured clock.
     return now.time() >= configured_send_time(settings)
 
 

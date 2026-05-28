@@ -436,13 +436,15 @@ const en: Record<string, string> = {
   'qrAdmin.managerTelegramReportDateHint':
     'Used for “Send report now”. Scheduled daily sends always use today (Baghdad).',
   'qrAdmin.managerTelegramSchedulerHint':
-    'After you save settings, the server sends automatically once per day at the chosen time (Baghdad). Manual send does not block the daily schedule.',
+    'After you save, the server sends once per day at the chosen time (Baghdad): one Telegram message with every shop in separate sections. Manual send does not block the daily schedule.',
   'qrAdmin.managerTelegramNextRun': 'Next automatic send',
   'qrAdmin.managerTelegramDueNow':
     'Send time has passed — the report will go out within about 5 minutes (server cron).',
   'qrAdmin.managerTelegramMissingCredentials': 'Enter bot token and chat ID, then save.',
   'qrAdmin.managerTelegramSchedulerOff':
-    'In-process scheduler is not running on this server — rely on cron after deploy, or restart Gunicorn with MANAGER_TELEGRAM_SCHEDULER=1.',
+    'Production should use server cron only (MANAGER_TELEGRAM_SCHEDULER=0). Do not enable the in-process scheduler together with cron — that caused duplicate messages.',
+  'qrAdmin.managerTelegramSchedulerOnWarn':
+    'MANAGER_TELEGRAM_SCHEDULER=1 is on together with cron — disable one of them to avoid hundreds of duplicate messages per day.',
   'qrAdmin.managerTelegramSentToday': 'Scheduled report already sent today',
   'qrAdmin.managerTelegramLastSent': 'Last sent',
   'qrAdmin.managerTelegramClearLock': 'Reset daily send lock',
@@ -1505,13 +1507,15 @@ const ar: Record<string, string> = {
   'qrAdmin.managerTelegramReportDateHint':
     'للإرسال اليدوي «إرسال تقرير اليوم الآن». الإرسال اليومي التلقائي يستخدم تاريخ اليوم (بغداد).',
   'qrAdmin.managerTelegramSchedulerHint':
-    'بعد الحفظ، يرسل السيرفر تلقائياً مرة يومياً في الوقت المحدد (بغداد). الإرسال اليدوي لا يمنع الإرسال اليومي.',
+    'بعد الحفظ، يرسل السيرفر مرة يومياً في الوقت المحدد (بغداد): رسالة واحدة فيها كل المتاجر بأقسام منفصلة. الإرسال اليدوي لا يمنع الإرسال اليومي.',
   'qrAdmin.managerTelegramNextRun': 'التشغيل التلقائي التالي',
   'qrAdmin.managerTelegramDueNow':
     'حان وقت الإرسال — سيُرسل التقرير خلال نحو 5 دقائق (cron على السيرفر).',
   'qrAdmin.managerTelegramMissingCredentials': 'أدخل رمز البوت و Chat ID ثم احفظ.',
   'qrAdmin.managerTelegramSchedulerOff':
-    'المجدول الداخلي غير شغّال — اعتمد على cron بعد النشر، أو أعد تشغيل Gunicorn مع MANAGER_TELEGRAM_SCHEDULER=1.',
+    'في الإنتاج استخدم cron فقط (MANAGER_TELEGRAM_SCHEDULER=0). لا تفعّل المجدول الداخلي مع cron — يسبب رسائل مكررة.',
+  'qrAdmin.managerTelegramSchedulerOnWarn':
+    'MANAGER_TELEGRAM_SCHEDULER=1 مفعّل مع cron — عطّل أحدهما لتجنب مئات الرسائل المكررة يومياً.',
   'qrAdmin.managerTelegramSentToday': 'تم إرسال تقرير اليوم المجدول',
   'qrAdmin.managerTelegramLastSent': 'آخر إرسال',
   'qrAdmin.managerTelegramClearLock': 'إعادة ضبط قفل الإرسال اليومي',
@@ -2743,13 +2747,15 @@ const ku: Record<string, string> = {
   'qrAdmin.managerTelegramReportDateHint':
     'بۆ «ناردنی ڕاپۆرت ئێستا». ناردنی ڕۆژانەی خۆکار هەر ڕۆژ بەرواری ئەمڕۆ (بەغدا) بەکاردەهێنێت.',
   'qrAdmin.managerTelegramSchedulerHint':
-    'دوای پاشەکەوتکردن، سێرڤەر ڕۆژانە یەکجار لە کاتی دیاریکراو (بەغدا) نامە دەنێرێت. ناردنی دەستی ڕێگری لە ناردنی خۆکار ناکات.',
+    'دوای پاشەکەوتکردن، سێرڤەر ڕۆژانە یەکجار لە کاتی دیاریکراو (بەغدا) یەک نامە دەنێرێت — هەموو فرۆشگاکان لە بەشە جیاوازەکاندا. ناردنی دەستی ڕێگری لە ناردنی خۆکار ناکات.',
   'qrAdmin.managerTelegramNextRun': 'ناردنی خۆکاری داهاتوو',
   'qrAdmin.managerTelegramDueNow':
     'کاتی ناردن تێپەڕیوە — ڕاپۆرت لە ماوەی نزیکەی ٥ خولەکدا دەنێردرێت (cron لە سێرڤەر).',
   'qrAdmin.managerTelegramMissingCredentials': 'تۆکێنی بۆت و Chat ID بنووسە و پاشەکەوت بکە.',
   'qrAdmin.managerTelegramSchedulerOff':
-    'خشتەی ناو سێرڤەر کار ناکات — پاش deploy.sh cron بەکاربهێنە، یان Gunicorn دووبارە دەستپێبکەرەوە بە MANAGER_TELEGRAM_SCHEDULER=1.',
+    'لە production تەنها cron بەکاربهێنە (MANAGER_TELEGRAM_SCHEDULER=0). هەردووکیان پێکەوە مەهێڵە — سەدان نامەی دووبارە دەنێرێت.',
+  'qrAdmin.managerTelegramSchedulerOnWarn':
+    'MANAGER_TELEGRAM_SCHEDULER=1 لەگەڵ cron چالاکە — یەکێکیان بکوژێنەوە بۆ ئەوەی ڕۆژانە تەنها یەک نامە بێت.',
   'qrAdmin.managerTelegramSentToday': 'ڕاپۆرتی خۆکاری ئەمڕۆ پێشتر نێردراوە',
   'qrAdmin.managerTelegramLastSent': 'دوایین ناردن',
   'qrAdmin.managerTelegramClearLock': 'سڕینەوەی قفڵی ناردنی ڕۆژانە',

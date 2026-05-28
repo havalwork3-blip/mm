@@ -13,14 +13,21 @@ _started = False
 
 
 def scheduler_enabled() -> bool:
-    raw = os.environ.get("MANAGER_TELEGRAM_SCHEDULER", "auto").strip().lower()
+    """
+    In-process APScheduler tick. Default OFF — production should use
+    backend/scripts/cron_manager_telegram.sh (every 5 min) only.
+    Set MANAGER_TELEGRAM_SCHEDULER=1 only if you are NOT using that cron.
+    """
+    raw = os.environ.get("MANAGER_TELEGRAM_SCHEDULER", "0").strip().lower()
     if raw in ("0", "false", "no", "off"):
         return False
     if raw in ("1", "true", "yes", "on"):
         return True
-    from django.conf import settings
+    if raw == "auto":
+        from django.conf import settings
 
-    return not settings.DEBUG
+        return not settings.DEBUG
+    return False
 
 
 def _tick_interval_seconds() -> int:
@@ -66,6 +73,7 @@ def run_scheduled_manager_digest() -> dict:
     from shops.models import QrLandingSettings
 
     skipped = {"skipped": True, "reason": "not_due"}
+    report_date = business_today()
     with transaction.atomic():
         try:
             settings = QrLandingSettings.objects.select_for_update().get(pk=1)
@@ -73,11 +81,17 @@ def run_scheduled_manager_digest() -> dict:
             return {"skipped": True, "reason": "lock_busy"}
         if not should_run_scheduled_send(settings):
             return skipped
-        return send_manager_daily_digest(
-            settings,
-            report_date=business_today(),
-            force=False,
-        )
+        # Claim the day before Telegram I/O so failed/partial sends do not spam all evening.
+        settings.manager_telegram_last_sent_date = report_date
+        settings.save(update_fields=["manager_telegram_last_sent_date", "updated_at"])
+
+    settings = QrLandingSettings.load()
+    return send_manager_daily_digest(
+        settings,
+        report_date=report_date,
+        force=True,
+        record_last_sent=False,
+    )
 
 
 def refresh_manager_telegram_schedule() -> None:
@@ -103,9 +117,11 @@ def schedule_status() -> dict:
     minute = int(s.manager_telegram_send_minute or 0)
     enabled = bool(s.manager_telegram_notify_enabled)
     ready = schedule_ready(s)
+    cron_recommended = not scheduler_enabled()
     out = {
         "scheduler_enabled": scheduler_enabled(),
         "scheduler_running": _scheduler is not None and _started,
+        "cron_recommended": cron_recommended,
         "notify_enabled": enabled,
         "schedule_ready": ready,
         "send_time_local": f"{hour:02d}:{minute:02d}",
