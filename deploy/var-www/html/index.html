@@ -583,7 +583,7 @@
       justify-content: center;
     }
     .explore-showcase__tilt {
-      --mosaic-w: min(620px, calc(100vw - 2.5rem), calc(56vh * 1.45));
+      --mosaic-w: min(1080px, calc(100vw - 3rem));
       width: var(--mosaic-w);
       transition: transform 0.5s var(--ease);
     }
@@ -591,10 +591,10 @@
       direction: ltr;
       display: grid;
       width: 100%;
-      aspect-ratio: 6 / 4.15;
+      aspect-ratio: 6 / 4;
       grid-template-columns: repeat(6, 1fr);
       grid-template-rows: repeat(4, 1fr);
-      gap: 7px;
+      gap: clamp(8px, 1vw, 12px);
     }
     .showcase-card {
       position: relative;
@@ -680,23 +680,23 @@
 
     @media (min-width: 1025px) {
       .explore-showcase__tilt {
-        transform: rotate(-17deg) scale(var(--mosaic-scale, 1));
+        transform: rotate(-12deg) scale(var(--mosaic-scale, 1));
       }
-      /* 14-card bento: 6 cols × 4 rows */
-      .showcase-card:nth-child(1)  { grid-column: 1; grid-row: 1; }
-      .showcase-card:nth-child(2)  { grid-column: 2; grid-row: 1; }
-      .showcase-card:nth-child(3)  { grid-column: 3 / span 2; grid-row: 1; }
-      .showcase-card:nth-child(4)  { grid-column: 5; grid-row: 1; }
-      .showcase-card:nth-child(5)  { grid-column: 6; grid-row: 1 / span 3; }
-      .showcase-card:nth-child(6)  { grid-column: 1 / span 2; grid-row: 2 / span 2; }
-      .showcase-card:nth-child(7)  { grid-column: 3; grid-row: 2; }
-      .showcase-card:nth-child(8)  { grid-column: 4; grid-row: 2; }
-      .showcase-card:nth-child(9)  { grid-column: 5; grid-row: 2; }
-      .showcase-card:nth-child(10) { grid-column: 3; grid-row: 3; }
-      .showcase-card:nth-child(11) { grid-column: 4; grid-row: 3; }
-      .showcase-card:nth-child(12) { grid-column: 5; grid-row: 3; }
-      .showcase-card:nth-child(13) { grid-column: 1; grid-row: 4; }
-      .showcase-card:nth-child(14) { grid-column: 2; grid-row: 4; }
+      /* 14-card bento — perfect 6×4 tiling with tall / wide / big cards */
+      .showcase-card:nth-child(1)  { grid-column: 1;        grid-row: 1 / span 2; } /* tall */
+      .showcase-card:nth-child(2)  { grid-column: 2;        grid-row: 1; }
+      .showcase-card:nth-child(3)  { grid-column: 3 / span 2; grid-row: 1; }       /* wide */
+      .showcase-card:nth-child(4)  { grid-column: 5;        grid-row: 1; }
+      .showcase-card:nth-child(5)  { grid-column: 6;        grid-row: 1 / span 2; } /* tall */
+      .showcase-card:nth-child(6)  { grid-column: 2;        grid-row: 2; }
+      .showcase-card:nth-child(7)  { grid-column: 3;        grid-row: 2; }
+      .showcase-card:nth-child(8)  { grid-column: 4;        grid-row: 2; }
+      .showcase-card:nth-child(9)  { grid-column: 5;        grid-row: 2; }
+      .showcase-card:nth-child(10) { grid-column: 1;        grid-row: 3 / span 2; } /* tall */
+      .showcase-card:nth-child(11) { grid-column: 2;        grid-row: 3 / span 2; } /* tall */
+      .showcase-card:nth-child(12) { grid-column: 3 / span 2; grid-row: 3 / span 2; } /* big */
+      .showcase-card:nth-child(13) { grid-column: 5;        grid-row: 3 / span 2; } /* tall */
+      .showcase-card:nth-child(14) { grid-column: 6;        grid-row: 3 / span 2; } /* tall */
     }
 
     @media (hover: hover) and (pointer: fine) {
@@ -1396,7 +1396,7 @@
               <div class="explore-showcase__grid">
               <a class="showcase-card" href="https://shopping.mmiraq.com/">
                 <span class="showcase-card__frame">
-                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop&q=80" alt="ئێکسسوارات" loading="lazy" width="400" height="400" />
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=440&h=700&fit=crop&q=80" alt="ئێکسسوارات" loading="lazy" width="440" height="700" />
                   <span class="showcase-card__shade" aria-hidden="true"></span>
                   <span class="showcase-card__label">Accessories</span>
                 </span>
@@ -1410,7 +1410,7 @@
               </a>
               <a class="showcase-card showcase-card--featured" href="https://shopping.mmiraq.com/">
                 <span class="showcase-card__frame">
-                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1639765487020-a9177d965a99?w=500&h=400&fit=crop&q=80" alt="MM IRAQ" loading="lazy" width="500" height="400" />
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1639765487020-a9177d965a99?w=760&h=400&fit=crop&q=80" alt="MM IRAQ" loading="lazy" width="760" height="400" />
                   <span class="showcase-card__shade" aria-hidden="true"></span>
                   <span class="showcase-card__label">MM IRAQ</span>
                 </span>
@@ -1424,7 +1424,7 @@
               </a>
               <a class="showcase-card" href="https://shopping.mmiraq.com/">
                 <span class="showcase-card__frame">
-                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=600&fit=crop&q=80" alt="Elite Pillow" loading="lazy" width="400" height="600" />
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=440&h=700&fit=crop&q=80" alt="Elite Pillow" loading="lazy" width="440" height="700" />
                   <span class="showcase-card__shade" aria-hidden="true"></span>
                   <span class="showcase-card__label">Elite Pillow</span>
                 </span>
@@ -1459,35 +1459,35 @@
               </a>
               <a class="showcase-card" href="https://shopping.mmiraq.com/">
                 <span class="showcase-card__frame">
-                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=400&fit=crop&q=80" alt="تەکنەلۆژیا" loading="lazy" width="400" height="400" />
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=440&h=700&fit=crop&q=80" alt="تەکنەلۆژیا" loading="lazy" width="440" height="700" />
                   <span class="showcase-card__shade" aria-hidden="true"></span>
                   <span class="showcase-card__label">Tech Gear</span>
                 </span>
               </a>
               <a class="showcase-card" href="https://shopping.mmiraq.com/">
                 <span class="showcase-card__frame">
-                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop&q=80" alt="هێدفۆن" loading="lazy" width="400" height="400" />
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=440&h=700&fit=crop&q=80" alt="هێدفۆن" loading="lazy" width="440" height="700" />
                   <span class="showcase-card__shade" aria-hidden="true"></span>
                   <span class="showcase-card__label">Studio Audio</span>
                 </span>
               </a>
               <a class="showcase-card" href="https://shopping.mmiraq.com/">
                 <span class="showcase-card__frame">
-                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&h=400&fit=crop&q=80" alt="MM KILLSWITCH" loading="lazy" width="400" height="400" />
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=760&h=700&fit=crop&q=80" alt="MM KILLSWITCH" loading="lazy" width="760" height="700" />
                   <span class="showcase-card__shade" aria-hidden="true"></span>
                   <span class="showcase-card__label">MM KILLSWITCH</span>
                 </span>
               </a>
               <a class="showcase-card" href="https://shopping.mmiraq.com/">
                 <span class="showcase-card__frame">
-                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1580480055273-228cc534581e?w=400&h=400&fit=crop&q=80" alt="MM ROUX" loading="lazy" width="400" height="400" />
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1580480055273-228cc534581e?w=440&h=700&fit=crop&q=80" alt="MM ROUX" loading="lazy" width="440" height="700" />
                   <span class="showcase-card__shade" aria-hidden="true"></span>
                   <span class="showcase-card__label">MM ROUX</span>
                 </span>
               </a>
               <a class="showcase-card" href="https://shopping.mmiraq.com/">
                 <span class="showcase-card__frame">
-                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop&q=80" alt="Wireless Pro" loading="lazy" width="400" height="400" />
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=440&h=700&fit=crop&q=80" alt="Wireless Pro" loading="lazy" width="440" height="700" />
                   <span class="showcase-card__shade" aria-hidden="true"></span>
                   <span class="showcase-card__label">Wireless Pro</span>
                 </span>
@@ -1896,9 +1896,9 @@
       mosaicTilt.style.setProperty("--mosaic-scale", "1");
       if (window.innerWidth < 1025) return;
       var rect = mosaicTilt.getBoundingClientRect();
-      var budget = window.innerHeight * 0.48;
+      var budget = window.innerHeight * 0.74;
       if (rect.height > budget && budget > 0) {
-        mosaicTilt.style.setProperty("--mosaic-scale", String((budget / rect.height) * 0.96));
+        mosaicTilt.style.setProperty("--mosaic-scale", String((budget / rect.height) * 0.98));
       }
     }
     fitExploreMosaic();
