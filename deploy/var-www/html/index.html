@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="MM IRAQ — بازرگانی ئێکسسواراتی مۆدێرن و ناوازە" />
-  <title>MM IRAQ — بەم زووانە</title>
+  <meta name="description" content="MM IRAQ — ناوەندێکی مۆدێرن بۆ ئێکسسواراتی لوکس، کۆگای زیرەک، و چارەسەری تەکنەلۆژیای پێشکەوتوو" />
+  <title>MM IRAQ — بازرگانی ئێکسسواراتی مۆدێرن</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -185,12 +185,269 @@
     main {
       position: relative;
       z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    .hero {
       min-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      width: 100%;
+      max-width: 1120px;
       padding: clamp(1.25rem, 5vw, 3rem);
+      scroll-margin-top: 1rem;
+    }
+
+    .section {
+      width: 100%;
+      max-width: 1120px;
+      padding: clamp(3rem, 8vw, 5.5rem) clamp(1.25rem, 5vw, 3rem);
+      scroll-margin-top: 1.5rem;
+    }
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-bottom: 1rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--cyan);
+      text-transform: uppercase;
+    }
+
+    .section-label::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan);
+    }
+
+    .section-heading {
+      font-size: clamp(1.5rem, 4.5vw, 2.15rem);
+      font-weight: 800;
+      line-height: 1.45;
+      letter-spacing: -0.02em;
+      background: linear-gradient(165deg, #fff 0%, #f1f5f9 40%, var(--silver) 75%, var(--gold-soft) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .section-lead {
+      margin-top: 1rem;
+      max-width: 62ch;
+      font-size: clamp(0.95rem, 2.8vw, 1.08rem);
+      line-height: 1.9;
+      color: var(--text-muted);
+    }
+
+    /* Shared glass panel */
+    .glass-panel {
+      position: relative;
+      border-radius: 24px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+        0 0 50px -15px rgba(139, 92, 246, 0.18) inset,
+        0 24px 48px -16px rgba(0, 0, 0, 0.55),
+        0 0 80px -30px var(--purple-shadow);
+      overflow: hidden;
+      transition:
+        transform 0.45s var(--ease-spring),
+        box-shadow 0.45s ease,
+        border-color 0.45s ease;
+    }
+
+    .glass-panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(
+        135deg,
+        rgba(139, 92, 246, 0.45),
+        rgba(34, 211, 238, 0.2) 40%,
+        transparent 60%,
+        rgba(99, 102, 241, 0.35)
+      );
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+      opacity: 0.75;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .glass-panel:hover {
+        transform: translateY(-4px);
+        border-color: rgba(34, 211, 238, 0.18);
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.05) inset,
+          0 0 60px -10px rgba(139, 92, 246, 0.22) inset,
+          0 32px 56px -16px rgba(0, 0, 0, 0.6),
+          0 0 100px -25px rgba(99, 102, 241, 0.35);
+      }
+    }
+
+    /* Scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(36px);
+      transition:
+        opacity 0.85s var(--ease-out),
+        transform 0.85s var(--ease-out);
+    }
+
+    .reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+
+    /* About */
+    .about-card {
+      margin-top: 2rem;
+      padding: clamp(1.75rem, 4vw, 2.75rem);
+    }
+
+    .about-card__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .about-stat {
+      padding: 1.1rem 1rem;
+      border-radius: 16px;
+      background: rgba(99, 102, 241, 0.06);
+      border: 1px solid rgba(99, 102, 241, 0.14);
+      text-align: center;
+    }
+
+    .about-stat strong {
+      display: block;
+      font-size: 1.35rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff, var(--cyan));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .about-stat span {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Bento grid */
+    .bento {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      grid-template-rows: minmax(168px, auto) minmax(148px, auto) minmax(132px, auto);
+      gap: clamp(0.85rem, 2.5vw, 1.15rem);
+      margin-top: 2.25rem;
+    }
+
+    .bento-card {
+      padding: clamp(1.25rem, 3vw, 1.75rem);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      min-height: 148px;
+    }
+
+    .bento-card--large {
+      grid-row: span 2;
+      min-height: 100%;
+      justify-content: space-between;
+    }
+
+    .bento-card--medium {
+      grid-column: span 2;
+    }
+
+    .bento-card__icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      margin-bottom: 1rem;
+      border-radius: 12px;
+      font-size: 1.15rem;
+      background: rgba(34, 211, 238, 0.08);
+      border: 1px solid rgba(34, 211, 238, 0.2);
+      box-shadow: 0 0 24px -8px rgba(34, 211, 238, 0.35);
+    }
+
+    .bento-card__title {
+      font-size: clamp(1rem, 2.6vw, 1.2rem);
+      font-weight: 700;
+      line-height: 1.55;
+      background: linear-gradient(165deg, #fff 0%, var(--silver) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .bento-card__desc {
+      margin-top: 0.55rem;
+      font-size: 0.88rem;
+      line-height: 1.75;
+      color: var(--text-muted);
+    }
+
+    .bento-card--large .bento-card__title {
+      font-size: clamp(1.15rem, 3vw, 1.45rem);
+    }
+
+    .bento-card__glow {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      filter: blur(50px);
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .bento-card__glow--violet { top: -20%; left: -10%; background: var(--violet); }
+    .bento-card__glow--cyan { bottom: -15%; right: -5%; background: var(--cyan); }
+    .bento-card__glow--indigo { top: 10%; right: 10%; background: var(--indigo); }
+
+    @media (max-width: 768px) {
+      .bento {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+      }
+
+      .bento-card--large,
+      .bento-card--medium {
+        grid-row: auto;
+        grid-column: auto;
+      }
     }
 
     .badge-top {
@@ -606,17 +863,136 @@
       35% { transform: translateY(-5px); opacity: 1; }
     }
 
-    footer {
+    /* Corporate footer */
+    .site-footer {
       position: relative;
       z-index: 2;
-      margin-top: clamp(2rem, 5vw, 3.25rem);
-      text-align: center;
-      font-size: 0.7rem;
-      font-weight: 500;
-      letter-spacing: 0.18em;
+      width: 100%;
+      margin-top: clamp(1rem, 4vw, 2rem);
+      padding: clamp(2.5rem, 6vw, 4rem) clamp(1.25rem, 5vw, 3rem) clamp(1.75rem, 4vw, 2.5rem);
+      background: linear-gradient(180deg, transparent 0%, rgba(11, 15, 25, 0.85) 12%, rgba(8, 11, 20, 0.98) 100%);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .site-footer__inner {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .site-footer__top {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: clamp(1.5rem, 4vw, 2.5rem);
+      padding-bottom: clamp(2rem, 4vw, 2.75rem);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .site-footer__brand {
+      font-size: 1.05rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff, var(--gold-soft));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .site-footer__tagline {
+      margin-top: 0.65rem;
+      font-size: 0.88rem;
+      line-height: 1.75;
+      color: var(--text-muted);
+      max-width: 28ch;
+    }
+
+    .site-footer__heading {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: rgba(148, 163, 184, 0.4);
-      animation: fade-up 0.9s var(--ease-out) 0.92s both;
+      color: rgba(148, 163, 184, 0.65);
+      margin-bottom: 1rem;
+    }
+
+    .site-footer__nav {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .site-footer__nav a {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.25s ease;
+    }
+
+    .site-footer__nav a:hover {
+      color: var(--cyan);
+    }
+
+    .socials {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .social-link {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 12px;
+      color: var(--silver);
+      background: rgba(20, 27, 45, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      text-decoration: none;
+      transition:
+        color 0.35s ease,
+        border-color 0.35s ease,
+        box-shadow 0.35s ease,
+        transform 0.35s var(--ease-spring);
+    }
+
+    .social-link svg {
+      width: 1.15rem;
+      height: 1.15rem;
+      fill: currentColor;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .social-link:hover {
+        color: #fff;
+        border-color: rgba(34, 211, 238, 0.45);
+        transform: translateY(-3px);
+        box-shadow:
+          0 0 24px rgba(34, 211, 238, 0.35),
+          0 0 40px rgba(139, 92, 246, 0.25);
+        animation: social-pulse 1.6s ease-in-out infinite;
+      }
+    }
+
+    @keyframes social-pulse {
+      0%, 100% { box-shadow: 0 0 16px rgba(34, 211, 238, 0.25), 0 0 28px rgba(139, 92, 246, 0.15); }
+      50% { box-shadow: 0 0 28px rgba(34, 211, 238, 0.5), 0 0 48px rgba(139, 92, 246, 0.35); }
+    }
+
+    .site-footer__bottom {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-top: 1.75rem;
+      font-size: 0.75rem;
+      color: rgba(148, 163, 184, 0.45);
+    }
+
+    @media (max-width: 720px) {
+      .site-footer__top {
+        grid-template-columns: 1fr;
+      }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -625,7 +1001,12 @@
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
       }
-      .card-wrap:hover .card {
+      .card-wrap:hover .card,
+      .glass-panel:hover {
+        transform: none;
+      }
+      .reveal {
+        opacity: 1;
         transform: none;
       }
     }
@@ -633,6 +1014,7 @@
     @media (max-width: 380px) {
       .logo-img { width: 7.5rem; }
       .cta { padding-inline: 2rem; }
+      .about-card__grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
@@ -657,9 +1039,10 @@
   </div>
 
   <main>
-    <p class="badge-top">MM IRAQ — بەم زووانە</p>
+    <section class="hero" id="top">
+      <p class="badge-top">MM IRAQ — بەم زووانە</p>
 
-    <article class="card-wrap" id="cardWrap">
+      <article class="card-wrap" id="cardWrap">
       <div class="card-shell">
         <div class="card" id="heroCard">
           <div class="card__inner-glow" aria-hidden="true"></div>
@@ -689,9 +1072,121 @@
         </div>
       </div>
     </article>
+    </section>
 
-    <footer>MM IRAQ &mdash; ئێکسسوارات</footer>
+    <section class="section section--about" id="about" aria-labelledby="about-heading">
+      <div class="reveal">
+        <p class="section-label">ناسنامەی ئێمە</p>
+        <h2 class="section-heading" id="about-heading">ناوەندێکی مۆدێرن بۆ ئێکسسوارات و چارەسەری تەکنەلۆژیا</h2>
+        <p class="section-lead">MM IRAQ وەک بازاڕێکی پێشکەوتوو و ناوازە دیزاین کراوە — لە ئێکسسواراتی لوکسەوە تا پلاتفۆرمە زیرەکەکانی فرۆشتن، ڕاپۆرتکردن، و گەیاندن.</p>
+      </div>
+
+      <article class="glass-panel about-card reveal reveal-delay-1">
+        <p class="section-lead" style="margin-top:0;max-width:none">
+          ئامانجمان دروستکردنی ئیکۆسیستەمێکی یەکگرتووە کە کڕیار، بەڕێوەبەر، و تیمەکانی کارگێڕی بە یەک کات پەیوەندیان هەبێت. لە ڕێگەی دیزاینی جوان، ئۆتۆماتیککردن، و تەکنەلۆژیای نوێ، MM IRAQ دەبێتە هابی سەرەکی بۆ بازرگانی ئێکسسواراتی مۆدێرن لە عێراق.
+        </p>
+        <div class="about-card__grid">
+          <div class="about-stat">
+            <strong>لوکس</strong>
+            <span>ئێکسسواراتی دەستچێن و premium</span>
+          </div>
+          <div class="about-stat">
+            <strong>زیرەک</strong>
+            <span>کۆگا و شۆپی دیجیتاڵی تایبەت</span>
+          </div>
+          <div class="about-stat">
+            <strong>خۆکار</strong>
+            <span>ڕاپۆرتی AI لە تێلیگرام</span>
+          </div>
+          <div class="about-stat">
+            <strong>خێرا</strong>
+            <span>چاودێری گەیاندن و لۆجستیک</span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="section section--portfolio" id="portfolio" aria-labelledby="portfolio-heading">
+      <div class="reveal">
+        <p class="section-label">پۆرتفۆلیۆی خزمەتگوزارییەکان</p>
+        <h2 class="section-heading" id="portfolio-heading">ئیکۆسیستەمی کۆپۆرەیت MM IRAQ</h2>
+        <p class="section-lead">چوار ستونێکی سەرەکی کە بازرگانی مۆدێرن و تەکنەلۆژیای پێشکەوتوو لە یەک شوێندا کۆدەکاتەوە.</p>
+      </div>
+
+      <div class="bento">
+        <article class="glass-panel bento-card bento-card--large reveal reveal-delay-1">
+          <span class="bento-card__glow bento-card__glow--violet" aria-hidden="true"></span>
+          <span class="bento-card__icon" aria-hidden="true">&#10022;</span>
+          <div>
+            <h3 class="bento-card__title">ئێکسسواراتی لوکس و مۆدێرن</h3>
+            <p class="bento-card__desc">کۆمەڵێک ئێکسسواراتی premium و دەستچێن — لە دیزاینی جوانەوە تا کوالیتی بەرز، بۆ کڕیارانی خوازراو بە ستایلی مۆدێرن.</p>
+          </div>
+        </article>
+
+        <article class="glass-panel bento-card reveal reveal-delay-2">
+          <span class="bento-card__glow bento-card__glow--cyan" aria-hidden="true"></span>
+          <span class="bento-card__icon" aria-hidden="true">&#9881;</span>
+          <h3 class="bento-card__title">کۆگا و شۆپی زیرەک</h3>
+          <p class="bento-card__desc">فرۆشگای ئۆنلاینی تایبەت بە RTL، بەڕێوەبردنی بەرهەم، و ئەزموونی کڕینی نەرم.</p>
+        </article>
+
+        <article class="glass-panel bento-card reveal reveal-delay-3">
+          <span class="bento-card__glow bento-card__glow--indigo" aria-hidden="true"></span>
+          <span class="bento-card__icon" aria-hidden="true">&#9993;</span>
+          <h3 class="bento-card__title">ڕاپۆرتی خۆکاری تێلیگرام</h3>
+          <p class="bento-card__desc">سیستەمی AI بۆ ناردنی ڕاپۆرتی ڕۆژانە و ئاگادارکردنەوەی بەڕێوەبەران لە تێلیگرام.</p>
+        </article>
+
+        <article class="glass-panel bento-card bento-card--medium reveal reveal-delay-4">
+          <span class="bento-card__glow bento-card__glow--violet" aria-hidden="true"></span>
+          <span class="bento-card__icon" aria-hidden="true">&#10148;</span>
+          <h3 class="bento-card__title">سیستەمی گەیاندنی خێرا</h3>
+          <p class="bento-card__desc">داشبۆردی پێشکەوتوو بۆ چاودێریکردنی گەیاندن، لۆجستیک، و ڕێڕەوەکانی دابینکردن بە کاتی ڕاستەقینە.</p>
+        </article>
+      </div>
+    </section>
   </main>
+
+  <footer class="site-footer" id="contact">
+    <div class="site-footer__inner reveal">
+      <div class="site-footer__top">
+        <div>
+          <p class="site-footer__brand">MM IRAQ</p>
+          <p class="site-footer__tagline">بازرگانی ئێکسسواراتی مۆدێرن — ناوەندێکی premium بۆ براند، تەکنەلۆژیا، و خزمەتگوزاری.</p>
+        </div>
+
+        <nav aria-label="ناڤیگەیشنی ماڵپەڕ">
+          <p class="site-footer__heading">گەڕان</p>
+          <div class="site-footer__nav">
+            <a href="#top">سەرەتا</a>
+            <a href="#about">ناسنامەی ئێمە</a>
+            <a href="#portfolio">پۆرتفۆلیۆ</a>
+            <a href="#contact">پەیوەندی</a>
+          </div>
+        </nav>
+
+        <div>
+          <p class="site-footer__heading">تۆڕە کۆمەڵایەتییەکان</p>
+          <div class="socials">
+            <a class="social-link" href="#" aria-label="Instagram" title="Instagram">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            </a>
+            <a class="social-link" href="#" aria-label="Snapchat" title="Snapchat">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.206.793c.99 0 4.347.276 5.93 3.821.529 1.193.403 3.219.299 4.847l-.003.06c-.012.18-.022.345-.03.51.075.045.203.09.401.09.3-.016.659-.12 1.033-.301.165-.088.344-.104.464-.104.182 0 .359.029.509.09.45.149.734.479.734.838.015.449-.39.839-1.213 1.168-.089.029-.209.075-.344.119-.45.135-1.139.36-1.333.81-.09.224-.061.524.12.868l.015.015c.06.136 1.526 3.475 4.791 4.014.255.044.435.27.42.509 0 .075-.015.149-.045.225-.24.569-1.273.988-3.146 1.271-.059.091-.12.375-.164.57-.029.179-.074.36-.134.553-.076.271-.27.405-.555.405h-.03c-.135 0-.313-.031-.538-.074-.36-.075-.765-.135-1.273-.135-.3 0-.599.015-.913.074-.6.104-1.123.464-1.723.884-.753.555-1.509 1.064-2.646 1.064-.06 0-.119-.015-.18-.015h-.149c-1.138 0-1.894-.509-2.647-1.064-.599-.42-1.107-.779-1.707-.884-.314-.045-.629-.074-.928-.074-.509 0-.904.074-1.281.149-.211.043-.391.074-.54.074-.374 0-.523-.224-.583-.42-.061-.192-.09-.389-.135-.567-.046-.181-.105-.494-.166-.57-1.918-.222-2.95-.642-3.189-1.226-.031-.063-.052-.12-.061-.165-.015-.225.165-.465.42-.509 3.264-.54 4.73-3.879 4.791-4.02l.016-.029c.18-.345.224-.645.119-.869-.181-.394-.854-.658-1.333-.809-.121-.029-.24-.074-.346-.119-1.107-.435-1.257-.93-1.197-1.273.09-.479.674-.793 1.168-.793.146 0 .27.029.383.074.42.194.789.3 1.104.3.234 0 .384-.06.465-.105l-.047-.569c-.098-1.626-.225-3.651.307-4.837C7.392 1.077 10.739.793 11.727.793h.479z"/></svg>
+            </a>
+            <a class="social-link" href="#" aria-label="TikTok" title="TikTok">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="site-footer__bottom">
+        <p>&copy; 2026 MM IRAQ. هەموو مافەکان پارێزراون.</p>
+        <p>ئێکسسوارات &middot; تەکنەلۆژیا &middot; عێراق</p>
+      </div>
+    </div>
+  </footer>
 
   <script>
     (function () {
@@ -711,6 +1206,26 @@
         wrap.style.setProperty("--rx", "0deg");
         wrap.style.setProperty("--ry", "0deg");
       });
+    })();
+
+    (function () {
+      var items = document.querySelectorAll(".reveal");
+      if (!items.length || !("IntersectionObserver" in window)) {
+        items.forEach(function (el) { el.classList.add("is-visible"); });
+        return;
+      }
+      var observer = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
+      );
+      items.forEach(function (el) { observer.observe(el); });
     })();
   </script>
 </body>
