@@ -1029,6 +1029,66 @@
     .feature__title { font-size: 0.88rem; font-weight: 700; }
     .feature__desc { margin-top: 0.35rem; font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
 
+    /* ── Home about teaser ── */
+    .home-about {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 clamp(1rem, 3vw, 1.75rem) clamp(2rem, 5vw, 3rem);
+      scroll-margin-top: calc(var(--header-h) + 1rem);
+    }
+    .home-about__inner {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: clamp(1.25rem, 3vw, 2rem);
+      align-items: stretch;
+      padding: clamp(1.5rem, 4vw, 2.25rem);
+      border-radius: 22px;
+      background: linear-gradient(145deg, rgba(14, 14, 22, 0.95), rgba(8, 8, 14, 0.98));
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    }
+    .home-about__cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.25rem;
+      padding: 0.65rem 1.15rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #050508;
+      background: linear-gradient(135deg, var(--cyan), var(--violet));
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .home-about__cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(56, 189, 248, 0.25);
+    }
+    .home-about__cards {
+      display: grid;
+      gap: 0.75rem;
+    }
+    .home-about__card {
+      padding: 1rem 1.1rem;
+      border-radius: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .home-about__card-icon {
+      font-size: 1.25rem;
+      margin-bottom: 0.35rem;
+    }
+    .home-about__card-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .home-about__card-desc {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
     /* ── Info pages (About, Terms, Contact) ── */
     .info-pages {
       max-width: 1400px;
@@ -1584,6 +1644,10 @@
       .feature__desc { display: none; }
 
       .info-page { padding: 0.85rem; }
+      .home-about__inner {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+      }
       .contact-form__row { flex-direction: column; }
 
       .chat-fab span { display: none; }
@@ -1624,7 +1688,7 @@
       }
       .reveal { opacity: 1; transform: none; }
     }
-  </style>
+    </style>
 </head>
 <body>
   <div class="page-bg" aria-hidden="true"></div>
@@ -1660,7 +1724,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           خزمەتگوزاری
         </a>
-        <a class="nav__link nav__link--active" href="/about/">زیاتر</a>
+        <a class="nav__link" href="/about/">زیاتر</a>
         <a class="nav__sidebar-shop shop-cta" href="https://shopping.mmiraq.com/">ئێستا بازاری بکە</a>
       </nav>
       <div class="header-actions">
@@ -1745,6 +1809,165 @@
         <a class="brand-logo" href="/about/">MM IRAQ</a>
       </div>
     </div>
+
+    <section class="home-about reveal" id="about-preview" aria-labelledby="home-about-title">
+      <div class="home-about__inner">
+        <div class="home-about__copy">
+          <span class="info-page__label">ئێمە کێین</span>
+          <h2 class="info-page__title" id="home-about-title">بەخێربێیت بۆ جیهانی MM IRAQ</h2>
+          <p class="info-page__lead">لەم پێڕستەدا لوکس، تەکنەلۆژیا، و خزمەتگوزاری لە یەک ئەزموونی تەواودا کۆدەکرێنەوە — بۆ ئەو کەسانەی ستایل و کارامەیی هاوکات گرنگیان پێ دەدەن. ئێمە نەک تەنها فرۆشگایەکین، بەڵکو هاوبەشی بازرگانی و تەکنەلۆژیایین بۆ عێراق.</p>
+          <a class="home-about__cta" href="/about/">زیاتر دەربارەمان بزانە ←</a>
+        </div>
+        <div class="home-about__cards">
+          <div class="home-about__card">
+            <div class="home-about__card-icon">✦</div>
+            <p class="home-about__card-title">کۆمەڵێک هەڵبژاردە</p>
+            <p class="home-about__card-desc">ئێکسسواراتی لوکس، ئامێری تەکنەلۆژیا، و شۆپی زیرەک — هەمووی لە ژێر یەک براند.</p>
+          </div>
+          <div class="home-about__card">
+            <div class="home-about__card-icon">🇮🇶</div>
+            <p class="home-about__card-title">دروستکراو بۆ عێراق</p>
+            <p class="home-about__card-desc">گەیاندن، پشتیوانی RTL، و خزمەتگوزاری ناوخۆیی بۆ هەموو شارەکان.</p>
+          </div>
+          <div class="home-about__card">
+            <div class="home-about__card-icon">⚡</div>
+            <p class="home-about__card-title">زیرەک و خێرا</p>
+            <p class="home-about__card-desc">کۆگای ئۆتۆمات، ڕاپۆرتی AI، و چاودێری داواکاری بە کاتی ڕاستەقینە.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="explore-showcase" id="explore" aria-labelledby="explore-title">
+      <div class="explore-showcase__inner">
+        <div class="explore-showcase__head reveal">
+          <h2 class="explore-showcase__title" id="explore-title">زیاتر لە MM IRAQ بگەڕێ</h2>
+          <a class="explore-showcase__cta" href="/explore/">ئێستا بگەڕێ</a>
+        </div>
+        <div class="explore-showcase__stage">
+          <div class="explore-showcase__glow" aria-hidden="true"></div>
+          <div class="explore-showcase__particles" aria-hidden="true"></div>
+          <div class="explore-showcase__perspective">
+            <div class="explore-showcase__tilt">
+              <div class="explore-showcase__grid">
+              <a class="showcase-card" href="/luxury/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=440&h=700&fit=crop&q=80" alt="ئێکسسوارات" loading="lazy" width="440" height="700" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">Accessories</span>
+                </div>
+              </a>
+              <a class="showcase-card" href="/tech/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1484704849700-f032a568e944?w=400&h=400&fit=crop&q=80" alt="هێدفۆنی پڕۆ" loading="lazy" width="400" height="400" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">Pro Headset</span>
+                </div>
+              </a>
+              <a class="showcase-card showcase-card--featured" href="/about/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1639765487020-a9177d965a99?w=760&h=400&fit=crop&q=80" alt="MM IRAQ" loading="lazy" width="760" height="400" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">MM IRAQ</span>
+                </div>
+              </a>
+              <a class="showcase-card" href="/tech/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1612287230202-22b6b192128d?w=400&h=400&fit=crop&q=80" alt="کۆntrۆڵەر" loading="lazy" width="400" height="400" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">MM Control</span>
+                </div>
+              </a>
+              <a class="showcase-card" href="/luxury/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=440&h=700&fit=crop&q=80" alt="Elite Pillow" loading="lazy" width="440" height="700" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">Elite Pillow</span>
+                </div>
+              </a>
+              <a class="showcase-card" href="/luxury/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500&h=500&fit=crop&q=80" alt="کورسی گەیمینگ" loading="lazy" width="500" height="500" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">Elite Chair</span>
+                </div>
+              </a>
+              <a class="showcase-card" href="/tech/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1595225472462-8752bf05d294?w=400&h=400&fit=crop&q=80" alt="کیبۆرد" loading="lazy" width="400" height="400" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">Mech Key</span>
+                </div>
+              </a>
+              <a class="showcase-card" href="/tech/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1615663245857-ac81dd76ad66?w=400&h=400&fit=crop&q=80" alt="ماوس" loading="lazy" width="400" height="400" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">Elite Mouse</span>
+                </div>
+              </a>
+              <a class="showcase-card" href="/luxury/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop&q=80" alt="ساعەت" loading="lazy" width="400" height="400" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">Smart Watch</span>
+                </div>
+              </a>
+              <a class="showcase-card" href="/tech/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=440&h=700&fit=crop&q=80" alt="تەکنەلۆژیا" loading="lazy" width="440" height="700" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">Tech Gear</span>
+                </div>
+              </a>
+              <a class="showcase-card" href="/tech/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=440&h=700&fit=crop&q=80" alt="هێدفۆن" loading="lazy" width="440" height="700" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">Studio Audio</span>
+                </div>
+              </a>
+              <a class="showcase-card" href="/shop/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=760&h=700&fit=crop&q=80" alt="MM KILLSWITCH" loading="lazy" width="760" height="700" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">MM KILLSWITCH</span>
+                </div>
+              </a>
+              <a class="showcase-card" href="/shop/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1580480055273-228cc534581e?w=440&h=700&fit=crop&q=80" alt="MM ROUX" loading="lazy" width="440" height="700" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">MM ROUX</span>
+                </div>
+              </a>
+              <a class="showcase-card" href="/tech/">
+                <span class="showcase-card__halo" aria-hidden="true"></span>
+                <div class="showcase-card__frame">
+                  <img class="showcase-card__img" src="https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=440&h=700&fit=crop&q=80" alt="Wireless Pro" loading="lazy" width="440" height="700" />
+                  <span class="showcase-card__shade" aria-hidden="true"></span>
+                  <span class="showcase-card__label">Wireless Pro</span>
+                </div>
+              </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <div class="features">
       <div class="feature reveal">
