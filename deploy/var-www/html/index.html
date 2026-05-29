@@ -91,7 +91,7 @@
     .nav__link:hover { color: #fff; background: rgba(255,255,255,0.05); }
     .nav__link svg { width: 1rem; height: 1rem; opacity: 0.7; }
     .header-actions {
-      display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;
+      display: flex; align-items: center; gap: 0.55rem; flex-shrink: 0;
     }
     .icon-btn {
       display: inline-flex; align-items: center; justify-content: center;
@@ -513,7 +513,12 @@
       color: var(--text);
       font-size: 1.15rem;
       cursor: pointer;
+      flex-shrink: 0;
       transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .menu-toggle svg {
+      width: 1.15rem;
+      height: 1.15rem;
     }
     .menu-toggle:hover {
       color: var(--gold);
@@ -1017,7 +1022,7 @@
     /* ── Features strip ── */
     .features {
       max-width: 1400px; margin: 0 auto;
-      padding: 0 clamp(1rem, 3vw, 1.75rem) clamp(2rem, 5vw, 3rem);
+      padding: clamp(2.25rem, 5vw, 3.75rem) clamp(1rem, 3vw, 1.75rem) clamp(2rem, 5vw, 3rem);
       display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
     }
     .feature {
@@ -1351,7 +1356,8 @@
 
     @media (max-width: 900px) {
       .lang-pill { display: none; }
-      .header-actions a.icon-btn { display: none; }
+      .header-actions .icon-btn { display: none; }
+      .menu-toggle { display: inline-flex !important; }
     }
     @media (max-width: 1280px) {
       .product-grid { grid-template-columns: repeat(3, 1fr); }
@@ -1365,13 +1371,26 @@
       .hero-carousel { max-height: 320px; min-height: 200px; aspect-ratio: 16 / 9; }
       .store-main { padding: 1.5rem 1rem; }
 
-      .menu-toggle { display: inline-flex; }
+      .site-header__inner {
+        justify-content: space-between;
+        width: 100%;
+        gap: 0.65rem;
+      }
+      .brand { order: 1; min-width: 0; }
+      .header-actions {
+        order: 2;
+        margin-inline-start: auto;
+        flex-shrink: 0;
+        z-index: 2;
+      }
+      .menu-toggle { display: inline-flex !important; }
 
       .nav {
         position: fixed;
         top: 0;
         bottom: 0;
         inset-inline-start: 0;
+        inset-inline-end: auto;
         z-index: 150;
         flex: none;
         flex-direction: column;
@@ -1386,12 +1405,12 @@
         box-shadow: -8px 0 40px rgba(0, 0, 0, 0.55);
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        transform: translateX(100%);
+        transform: translate3d(100%, 0, 0);
         visibility: hidden;
         transition: transform 0.35s var(--ease), visibility 0.35s;
       }
       .nav.is-open {
-        transform: translateX(0);
+        transform: translate3d(0, 0, 0);
         visibility: visible;
       }
       .nav__sidebar-head {
@@ -1732,19 +1751,12 @@
         <button class="icon-btn" type="button" id="searchOpen" aria-label="گەڕان" aria-expanded="false" aria-controls="searchPanel">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
-        <a class="icon-btn" href="/about/" aria-label="هەژمار">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </a>
-        <a class="icon-btn" href="/services/" aria-label="داواکارییەکان">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-        </a>
         <button class="lang-pill" type="button" id="langToggle" aria-label="گۆڕینی زمان">
           <span class="lang-pill__code" id="langCode">KU</span>
         </button>
-        <a class="icon-btn" href="/shop/" aria-label="سەبەتە">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-        </a>
-        <button class="menu-toggle" type="button" id="menuToggle" aria-label="مێنیو" aria-expanded="false" aria-controls="mainNav">☰</button>
+        <button class="menu-toggle" type="button" id="menuToggle" aria-label="مێنیو" aria-expanded="false" aria-controls="mainNav">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+        </button>
       </div>
     </div>
   </header>
@@ -1798,17 +1810,6 @@
         <button class="hero-dot" type="button" data-go="2" aria-label="سلاید ٣"></button>
       </div>
     </section>
-
-    <div class="brands">
-      <div class="brands__inner">
-        <a class="brand-logo" href="/luxury/">Apple</a>
-        <a class="brand-logo" href="/luxury/">Samsung</a>
-        <a class="brand-logo" href="/tech/">Sony</a>
-        <a class="brand-logo" href="/tech/">Logitech</a>
-        <a class="brand-logo" href="/tech/">Razer</a>
-        <a class="brand-logo" href="/about/">MM IRAQ</a>
-      </div>
-    </div>
 
     <div class="features">
       <div class="feature reveal">
@@ -2118,6 +2119,7 @@
       document.body.classList.remove("menu-open");
     }
 
+    if (toggle && nav) {
     toggle.addEventListener("click", function () {
       if (nav.classList.contains("is-open")) closeMenu();
       else openMenu();
@@ -2130,6 +2132,7 @@
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && nav.classList.contains("is-open")) closeMenu();
     });
+    }
 
     /* Fit explore mosaic to viewport (desktop) */
     var mosaicTilt = document.querySelector(".explore-showcase__tilt");

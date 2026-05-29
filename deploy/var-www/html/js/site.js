@@ -49,6 +49,7 @@
       document.body.classList.remove("menu-open");
     }
 
+    if (toggle && nav) {
     toggle.addEventListener("click", function () {
       if (nav.classList.contains("is-open")) closeMenu();
       else openMenu();
@@ -61,6 +62,7 @@
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && nav.classList.contains("is-open")) closeMenu();
     });
+    }
 
     /* Fit explore mosaic to viewport (desktop) */
     var mosaicTilt = document.querySelector(".explore-showcase__tilt");
