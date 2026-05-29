@@ -154,7 +154,25 @@
         0 10px 36px rgba(0, 0, 0, 0.5),
         0 0 28px rgba(99, 102, 241, 0.18);
     }
+    .float-dock__indicator {
+      position: absolute;
+      inset-inline-start: 50%;
+      width: 2.45rem;
+      height: 2.45rem;
+      margin-inline-start: -1.225rem;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #6366f1 0%, #7c3aed 52%, #8b5cf6 100%);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.14) inset,
+        0 0 22px rgba(124, 58, 237, 0.6),
+        0 4px 16px rgba(99, 102, 241, 0.4);
+      transition: top 0.38s var(--ease), opacity 0.25s;
+      pointer-events: none;
+      z-index: 0;
+    }
     .float-dock__btn {
+      position: relative;
+      z-index: 1;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -166,18 +184,17 @@
       color: rgba(148, 163, 184, 0.85);
       cursor: pointer;
       text-decoration: none;
-      transition: color 0.22s, background 0.22s, box-shadow 0.22s, transform 0.22s;
+      transition: color 0.22s, background 0.22s, transform 0.22s;
     }
     .float-dock__btn svg { width: 1.05rem; height: 1.05rem; }
-    .float-dock__btn:hover {
+    .float-dock__btn:hover:not(.is-active) {
       color: #fff;
       background: rgba(255, 255, 255, 0.08);
       transform: scale(1.06);
     }
     .float-dock__btn.is-active {
       color: #fff;
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.55), rgba(139, 92, 246, 0.45));
-      box-shadow: 0 0 18px rgba(139, 92, 246, 0.45);
+      background: transparent;
     }
 
     /* ── Back-to-top + chat FAB ── */
@@ -1507,7 +1524,7 @@
   </div>
 
   <main id="top">
-    <section class="hero-carousel" aria-label="بانێری سەرەکی">
+    <section class="hero-carousel" id="home" aria-label="بانێری سەرەکی">
       <div class="hero-slide hero-slide--1 is-active" data-slide="0">
         <div class="hero-slide__bg" aria-hidden="true"></div>
         <div class="hero-slide__content">
@@ -2011,13 +2028,14 @@
   </footer>
 
   <nav class="float-dock" id="floatDock" aria-label="ناڤیگەیشنی خێرا">
-    <a class="float-dock__btn" href="#top" data-dock="home" aria-label="سەرەوە">
+    <span class="float-dock__indicator" id="dockIndicator" aria-hidden="true"></span>
+    <a class="float-dock__btn is-active" href="#home" data-dock="home" aria-label="سەرەوە">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     </a>
     <a class="float-dock__btn" href="#luxury" data-dock="fav" aria-label="دڵخواز">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </a>
-    <a class="float-dock__btn is-active" href="#explore" data-dock="grid" aria-label="گەڕان">
+    <a class="float-dock__btn" href="#explore" data-dock="grid" aria-label="گەڕان">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     </a>
     <a class="float-dock__btn" href="#shop" data-dock="bookmark" aria-label="فرۆشگا">
@@ -2144,25 +2162,46 @@
     }
 
     if (floatDock) {
-      var dockBtns = floatDock.querySelectorAll(".float-dock__btn[href]");
-      var dockSections = [
-        { id: "explore", dock: "grid" },
-        { id: "luxury", dock: "fav" },
-        { id: "shop", dock: "bookmark" },
-        { id: "top", dock: "home" }
+      var dockIndicator = document.getElementById("dockIndicator");
+      var dockBtns = floatDock.querySelectorAll(".float-dock__btn[data-dock]");
+      var dockAnchors = [
+        { dock: "bookmark", id: "shop" },
+        { dock: "fav", id: "luxury" },
+        { dock: "grid", id: "explore" },
+        { dock: "home", id: "home" }
       ];
-      function updateDockActive() {
-        var scrollY = window.scrollY + window.innerHeight * 0.35;
-        var active = "home";
-        dockSections.forEach(function (s) {
-          var el = document.getElementById(s.id);
-          if (el && el.offsetTop <= scrollY) active = s.dock;
-        });
-        dockBtns.forEach(function (btn) {
-          btn.classList.toggle("is-active", btn.getAttribute("data-dock") === active);
-        });
+
+      function moveDockIndicator(activeBtn) {
+        if (!dockIndicator || !activeBtn) return;
+        dockIndicator.style.top = activeBtn.offsetTop + "px";
       }
+
+      function setDockActive(dock) {
+        var activeBtn = null;
+        dockBtns.forEach(function (btn) {
+          var isActive = btn.getAttribute("data-dock") === dock;
+          btn.classList.toggle("is-active", isActive);
+          if (isActive) activeBtn = btn;
+        });
+        moveDockIndicator(activeBtn);
+      }
+
+      function updateDockActive() {
+        var probe = window.innerHeight * 0.34;
+        var active = "home";
+        for (var i = 0; i < dockAnchors.length; i++) {
+          var el = document.getElementById(dockAnchors[i].id);
+          if (el && el.getBoundingClientRect().top <= probe) {
+            active = dockAnchors[i].dock;
+            break;
+          }
+        }
+        setDockActive(active);
+      }
+
       window.addEventListener("scroll", updateDockActive, { passive: true });
+      window.addEventListener("resize", updateDockActive);
+      window.addEventListener("load", updateDockActive);
       updateDockActive();
     }
 
