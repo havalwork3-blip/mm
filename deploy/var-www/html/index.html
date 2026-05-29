@@ -104,11 +104,98 @@
       box-shadow: 0 0 20px rgba(34,211,238,0.15);
     }
     .icon-btn svg { width: 1.05rem; height: 1.05rem; }
-    .lang-pill {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      padding: 0.4rem 0.75rem; border-radius: 999px;
-      border: 1px solid var(--border); background: var(--surface);
-      font-size: 0.75rem; font-weight: 600; color: var(--muted);
+
+    /* ── Search ── */
+    .search-panel {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: calc(var(--header-h) + 1rem) 1rem 1rem;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.25s ease, visibility 0.25s;
+    }
+    .search-panel.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+    .search-panel__box {
+      width: min(100%, 560px);
+      padding: 1rem 1.15rem 1.25rem;
+      border-radius: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+    }
+    .search-panel__row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+    .search-panel__input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      font-family: inherit;
+      font-size: 1rem;
+      color: var(--text);
+      background: var(--bg-2);
+      border: 1px solid rgba(34, 211, 238, 0.25);
+      border-radius: 12px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-panel__input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+    }
+    .search-panel__input::placeholder { color: var(--muted); }
+    .search-panel__close {
+      flex-shrink: 0;
+      width: 2.35rem;
+      height: 2.35rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-2);
+      color: var(--muted);
+      font-size: 1.35rem;
+      line-height: 1;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .search-panel__close:hover { color: #fff; border-color: rgba(255,255,255,0.2); }
+    .search-panel__hint {
+      margin-top: 0.65rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .search-panel__count {
+      margin-top: 0.5rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--cyan);
+    }
+    .search-panel__count.is-empty { color: #f87171; }
+    .product-card.is-search-hidden {
+      display: none !important;
+    }
+    .store-section.is-search-empty .product-grid {
+      display: none;
+    }
+    .store-section.is-search-empty::after {
+      content: "هیچ ئەنجامێک نەدۆزرایەوە";
+      display: block;
+      padding: 1.5rem;
+      text-align: center;
+      font-size: 0.88rem;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
     }
 
     .shop-cta {
@@ -481,7 +568,6 @@
       .hero-nav { display: none; }
       .product-grid { grid-template-columns: repeat(2, 1fr); }
       .site-footer__top { grid-template-columns: 1fr; }
-      .lang-pill { display: none; }
       .shop-cta { padding: 0.5rem 0.85rem; font-size: 0.78rem; }
     }
     @media (max-width: 420px) {
@@ -528,21 +614,24 @@
       </nav>
       <div class="header-actions">
         <a class="shop-cta" href="https://shopping.mmiraq.com/">ئێستا بازاری بکە</a>
-
-        <a class="icon-btn" href="https://shopping.mmiraq.com/" aria-label="گەڕان">
+        <button class="icon-btn" type="button" id="searchOpen" aria-label="گەڕان" aria-expanded="false" aria-controls="searchPanel">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </a>
-        <a class="icon-btn" href="https://shopping.mmiraq.com/" aria-label="هەژمار">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </a>
-        <a class="icon-btn" href="https://shopping.mmiraq.com/" aria-label="سەبەتە">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-        </a>
-        <span class="lang-pill">🇮🇶 ckb</span>
+        </button>
         <button class="menu-toggle" type="button" id="menuToggle" aria-label="مێنیو">☰</button>
       </div>
     </div>
   </header>
+
+  <div class="search-panel" id="searchPanel" role="dialog" aria-modal="true" aria-label="گەڕان" hidden>
+    <div class="search-panel__box">
+      <div class="search-panel__row">
+        <input class="search-panel__input" type="search" id="searchInput" placeholder="ناوی کاڵا بنووسە..." autocomplete="off" />
+        <button class="search-panel__close" type="button" id="searchClose" aria-label="داخستن">×</button>
+      </div>
+      <p class="search-panel__hint">ناوی کاڵا بنووسە — Enter بۆ گەڕان و × بۆ داخستن</p>
+      <p class="search-panel__count" id="searchCount" hidden></p>
+    </div>
+  </div>
 
   <main id="top">
     <section class="hero-carousel" aria-label="بانێری سەرەکی">
@@ -823,7 +912,7 @@
   </div>
 
   <script>
-  (function () {
+    (function () {
     var slides = document.querySelectorAll(".hero-slide");
     var dots = document.querySelectorAll(".hero-dot");
     var current = 0;
@@ -855,6 +944,89 @@
       link.addEventListener("click", function () { nav.classList.remove("is-open"); });
     });
 
+    /* Search */
+    var searchPanel = document.getElementById("searchPanel");
+    var searchOpen = document.getElementById("searchOpen");
+    var searchClose = document.getElementById("searchClose");
+    var searchInput = document.getElementById("searchInput");
+    var searchCount = document.getElementById("searchCount");
+    var productCards = document.querySelectorAll(".product-card");
+    var storeSections = document.querySelectorAll(".store-section");
+
+    function normalizeSearch(text) {
+      return (text || "").toLowerCase().replace(/\s+/g, " ").trim();
+    }
+
+    function runSearch(scrollToFirst) {
+      var q = normalizeSearch(searchInput.value);
+      var visible = 0;
+
+      productCards.forEach(function (card) {
+        var nameEl = card.querySelector(".product-card__name");
+        var name = normalizeSearch(nameEl ? nameEl.textContent : "");
+        var match = !q || name.indexOf(q) !== -1;
+        card.classList.toggle("is-search-hidden", !match);
+        if (match) visible++;
+      });
+
+      storeSections.forEach(function (section) {
+        var sectionCards = section.querySelectorAll(".product-card:not(.is-search-hidden)");
+        section.classList.toggle("is-search-empty", q.length > 0 && sectionCards.length === 0);
+      });
+
+      if (q) {
+        searchCount.hidden = false;
+        searchCount.textContent = visible > 0
+          ? visible + " ئەنجام دۆزرایەوە"
+          : "هیچ کاڵایەک نەدۆزرایەوە";
+        searchCount.classList.toggle("is-empty", visible === 0);
+        if (scrollToFirst && visible > 0) {
+          var first = document.querySelector(".product-card:not(.is-search-hidden)");
+          if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      } else {
+        searchCount.hidden = true;
+        searchCount.classList.remove("is-empty");
+      }
+    }
+
+    function openSearch() {
+      searchPanel.hidden = false;
+      searchPanel.classList.add("is-open");
+      searchOpen.setAttribute("aria-expanded", "true");
+      document.body.style.overflow = "hidden";
+      setTimeout(function () { searchInput.focus(); }, 50);
+    }
+
+    function closeSearch(reset) {
+      searchPanel.classList.remove("is-open");
+      searchOpen.setAttribute("aria-expanded", "false");
+      document.body.style.overflow = "";
+      if (reset) {
+        searchInput.value = "";
+        runSearch(false);
+      }
+      setTimeout(function () { searchPanel.hidden = true; }, 250);
+    }
+
+    searchOpen.addEventListener("click", openSearch);
+    searchClose.addEventListener("click", function () { closeSearch(true); });
+    searchPanel.addEventListener("click", function (e) {
+      if (e.target === searchPanel) closeSearch(true);
+    });
+    searchInput.addEventListener("input", function () { runSearch(false); });
+    searchInput.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeSearch(true);
+      if (e.key === "Enter") {
+        e.preventDefault();
+        runSearch(true);
+        closeSearch(false);
+      }
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && searchPanel.classList.contains("is-open")) closeSearch(true);
+    });
+
     var items = document.querySelectorAll(".reveal");
     if (!items.length || !("IntersectionObserver" in window)) {
       items.forEach(function (el) { el.classList.add("is-visible"); });
@@ -866,7 +1038,7 @@
       }, { threshold: 0.1, rootMargin: "0px 0px -6% 0px" });
       items.forEach(function (el) { obs.observe(el); });
     }
-  })();
+    })();
   </script>
 </body>
 </html>
