@@ -105,6 +105,145 @@
     }
     .icon-btn svg { width: 1.05rem; height: 1.05rem; }
 
+    .lang-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      height: 2.35rem;
+      padding: 0 0.55rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .lang-pill:hover {
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+    .lang-pill__flag {
+      width: 1.15rem;
+      height: 0.85rem;
+      border-radius: 2px;
+      object-fit: cover;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+    }
+
+    /* ── Floating dock (Ari-style side nav) ── */
+    .float-dock {
+      position: fixed;
+      z-index: 90;
+      top: 50%;
+      inset-inline-end: clamp(0.65rem, 1.8vw, 1.15rem);
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      padding: 0.55rem 0.45rem;
+      border-radius: 999px;
+      background: rgba(10, 10, 16, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow:
+        0 10px 36px rgba(0, 0, 0, 0.5),
+        0 0 28px rgba(99, 102, 241, 0.18);
+    }
+    .float-dock__btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.45rem;
+      height: 2.45rem;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: rgba(148, 163, 184, 0.85);
+      cursor: pointer;
+      text-decoration: none;
+      transition: color 0.22s, background 0.22s, box-shadow 0.22s, transform 0.22s;
+    }
+    .float-dock__btn svg { width: 1.05rem; height: 1.05rem; }
+    .float-dock__btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+      transform: scale(1.06);
+    }
+    .float-dock__btn.is-active {
+      color: #fff;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.55), rgba(139, 92, 246, 0.45));
+      box-shadow: 0 0 18px rgba(139, 92, 246, 0.45);
+    }
+
+    /* ── Back-to-top + chat FAB ── */
+    .float-actions {
+      position: fixed;
+      z-index: 90;
+      inset-inline-end: clamp(0.65rem, 1.8vw, 1.15rem);
+      bottom: clamp(1rem, 2.5vw, 1.65rem);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.65rem;
+      pointer-events: none;
+    }
+    .float-actions > * { pointer-events: auto; }
+    .back-top {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.85rem;
+      height: 2.85rem;
+      border: none;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 8px 28px rgba(99, 102, 241, 0.5);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(10px);
+      transition: opacity 0.3s var(--ease), visibility 0.3s, transform 0.3s var(--ease), box-shadow 0.25s;
+    }
+    .back-top svg { width: 1.1rem; height: 1.1rem; }
+    .back-top.is-visible {
+      opacity: 1;
+      visibility: visible;
+      transform: none;
+    }
+    .back-top:hover {
+      box-shadow: 0 10px 32px rgba(139, 92, 246, 0.6);
+      transform: translateY(-2px);
+    }
+    .chat-fab {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.6rem 0.95rem 0.6rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(10, 10, 16, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.76rem;
+      font-weight: 600;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+      transition: border-color 0.22s, box-shadow 0.22s, transform 0.22s;
+    }
+    .chat-fab svg { width: 1rem; height: 1rem; color: var(--cyan); flex-shrink: 0; }
+    .chat-fab:hover {
+      border-color: rgba(34, 211, 238, 0.35);
+      box-shadow: 0 10px 32px rgba(34, 211, 238, 0.15);
+      transform: translateY(-2px);
+    }
+
     /* ── Search ── */
     .search-panel {
       position: fixed;
@@ -688,6 +827,9 @@
       .explore-showcase__tilt {
         transform: rotate(-10deg) scale(var(--mosaic-scale, 1));
       }
+      .explore-showcase__stage {
+        padding-inline-end: 3.25rem;
+      }
       /* 14-card bento — perfect 6×4 tiling with tall / wide / big cards */
       .showcase-card:nth-child(1)  { grid-column: 1;        grid-row: 1 / span 2; } /* tall */
       .showcase-card:nth-child(2)  { grid-column: 2;        grid-row: 1; }
@@ -1130,6 +1272,10 @@
     .reveal-delay-3 { transition-delay: 0.24s; }
     .reveal-delay-4 { transition-delay: 0.32s; }
 
+    @media (max-width: 900px) {
+      .lang-pill { display: none; }
+      .header-actions a.icon-btn { display: none; }
+    }
     @media (max-width: 1280px) {
       .product-grid { grid-template-columns: repeat(3, 1fr); }
       .brands__inner { grid-template-columns: repeat(4, 1fr); }
@@ -1224,6 +1370,7 @@
         text-align: center;
       }
       .header-actions .shop-cta { display: none; }
+      .float-dock { display: none; }
     }
     @media (max-width: 768px) {
       :root { --header-h: 3.75rem; }
@@ -1327,6 +1474,18 @@
         <button class="icon-btn" type="button" id="searchOpen" aria-label="گەڕان" aria-expanded="false" aria-controls="searchPanel">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
+        <a class="icon-btn" href="https://shopping.mmiraq.com/" aria-label="هەژمار">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </a>
+        <a class="icon-btn" href="https://shopping.mmiraq.com/" aria-label="داواکارییەکان">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </a>
+        <button class="lang-pill" type="button" id="langToggle" aria-label="گۆڕینی زمان">
+          <span class="lang-pill__code" id="langCode">KU</span>
+        </button>
+        <a class="icon-btn" href="https://shopping.mmiraq.com/" aria-label="سەبەتە">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        </a>
         <button class="menu-toggle" type="button" id="menuToggle" aria-label="مێنیو" aria-expanded="false" aria-controls="mainNav">☰</button>
       </div>
     </div>
@@ -1851,6 +2010,34 @@
     </div>
   </footer>
 
+  <nav class="float-dock" id="floatDock" aria-label="ناڤیگەیشنی خێرا">
+    <a class="float-dock__btn" href="#top" data-dock="home" aria-label="سەرەوە">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </a>
+    <a class="float-dock__btn" href="#luxury" data-dock="fav" aria-label="دڵخواز">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </a>
+    <a class="float-dock__btn is-active" href="#explore" data-dock="grid" aria-label="گەڕان">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    </a>
+    <a class="float-dock__btn" href="#shop" data-dock="bookmark" aria-label="فرۆشگا">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+    </a>
+    <button class="float-dock__btn" type="button" id="dockSearch" aria-label="گەڕان">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+  </nav>
+
+  <div class="float-actions">
+    <button class="back-top" type="button" id="backTop" aria-label="گەڕانەوە بۆ سەرەوە">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="18 15 12 9 6 15"/></svg>
+    </button>
+    <a class="chat-fab" href="#contact" aria-label="پەیاممان بنێرە">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      <span>پەیاممان بنێرە</span>
+    </a>
+  </div>
+
   </div>
 
   <script>
@@ -1932,6 +2119,68 @@
       document.fonts.ready.then(fitExploreMosaic);
     }
     window.addEventListener("load", fitExploreMosaic);
+
+    /* Floating dock + back-to-top */
+    var backTop = document.getElementById("backTop");
+    var floatDock = document.getElementById("floatDock");
+    var dockSearch = document.getElementById("dockSearch");
+    var langToggle = document.getElementById("langToggle");
+    var langCode = document.getElementById("langCode");
+    var searchOpenBtn = document.getElementById("searchOpen");
+
+    if (backTop) {
+      backTop.addEventListener("click", function () {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+      window.addEventListener("scroll", function () {
+        backTop.classList.toggle("is-visible", window.scrollY > 420);
+      }, { passive: true });
+    }
+
+    if (dockSearch && searchOpenBtn) {
+      dockSearch.addEventListener("click", function () {
+        searchOpenBtn.click();
+      });
+    }
+
+    if (floatDock) {
+      var dockBtns = floatDock.querySelectorAll(".float-dock__btn[href]");
+      var dockSections = [
+        { id: "explore", dock: "grid" },
+        { id: "luxury", dock: "fav" },
+        { id: "shop", dock: "bookmark" },
+        { id: "top", dock: "home" }
+      ];
+      function updateDockActive() {
+        var scrollY = window.scrollY + window.innerHeight * 0.35;
+        var active = "home";
+        dockSections.forEach(function (s) {
+          var el = document.getElementById(s.id);
+          if (el && el.offsetTop <= scrollY) active = s.dock;
+        });
+        dockBtns.forEach(function (btn) {
+          btn.classList.toggle("is-active", btn.getAttribute("data-dock") === active);
+        });
+      }
+      window.addEventListener("scroll", updateDockActive, { passive: true });
+      updateDockActive();
+    }
+
+    if (langToggle && langCode) {
+      langToggle.addEventListener("click", function () {
+        var html = document.documentElement;
+        var isKu = html.getAttribute("lang") === "ckb";
+        if (isKu) {
+          html.setAttribute("lang", "en");
+          html.setAttribute("dir", "ltr");
+          langCode.textContent = "EN";
+        } else {
+          html.setAttribute("lang", "ckb");
+          html.setAttribute("dir", "rtl");
+          langCode.textContent = "KU";
+        }
+      });
+    }
 
     /* Search */
     var searchPanel = document.getElementById("searchPanel");
