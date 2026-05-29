@@ -891,27 +891,23 @@
       }
       .explore-showcase__grid {
         aspect-ratio: unset;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         grid-template-rows: auto;
-        gap: 8px;
+        gap: 6px;
       }
       .showcase-card {
         height: auto;
-        aspect-ratio: 1;
+        aspect-ratio: 3 / 4;
+        max-height: 145px;
       }
       .showcase-card:nth-child(n) {
         grid-column: auto !important;
         grid-row: auto !important;
       }
-      .showcase-card__frame { border-radius: 22px; }
+      .showcase-card__frame { border-radius: 16px; }
       .showcase-card__img,
-      .showcase-card__shade { border-radius: 20px; }
-    }
-    @media (max-width: 480px) {
-      .explore-showcase__grid { gap: 6px; }
-      .showcase-card__frame { border-radius: 18px; }
-      .showcase-card__img,
-      .showcase-card__shade { border-radius: 16px; }
+      .showcase-card__shade { border-radius: 14px; }
+      .showcase-card__label { font-size: 0.45rem; padding: 0.3rem 0.35rem 0.45rem; }
     }
 
     /* ── Store sections ── */
@@ -919,7 +915,10 @@
       max-width: 1400px; margin: 0 auto;
       padding: clamp(2rem, 5vw, 3.5rem) clamp(1rem, 3vw, 1.75rem);
     }
-    .store-section { margin-bottom: clamp(2.5rem, 6vw, 4rem); }
+    .store-section { margin-bottom: clamp(2.5rem, 6vw, 4rem); scroll-margin-top: calc(var(--header-h) + 1rem); }
+    #home,
+    #explore,
+    .explore-showcase { scroll-margin-top: calc(var(--header-h) + 1rem); }
     .store-section__head {
       display: flex; align-items: flex-end; justify-content: space-between;
       gap: 1rem; margin-bottom: 1.35rem;
@@ -1298,10 +1297,12 @@
       .brands__inner { grid-template-columns: repeat(4, 1fr); }
     }
     @media (max-width: 1024px) {
-      .product-grid { grid-template-columns: repeat(2, 1fr); }
-      .features { grid-template-columns: repeat(2, 1fr); }
-      .brands__inner { grid-template-columns: repeat(3, 1fr); }
+      .product-grid { grid-template-columns: repeat(2, 1fr); gap: 0.65rem; }
+      .features { grid-template-columns: repeat(2, 1fr); gap: 0.65rem; }
+      .brands__inner { grid-template-columns: repeat(3, 1fr); gap: 0.65rem; }
       .site-footer__top { grid-template-columns: 1fr 1fr; }
+      .hero-carousel { max-height: 320px; min-height: 200px; aspect-ratio: 16 / 9; }
+      .store-main { padding: 1.5rem 1rem; }
 
       .menu-toggle { display: inline-flex; }
 
@@ -1390,47 +1391,214 @@
       .float-dock { display: none; }
     }
     @media (max-width: 768px) {
-      :root { --header-h: 3.75rem; }
-      .site-header__inner { gap: 0.65rem; }
-      .header-logo { width: 2.35rem; height: 2.35rem; }
-      .brand__name { font-size: 0.92rem; }
-      .hero-carousel { aspect-ratio: 16 / 10; max-height: 380px; min-height: 220px; }
+      :root { --header-h: 3.35rem; }
+
+      /* Header */
+      .site-header__inner { gap: 0.5rem; padding-inline: 0.85rem; }
+      .header-logo { width: 2rem; height: 2rem; }
+      .brand__name { font-size: 0.85rem; }
+      .icon-btn, .menu-toggle { width: 2.1rem; height: 2.1rem; border-radius: 8px; }
+
+      /* Hero */
+      .hero-carousel {
+        aspect-ratio: 16 / 11;
+        max-height: 240px;
+        min-height: 168px;
+      }
+      .hero-slide__content { padding: 0.85rem 1rem; }
+      .hero-slide__title { max-width: 100%; font-size: 1.28rem; line-height: 1.3; }
+      .hero-slide__sub {
+        max-width: 100%;
+        margin-top: 0.45rem;
+        font-size: 0.74rem;
+        line-height: 1.55;
+      }
+      .hero-slide__cta {
+        margin-top: 0.75rem;
+        padding: 0.48rem 0.95rem;
+        font-size: 0.76rem;
+        border-radius: 8px;
+      }
       .hero-nav { display: none; }
-      .hero-slide__title { max-width: 100%; }
-      .hero-slide__sub { max-width: 100%; font-size: 0.85rem; }
+      .hero-dots { bottom: 0.65rem; gap: 0.35rem; }
+      .hero-dot { width: 6px; height: 6px; }
+
+      /* Brands */
+      .brands { padding: 0.85rem 0.75rem; }
+      .brands__inner { grid-template-columns: repeat(3, 1fr); gap: 0.45rem; }
+      .brand-logo { font-size: 0.62rem; letter-spacing: 0.04em; }
+
+      /* Explore — horizontal scroll strip */
+      .explore-showcase {
+        padding: 0.85rem 0 1rem;
+        overflow: visible;
+      }
+      .explore-showcase__inner { padding-inline: 0; }
+      .explore-showcase__head {
+        margin-bottom: 0.65rem;
+        padding-inline: 0.85rem;
+      }
+      .explore-showcase__title { font-size: 1.15rem; }
+      .explore-showcase__cta {
+        margin-top: 0.45rem;
+        padding: 0.45rem 0.95rem;
+        font-size: 0.72rem;
+      }
+      .explore-showcase__stage { padding: 0.35rem 0; }
+      .explore-showcase__glow,
+      .explore-showcase__particles { opacity: 0.3; }
+      .explore-showcase__perspective { overflow: visible; }
+      .explore-showcase__grid {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        gap: 8px;
+        padding: 0.15rem 0.85rem 0.5rem;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .explore-showcase__grid::-webkit-scrollbar { display: none; }
+      .showcase-card {
+        flex: 0 0 118px;
+        width: 118px;
+        height: 148px;
+        max-height: none;
+        aspect-ratio: unset;
+        scroll-snap-align: start;
+      }
+      .showcase-card__frame { border-radius: 14px; border-width: 1.5px; }
+      .showcase-card__img,
+      .showcase-card__shade { border-radius: 12px; }
+      .showcase-card__label {
+        font-size: 0.44rem;
+        padding: 0.28rem 0.35rem 0.42rem;
+      }
+      .showcase-card__halo { display: none; }
+
+      /* Store sections */
+      .store-main { padding: 1.1rem 0.75rem; }
+      .store-section { margin-bottom: 1.5rem; }
       .store-section__head {
         flex-direction: column;
         align-items: flex-start;
-        gap: 0.65rem;
+        gap: 0.4rem;
+        margin-bottom: 0.75rem;
       }
-      .cinema { aspect-ratio: 16 / 9; min-height: 160px; max-height: 280px; }
-      .cinema__sub { font-size: 0.82rem; }
-      .site-footer__top { grid-template-columns: 1fr; }
+      .store-section__title { font-size: 1.05rem; }
+      .store-section__sub { font-size: 0.74rem; margin-top: 0.2rem; }
+      .store-section__more { font-size: 0.74rem; }
+      .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.55rem;
+      }
+      .product-card { border-radius: 10px; }
+      .product-card__media::after { font-size: 1.35rem; }
+      .product-card__tag { font-size: 0.58rem; padding: 0.12rem 0.4rem; top: 0.4rem; inset-inline-start: 0.4rem; }
+      .product-card__body { padding: 0.5rem 0.55rem 0.65rem; }
+      .product-card__name { font-size: 0.72rem; line-height: 1.4; }
+
+      /* Cinema banners */
+      .cinema {
+        aspect-ratio: 16 / 9;
+        min-height: 110px;
+        max-height: 165px;
+        margin-block: 0.35rem;
+      }
+      .cinema__content { padding: 0.75rem 0.85rem; }
+      .cinema__title { font-size: 0.95rem; line-height: 1.35; }
+      .cinema__sub { font-size: 0.72rem; margin-top: 0.25rem; }
+
+      /* Features */
+      .features {
+        padding: 0 0.75rem 1.25rem;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.55rem;
+      }
+      .feature { padding: 0.75rem 0.55rem; border-radius: 10px; }
+      .feature__icon { font-size: 1.15rem; margin-bottom: 0.3rem; }
+      .feature__title { font-size: 0.74rem; }
+      .feature__desc { font-size: 0.68rem; margin-top: 0.2rem; line-height: 1.45; }
+
+      /* Info pages */
+      .info-pages { padding: 0 0.75rem 1.5rem; gap: 0.85rem; }
+      .info-page { padding: 1rem; border-radius: 14px; }
+      .info-page__title { font-size: 1.1rem; margin-bottom: 0.55rem; }
+      .info-page__lead { font-size: 0.82rem; line-height: 1.65; margin-bottom: 0.85rem; }
+      .info-list li { font-size: 0.8rem; line-height: 1.55; }
+      .info-stats { grid-template-columns: 1fr; gap: 0.55rem; }
+      .contact-grid { grid-template-columns: 1fr; gap: 0.55rem; }
+
+      /* Footer & search */
+      .site-footer { padding: 1.5rem 0.75rem 1.25rem; }
+      .site-footer__tagline { font-size: 0.78rem; line-height: 1.55; }
+      .site-footer__heading { font-size: 0.72rem; margin-bottom: 0.45rem; }
+      .site-footer__nav a { font-size: 0.78rem; }
+      .site-footer__top { grid-template-columns: 1fr; gap: 1.25rem; }
       .site-footer__bottom {
         flex-direction: column;
         align-items: center;
         text-align: center;
+        gap: 0.35rem;
+        font-size: 0.68rem;
       }
-      .search-panel { padding: calc(var(--header-h) + 0.75rem) 0.75rem 0.75rem; }
-      .search-panel__box { width: 100%; border-radius: 14px; }
-      .info-stats { grid-template-columns: 1fr; }
-      .contact-grid { grid-template-columns: 1fr; }
+      .search-panel { padding: calc(var(--header-h) + 0.5rem) 0.65rem 0.65rem; }
+      .search-panel__box { width: 100%; border-radius: 12px; padding: 0.85rem; }
+      .search-panel__input { padding: 0.6rem 0.75rem; font-size: 0.88rem; }
+
+      /* Float actions */
+      .float-actions {
+        inset-inline-end: 0.65rem;
+        bottom: max(0.75rem, env(safe-area-inset-bottom));
+      }
+      .back-top { width: 2.45rem; height: 2.45rem; }
+      .chat-fab {
+        padding: 0.5rem 0.65rem;
+        font-size: 0.68rem;
+        gap: 0.35rem;
+      }
+      .chat-fab svg { width: 0.85rem; height: 0.85rem; }
     }
+
     @media (max-width: 480px) {
-      .product-grid { grid-template-columns: 1fr; }
-      .features { grid-template-columns: 1fr; }
-      .brands__inner { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
-      .brand-logo { font-size: 0.7rem; }
-      .product-card__name { font-size: 0.85rem; }
-      .hero-slide__cta { padding: 0.65rem 1.25rem; font-size: 0.85rem; }
-      .info-page { padding: 1.35rem; border-radius: 16px; }
+      :root { --header-h: 3.1rem; }
+
+      .hero-carousel { max-height: 210px; min-height: 155px; }
+      .hero-slide__title { font-size: 1.12rem; }
+      .hero-slide__sub { font-size: 0.7rem; }
+
+      .brands__inner { grid-template-columns: repeat(3, 1fr); gap: 0.35rem; }
+      .brand-logo { font-size: 0.58rem; }
+
+      .showcase-card {
+        flex: 0 0 108px;
+        width: 108px;
+        height: 136px;
+      }
+
+      .product-grid { gap: 0.45rem; }
+      .product-card__name { font-size: 0.68rem; }
+
+      .features { grid-template-columns: 1fr 1fr; gap: 0.45rem; }
+      .feature__desc { display: none; }
+
+      .info-page { padding: 0.85rem; }
       .contact-form__row { flex-direction: column; }
+
+      .chat-fab span { display: none; }
+      .chat-fab { padding: 0.55rem; border-radius: 50%; width: 2.45rem; height: 2.45rem; justify-content: center; }
     }
+
     @media (max-width: 360px) {
       .brand__name { display: none; }
-      .header-actions { gap: 0.25rem; }
-      .icon-btn { width: 2.15rem; height: 2.15rem; }
-      .menu-toggle { width: 2.15rem; height: 2.15rem; }
+      .header-actions { gap: 0.2rem; }
+      .icon-btn, .menu-toggle { width: 2rem; height: 2rem; }
+      .showcase-card {
+        flex: 0 0 100px;
+        width: 100px;
+        height: 126px;
+      }
+      .hero-slide__title { font-size: 1rem; }
     }
     @supports (padding: max(0px)) {
       .site-header__inner {
@@ -1443,6 +1611,11 @@
         padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
       }
     }
+    @media (hover: none) {
+      .product-card:hover { transform: none; box-shadow: none; }
+      .showcase-card__frame { box-shadow: 0 0 12px 2px rgba(99, 102, 241, 0.2), 0 4px 16px rgba(0, 0, 0, 0.35); }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
@@ -1471,6 +1644,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
           ئێکسسوارات
         </a>
+        <a class="nav__link" href="#explore">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          گەڕان
+        </a>
         <a class="nav__link" href="#tech">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
           تەکنەلۆژیا
@@ -1491,16 +1668,16 @@
         <button class="icon-btn" type="button" id="searchOpen" aria-label="گەڕان" aria-expanded="false" aria-controls="searchPanel">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
-        <a class="icon-btn" href="https://shopping.mmiraq.com/" aria-label="هەژمار">
+        <a class="icon-btn" href="#about" aria-label="هەژمار">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </a>
-        <a class="icon-btn" href="https://shopping.mmiraq.com/" aria-label="داواکارییەکان">
+        <a class="icon-btn" href="#services" aria-label="داواکارییەکان">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         </a>
         <button class="lang-pill" type="button" id="langToggle" aria-label="گۆڕینی زمان">
           <span class="lang-pill__code" id="langCode">KU</span>
         </button>
-        <a class="icon-btn" href="https://shopping.mmiraq.com/" aria-label="سەبەتە">
+        <a class="icon-btn" href="#shop" aria-label="سەبەتە">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
         </a>
         <button class="menu-toggle" type="button" id="menuToggle" aria-label="مێنیو" aria-expanded="false" aria-controls="mainNav">☰</button>
@@ -1530,7 +1707,7 @@
         <div class="hero-slide__content">
           <h1 class="hero-slide__title">ئێکسسواراتی <span>لوکس و مۆدێرن</span></h1>
           <p class="hero-slide__sub">کۆمەڵێک بەرهەمی premium بۆ ستایلی ژیانت — کوالیتی بەرز، دیزاینی جوان.</p>
-          <a class="hero-slide__cta" href="https://shopping.mmiraq.com/">ئێستا بازاری بکە</a>
+          <a class="hero-slide__cta" href="#shop">ئێستا بازاری بکە</a>
         </div>
       </div>
       <div class="hero-slide hero-slide--2" data-slide="1">
@@ -1538,7 +1715,7 @@
         <div class="hero-slide__content">
           <h2 class="hero-slide__title">شۆپی <span>زیرەک MM IRAQ</span></h2>
           <p class="hero-slide__sub">فرۆشگای ئۆنلاینی RTL، کۆگا، و بەڕێوەبردنی بەرهەم لە یەک پلاتفۆرم.</p>
-          <a class="hero-slide__cta" href="https://shopping.mmiraq.com/">زیاتر بزانە</a>
+          <a class="hero-slide__cta" href="#explore">زیاتر بزانە</a>
         </div>
       </div>
       <div class="hero-slide hero-slide--3" data-slide="2">
@@ -1546,7 +1723,7 @@
         <div class="hero-slide__content">
           <h2 class="hero-slide__title">گەیاندنی <span>خێرا و متمانەپێکراو</span></h2>
           <p class="hero-slide__sub">لۆجستیکی پێشکەوتوو و چاودێری کاتی ڕاستەقینە بۆ هەموو داواکارییەک.</p>
-          <a class="hero-slide__cta" href="https://shopping.mmiraq.com/">دەست پێ بکە</a>
+          <a class="hero-slide__cta" href="#services">دەست پێ بکە</a>
         </div>
       </div>
       <button class="hero-nav hero-nav--prev" type="button" id="heroPrev" aria-label="پێشوو">‹</button>
@@ -1560,12 +1737,12 @@
 
     <div class="brands">
       <div class="brands__inner">
-        <a class="brand-logo" href="https://shopping.mmiraq.com/">Apple</a>
-        <a class="brand-logo" href="https://shopping.mmiraq.com/">Samsung</a>
-        <a class="brand-logo" href="https://shopping.mmiraq.com/">Sony</a>
-        <a class="brand-logo" href="https://shopping.mmiraq.com/">Logitech</a>
-        <a class="brand-logo" href="https://shopping.mmiraq.com/">Razer</a>
-        <a class="brand-logo" href="https://shopping.mmiraq.com/">MM IRAQ</a>
+        <a class="brand-logo" href="#luxury">Apple</a>
+        <a class="brand-logo" href="#luxury">Samsung</a>
+        <a class="brand-logo" href="#tech">Sony</a>
+        <a class="brand-logo" href="#tech">Logitech</a>
+        <a class="brand-logo" href="#tech">Razer</a>
+        <a class="brand-logo" href="#about">MM IRAQ</a>
       </div>
     </div>
 
@@ -1573,7 +1750,7 @@
       <div class="explore-showcase__inner">
         <div class="explore-showcase__head reveal">
           <h2 class="explore-showcase__title" id="explore-title">زیاتر لە MM IRAQ بگەڕێ</h2>
-          <a class="explore-showcase__cta" href="https://shopping.mmiraq.com/">ئێستا بگەڕێ</a>
+          <a class="explore-showcase__cta" href="#luxury">ئێستا بگەڕێ</a>
         </div>
         <div class="explore-showcase__stage">
           <div class="explore-showcase__glow" aria-hidden="true"></div>
@@ -1581,7 +1758,7 @@
           <div class="explore-showcase__perspective">
             <div class="explore-showcase__tilt">
               <div class="explore-showcase__grid">
-              <a class="showcase-card" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card" href="#luxury">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=440&h=700&fit=crop&q=80" alt="ئێکسسوارات" loading="lazy" width="440" height="700" />
@@ -1589,7 +1766,7 @@
                   <span class="showcase-card__label">Accessories</span>
                 </div>
               </a>
-              <a class="showcase-card" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card" href="#tech">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1484704849700-f032a568e944?w=400&h=400&fit=crop&q=80" alt="هێدفۆنی پڕۆ" loading="lazy" width="400" height="400" />
@@ -1597,7 +1774,7 @@
                   <span class="showcase-card__label">Pro Headset</span>
                 </div>
               </a>
-              <a class="showcase-card showcase-card--featured" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card showcase-card--featured" href="#about">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1639765487020-a9177d965a99?w=760&h=400&fit=crop&q=80" alt="MM IRAQ" loading="lazy" width="760" height="400" />
@@ -1605,7 +1782,7 @@
                   <span class="showcase-card__label">MM IRAQ</span>
                 </div>
               </a>
-              <a class="showcase-card" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card" href="#tech">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1612287230202-22b6b192128d?w=400&h=400&fit=crop&q=80" alt="کۆntrۆڵەر" loading="lazy" width="400" height="400" />
@@ -1613,7 +1790,7 @@
                   <span class="showcase-card__label">MM Control</span>
                 </div>
               </a>
-              <a class="showcase-card" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card" href="#luxury">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=440&h=700&fit=crop&q=80" alt="Elite Pillow" loading="lazy" width="440" height="700" />
@@ -1621,7 +1798,7 @@
                   <span class="showcase-card__label">Elite Pillow</span>
                 </div>
               </a>
-              <a class="showcase-card" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card" href="#luxury">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500&h=500&fit=crop&q=80" alt="کورسی گەیمینگ" loading="lazy" width="500" height="500" />
@@ -1629,7 +1806,7 @@
                   <span class="showcase-card__label">Elite Chair</span>
                 </div>
               </a>
-              <a class="showcase-card" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card" href="#tech">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1595225472462-8752bf05d294?w=400&h=400&fit=crop&q=80" alt="کیبۆرد" loading="lazy" width="400" height="400" />
@@ -1637,7 +1814,7 @@
                   <span class="showcase-card__label">Mech Key</span>
                 </div>
               </a>
-              <a class="showcase-card" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card" href="#tech">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1615663245857-ac81dd76ad66?w=400&h=400&fit=crop&q=80" alt="ماوس" loading="lazy" width="400" height="400" />
@@ -1645,7 +1822,7 @@
                   <span class="showcase-card__label">Elite Mouse</span>
                 </div>
               </a>
-              <a class="showcase-card" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card" href="#luxury">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop&q=80" alt="ساعەت" loading="lazy" width="400" height="400" />
@@ -1653,7 +1830,7 @@
                   <span class="showcase-card__label">Smart Watch</span>
                 </div>
               </a>
-              <a class="showcase-card" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card" href="#tech">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=440&h=700&fit=crop&q=80" alt="تەکنەلۆژیا" loading="lazy" width="440" height="700" />
@@ -1661,7 +1838,7 @@
                   <span class="showcase-card__label">Tech Gear</span>
                 </div>
               </a>
-              <a class="showcase-card" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card" href="#tech">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=440&h=700&fit=crop&q=80" alt="هێدفۆن" loading="lazy" width="440" height="700" />
@@ -1669,7 +1846,7 @@
                   <span class="showcase-card__label">Studio Audio</span>
                 </div>
               </a>
-              <a class="showcase-card" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card" href="#shop">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1542751371-adc38448a05e?w=760&h=700&fit=crop&q=80" alt="MM KILLSWITCH" loading="lazy" width="760" height="700" />
@@ -1677,7 +1854,7 @@
                   <span class="showcase-card__label">MM KILLSWITCH</span>
                 </div>
               </a>
-              <a class="showcase-card" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card" href="#shop">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1580480055273-228cc534581e?w=440&h=700&fit=crop&q=80" alt="MM ROUX" loading="lazy" width="440" height="700" />
@@ -1685,7 +1862,7 @@
                   <span class="showcase-card__label">MM ROUX</span>
                 </div>
               </a>
-              <a class="showcase-card" href="https://shopping.mmiraq.com/">
+              <a class="showcase-card" href="#tech">
                 <span class="showcase-card__halo" aria-hidden="true"></span>
                 <div class="showcase-card__frame">
                   <img class="showcase-card__img" src="https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=440&h=700&fit=crop&q=80" alt="Wireless Pro" loading="lazy" width="440" height="700" />
@@ -1707,28 +1884,28 @@
           <h2 class="store-section__title">ئێکسسواراتی لوکس</h2>
           <p class="store-section__sub">هەڵبژاردەی دەستچێن و ستایلی premium</p>
         </div>
-        <a class="store-section__more" href="https://shopping.mmiraq.com/">هەمووی ببینە ←</a>
+        <a class="store-section__more" href="#luxury">هەمووی ببینە ←</a>
       </div>
       <div class="product-grid">
-        <a class="product-card reveal reveal-delay-1" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-1" href="#luxury">
           <div class="product-card__media product-card__media--violet"><span class="product-card__tag">نوێ</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">کڵاوی چەرم Premium</h3>
           </div>
         </a>
-        <a class="product-card reveal reveal-delay-2" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-2" href="#luxury">
           <div class="product-card__media product-card__media--gold"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">کەمی چوارینە لوکس</h3>
           </div>
         </a>
-        <a class="product-card reveal reveal-delay-3" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-3" href="#luxury">
           <div class="product-card__media product-card__media--cyan"><span class="product-card__tag">Hot</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">ساعەتی زیرەک MM Edition</h3>
           </div>
         </a>
-        <a class="product-card reveal reveal-delay-4" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-4" href="#luxury">
           <div class="product-card__media product-card__media--indigo"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">جانتای دەستی دیزاین</h3>
@@ -1738,7 +1915,7 @@
     </section>
     </div>
 
-    <a class="cinema cinema--a cinema--link" href="https://shopping.mmiraq.com/" aria-label="کۆڵێکشنێکی نوێ">
+    <a class="cinema cinema--a cinema--link" href="#luxury" aria-label="کۆڵێکشنێکی نوێ">
       <div class="cinema__bg"></div>
       <div class="cinema__content">
         <h2 class="cinema__title">کۆڵێکشنێکی نوێ — وەرزی ٢٠٢٦</h2>
@@ -1753,28 +1930,28 @@
           <h2 class="store-section__title">ئامێر و تەکنەلۆژیا</h2>
           <p class="store-section__sub">هێدسێت، ماوس، کیبۆرد، و زیاتر</p>
         </div>
-        <a class="store-section__more" href="https://shopping.mmiraq.com/">هەمووی ببینە ←</a>
+        <a class="store-section__more" href="#tech">هەمووی ببینە ←</a>
       </div>
       <div class="product-grid">
-        <a class="product-card reveal reveal-delay-1" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-1" href="#tech">
           <div class="product-card__media product-card__media--cyan"><span class="product-card__tag">-١٥٪</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">هێدسێت گەیمینگ Pro</h3>
           </div>
         </a>
-        <a class="product-card reveal reveal-delay-2" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-2" href="#tech">
           <div class="product-card__media product-card__media--violet"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">ماوس RGB Wireless</h3>
           </div>
         </a>
-        <a class="product-card reveal reveal-delay-3" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-3" href="#tech">
           <div class="product-card__media product-card__media--indigo"><span class="product-card__tag">Premium</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">کیبۆرد Mechanical</h3>
           </div>
         </a>
-        <a class="product-card reveal reveal-delay-4" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-4" href="#tech">
           <div class="product-card__media product-card__media--gold"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">Webcam 4K Stream</h3>
@@ -1784,7 +1961,7 @@
     </section>
     </div>
 
-    <a class="cinema cinema--b cinema--link" href="https://shopping.mmiraq.com/" aria-label="تەکنەلۆژیا و بازرگانی">
+    <a class="cinema cinema--b cinema--link" href="#services" aria-label="تەکنەلۆژیا و بازرگانی">
       <div class="cinema__bg" aria-hidden="true"></div>
       <div class="cinema__content reveal">
         <h2 class="cinema__title">تەکنەلۆژیا + بازرگانی</h2>
@@ -1799,28 +1976,28 @@
           <h2 class="store-section__title">شۆپ و کۆگای زیرەک</h2>
           <p class="store-section__sub">پلاتفۆرمی فرۆشتن و بەڕێوەبردن</p>
         </div>
-        <a class="store-section__more" href="https://shopping.mmiraq.com/">هەمووی ببینە ←</a>
+        <a class="store-section__more" href="#shop">هەمووی ببینە ←</a>
       </div>
       <div class="product-grid">
-        <a class="product-card reveal reveal-delay-1" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-1" href="#shop">
           <div class="product-card__media product-card__media--indigo"><span class="product-card__tag">MM</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">پلاتفۆرمی شۆپی RTL</h3>
           </div>
         </a>
-        <a class="product-card reveal reveal-delay-2" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-2" href="#shop">
           <div class="product-card__media product-card__media--cyan"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">داشبۆردی کۆگا</h3>
           </div>
         </a>
-        <a class="product-card reveal reveal-delay-3" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-3" href="#shop">
           <div class="product-card__media product-card__media--violet"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">بەڕێوەبردنی بەرهەم</h3>
           </div>
         </a>
-        <a class="product-card reveal reveal-delay-4" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-4" href="#shop">
           <div class="product-card__media product-card__media--gold"><span class="product-card__tag">AI</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">ئامار و ڕاپۆرت</h3>
@@ -1834,28 +2011,28 @@
           <h2 class="store-section__title">خزمەتگوزارییەکان</h2>
           <p class="store-section__sub">لۆجستیک، AI، و پشتیوانی</p>
         </div>
-        <a class="store-section__more" href="https://shopping.mmiraq.com/">هەمووی ببینە ←</a>
+        <a class="store-section__more" href="#services">هەمووی ببینە ←</a>
       </div>
       <div class="product-grid">
-        <a class="product-card reveal reveal-delay-1" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-1" href="#services">
           <div class="product-card__media product-card__media--cyan"><span class="product-card__tag">AI</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">ڕاپۆرتی تێلیگرام</h3>
           </div>
         </a>
-        <a class="product-card reveal reveal-delay-2" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-2" href="#services">
           <div class="product-card__media product-card__media--violet"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">گەیاندنی خێرا</h3>
           </div>
         </a>
-        <a class="product-card reveal reveal-delay-3" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-3" href="#services">
           <div class="product-card__media product-card__media--indigo"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">پشتیوانی کڕیار</h3>
           </div>
         </a>
-        <a class="product-card reveal reveal-delay-4" href="https://shopping.mmiraq.com/">
+        <a class="product-card reveal reveal-delay-4" href="#services">
           <div class="product-card__media product-card__media--gold"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">چارەسەری تایبەت</h3>
@@ -1997,7 +2174,7 @@
           <p class="site-footer__heading">بەشەکان</p>
           <div class="site-footer__nav">
             <a href="#luxury">ئێکسسوارات</a>
-            <a href="https://shopping.mmiraq.com/">فرۆشگا</a>
+            <a href="#shop">فرۆشگا</a>
             <a href="#tech">تەکنەلۆژیا</a>
             <a href="#shop">شۆپ</a>
             <a href="#services">خزمەتگوزاری</a>
@@ -2032,11 +2209,11 @@
     <a class="float-dock__btn is-active" href="#home" data-dock="home" aria-label="سەرەوە">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     </a>
-    <a class="float-dock__btn" href="#luxury" data-dock="fav" aria-label="دڵخواز">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-    </a>
     <a class="float-dock__btn" href="#explore" data-dock="grid" aria-label="گەڕان">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    </a>
+    <a class="float-dock__btn" href="#luxury" data-dock="fav" aria-label="دڵخواز">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </a>
     <a class="float-dock__btn" href="#shop" data-dock="bookmark" aria-label="فرۆشگا">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
@@ -2199,11 +2376,50 @@
         setDockActive(active);
       }
 
+      window.setDockActive = setDockActive;
+      window.updateDockActive = updateDockActive;
+
       window.addEventListener("scroll", updateDockActive, { passive: true });
       window.addEventListener("resize", updateDockActive);
       window.addEventListener("load", updateDockActive);
       updateDockActive();
     }
+
+    function scrollToSection(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var header = document.querySelector(".site-header");
+      var headerH = header ? header.offsetHeight : 68;
+      var top = el.getBoundingClientRect().top + window.scrollY - headerH - 12;
+      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    }
+
+    var hashToDock = {
+      home: "home",
+      top: "home",
+      explore: "grid",
+      luxury: "fav",
+      shop: "bookmark"
+    };
+
+    document.querySelectorAll('a[href^="#"]').forEach(function (link) {
+      link.addEventListener("click", function (e) {
+        var hash = link.getAttribute("href");
+        if (!hash || hash === "#") return;
+        var id = hash.slice(1);
+        var target = document.getElementById(id);
+        if (!target) return;
+        e.preventDefault();
+        scrollToSection(id);
+        if (nav.classList.contains("is-open")) closeMenu();
+        if (typeof window.setDockActive === "function" && hashToDock[id]) {
+          window.setDockActive(hashToDock[id]);
+        }
+        if (history.replaceState) {
+          history.replaceState(null, "", hash);
+        }
+      });
+    });
 
     if (langToggle && langCode) {
       langToggle.addEventListener("click", function () {
@@ -2526,11 +2742,6 @@
       });
     }
 
-    document.querySelectorAll('a[href^="#"]').forEach(function (link) {
-      link.addEventListener("click", function () {
-        if (nav.classList.contains("is-open")) closeMenu();
-      });
-    });
 
     var items = document.querySelectorAll(".reveal");
     if (!items.length || !("IntersectionObserver" in window)) {
