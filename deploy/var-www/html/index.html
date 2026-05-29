@@ -110,6 +110,65 @@
       border: 1px solid var(--border); background: var(--surface);
       font-size: 0.75rem; font-weight: 600; color: var(--muted);
     }
+
+    .shop-cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.55rem 1.2rem;
+      margin-inline-end: 0.25rem;
+      font-family: inherit;
+      font-size: 0.84rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      white-space: nowrap;
+      color: #1a1200;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #fef08a 0%, #facc15 45%, #f59e0b 100%);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.25) inset,
+        0 4px 20px rgba(250, 204, 21, 0.45),
+        0 0 28px rgba(245, 158, 11, 0.35);
+      animation: shop-cta-glow 2.4s ease-in-out infinite;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .shop-cta:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.35) inset,
+        0 8px 28px rgba(250, 204, 21, 0.55),
+        0 0 40px rgba(245, 158, 11, 0.5);
+    }
+    @keyframes shop-cta-glow {
+      0%, 100% {
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.25) inset,
+          0 4px 18px rgba(250, 204, 21, 0.4),
+          0 0 24px rgba(245, 158, 11, 0.3);
+      }
+      50% {
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.35) inset,
+          0 6px 26px rgba(250, 204, 21, 0.65),
+          0 0 36px rgba(251, 191, 36, 0.55);
+      }
+    }
+    a.product-card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+    }
+    .cinema--link {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+    }
+    .cinema--link:hover .cinema__title {
+      color: var(--gold);
+    }
+
     .menu-toggle {
       display: none; background: none; border: none;
       color: #fff; font-size: 1.35rem; cursor: pointer; padding: 0.25rem;
@@ -220,10 +279,12 @@
       align-items: center;
     }
     .brand-logo {
+      display: block;
       text-align: center; font-size: clamp(0.75rem, 1.5vw, 0.95rem);
       font-weight: 700; letter-spacing: 0.08em;
       color: rgba(255,255,255,0.35);
       text-transform: uppercase;
+      text-decoration: none;
       transition: color 0.25s;
     }
     .brand-logo:hover { color: rgba(255,255,255,0.75); }
@@ -293,10 +354,6 @@
     .product-card__body { padding: 0.85rem 1rem 1.1rem; }
     .product-card__name {
       font-size: 0.88rem; font-weight: 600; line-height: 1.5;
-    }
-    .product-card__price {
-      margin-top: 0.45rem; font-size: 0.95rem; font-weight: 800;
-      color: var(--gold);
     }
 
     /* ── Cinema banners ── */
@@ -425,6 +482,7 @@
       .product-grid { grid-template-columns: repeat(2, 1fr); }
       .site-footer__top { grid-template-columns: 1fr; }
       .lang-pill { display: none; }
+      .shop-cta { padding: 0.5rem 0.85rem; font-size: 0.78rem; }
     }
     @media (max-width: 420px) {
       .product-grid { grid-template-columns: 1fr; }
@@ -469,13 +527,15 @@
         <a class="nav__link" href="#contact">زیاتر</a>
       </nav>
       <div class="header-actions">
-        <button class="icon-btn" type="button" aria-label="گەڕان">
+        <a class="shop-cta" href="https://shopping.mmiraq.com/">ئێستا بازاری بکە</a>
+
+        <a class="icon-btn" href="https://shopping.mmiraq.com/" aria-label="گەڕان">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </button>
-        <a class="icon-btn" href="#contact" aria-label="هەژمار">
+        </a>
+        <a class="icon-btn" href="https://shopping.mmiraq.com/" aria-label="هەژمار">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </a>
-        <a class="icon-btn" href="#luxury" aria-label="سەبەتە">
+        <a class="icon-btn" href="https://shopping.mmiraq.com/" aria-label="سەبەتە">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
         </a>
         <span class="lang-pill">🇮🇶 ckb</span>
@@ -491,7 +551,7 @@
         <div class="hero-slide__content">
           <h1 class="hero-slide__title">ئێکسسواراتی <span>لوکس و مۆدێرن</span></h1>
           <p class="hero-slide__sub">کۆمەڵێک بەرهەمی premium بۆ ستایلی ژیانت — کوالیتی بەرز، دیزاینی جوان.</p>
-          <a class="hero-slide__cta" href="#luxury">ئێستا بگەڕێ</a>
+          <a class="hero-slide__cta" href="https://shopping.mmiraq.com/">ئێستا بازاری بکە</a>
         </div>
       </div>
       <div class="hero-slide hero-slide--2" data-slide="1">
@@ -499,7 +559,7 @@
         <div class="hero-slide__content">
           <h2 class="hero-slide__title">شۆپی <span>زیرەک MM IRAQ</span></h2>
           <p class="hero-slide__sub">فرۆشگای ئۆنلاینی RTL، کۆگا، و بەڕێوەبردنی بەرهەم لە یەک پلاتفۆرم.</p>
-          <a class="hero-slide__cta" href="#shop">زیاتر بزانە</a>
+          <a class="hero-slide__cta" href="https://shopping.mmiraq.com/">زیاتر بزانە</a>
         </div>
       </div>
       <div class="hero-slide hero-slide--3" data-slide="2">
@@ -507,7 +567,7 @@
         <div class="hero-slide__content">
           <h2 class="hero-slide__title">گەیاندنی <span>خێرا و متمانەپێکراو</span></h2>
           <p class="hero-slide__sub">لۆجستیکی پێشکەوتوو و چاودێری کاتی ڕاستەقینە بۆ هەموو داواکارییەک.</p>
-          <a class="hero-slide__cta" href="#services">دەست پێ بکە</a>
+          <a class="hero-slide__cta" href="https://shopping.mmiraq.com/">دەست پێ بکە</a>
         </div>
       </div>
       <button class="hero-nav hero-nav--prev" type="button" id="heroPrev" aria-label="پێشوو">‹</button>
@@ -521,12 +581,12 @@
 
     <div class="brands">
       <div class="brands__inner">
-        <span class="brand-logo">Apple</span>
-        <span class="brand-logo">Samsung</span>
-        <span class="brand-logo">Sony</span>
-        <span class="brand-logo">Logitech</span>
-        <span class="brand-logo">Razer</span>
-        <span class="brand-logo">MM IRAQ</span>
+        <a class="brand-logo" href="https://shopping.mmiraq.com/">Apple</a>
+        <a class="brand-logo" href="https://shopping.mmiraq.com/">Samsung</a>
+        <a class="brand-logo" href="https://shopping.mmiraq.com/">Sony</a>
+        <a class="brand-logo" href="https://shopping.mmiraq.com/">Logitech</a>
+        <a class="brand-logo" href="https://shopping.mmiraq.com/">Razer</a>
+        <a class="brand-logo" href="https://shopping.mmiraq.com/">MM IRAQ</a>
       </div>
     </div>
 
@@ -537,48 +597,44 @@
           <h2 class="store-section__title">ئێکسسواراتی لوکس</h2>
           <p class="store-section__sub">هەڵبژاردەی دەستچێن و ستایلی premium</p>
         </div>
-        <a class="store-section__more" href="#luxury">هەمووی ببینە ←</a>
+        <a class="store-section__more" href="https://shopping.mmiraq.com/">هەمووی ببینە ←</a>
       </div>
       <div class="product-grid">
-        <article class="product-card reveal reveal-delay-1">
+        <a class="product-card reveal reveal-delay-1" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--violet"><span class="product-card__tag">نوێ</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">کڵاوی چەرم Premium</h3>
-            <p class="product-card__price">٤٨٬٠٠٠ IQD</p>
           </div>
-        </article>
-        <article class="product-card reveal reveal-delay-2">
+        </a>
+        <a class="product-card reveal reveal-delay-2" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--gold"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">کەمی چوارینە لوکس</h3>
-            <p class="product-card__price">٣٢٬٥٠٠ IQD</p>
           </div>
-        </article>
-        <article class="product-card reveal reveal-delay-3">
+        </a>
+        <a class="product-card reveal reveal-delay-3" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--cyan"><span class="product-card__tag">Hot</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">ساعەتی زیرەک MM Edition</h3>
-            <p class="product-card__price">١٢٥٬٠٠٠ IQD</p>
           </div>
-        </article>
-        <article class="product-card reveal reveal-delay-4">
+        </a>
+        <a class="product-card reveal reveal-delay-4" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--indigo"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">جانتای دەستی دیزاین</h3>
-            <p class="product-card__price">٥٦٬٠٠٠ IQD</p>
           </div>
-        </article>
+        </a>
       </div>
     </section>
     </div>
 
-    <section class="cinema cinema--a" aria-hidden="true">
+    <a class="cinema cinema--a cinema--link" href="https://shopping.mmiraq.com/" aria-label="کۆڵێکشنێکی نوێ">
       <div class="cinema__bg"></div>
       <div class="cinema__content">
         <h2 class="cinema__title">کۆڵێکشنێکی نوێ — وەرزی ٢٠٢٦</h2>
         <p class="cinema__sub">دیزاینی تایبەت MM IRAQ بۆ ئەو کەسانەی ستایل و کوالیتی گرنگی پێ دەدەن</p>
       </div>
-    </section>
+    </a>
 
     <div class="store-main">
     <section class="store-section" id="tech">
@@ -587,48 +643,44 @@
           <h2 class="store-section__title">ئامێر و تەکنەلۆژیا</h2>
           <p class="store-section__sub">هێدسێت، ماوس، کیبۆرد، و زیاتر</p>
         </div>
-        <a class="store-section__more" href="#tech">هەمووی ببینە ←</a>
+        <a class="store-section__more" href="https://shopping.mmiraq.com/">هەمووی ببینە ←</a>
       </div>
       <div class="product-grid">
-        <article class="product-card reveal reveal-delay-1">
+        <a class="product-card reveal reveal-delay-1" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--cyan"><span class="product-card__tag">-١٥٪</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">هێدسێت گەیمینگ Pro</h3>
-            <p class="product-card__price">٧٨٬٠٠٠ IQD</p>
           </div>
-        </article>
-        <article class="product-card reveal reveal-delay-2">
+        </a>
+        <a class="product-card reveal reveal-delay-2" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--violet"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">ماوس RGB Wireless</h3>
-            <p class="product-card__price">٣٤٬٠٠٠ IQD</p>
           </div>
-        </article>
-        <article class="product-card reveal reveal-delay-3">
+        </a>
+        <a class="product-card reveal reveal-delay-3" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--indigo"><span class="product-card__tag">Premium</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">کیبۆرد Mechanical</h3>
-            <p class="product-card__price">٨٩٬٠٠٠ IQD</p>
           </div>
-        </article>
-        <article class="product-card reveal reveal-delay-4">
+        </a>
+        <a class="product-card reveal reveal-delay-4" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--gold"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">Webcam 4K Stream</h3>
-            <p class="product-card__price">٦٢٬٠٠٠ IQD</p>
           </div>
-        </article>
+        </a>
       </div>
     </section>
     </div>
 
-    <section class="cinema cinema--b">
+    <a class="cinema cinema--b cinema--link" href="https://shopping.mmiraq.com/" aria-label="تەکنەلۆژیا و بازرگانی">
       <div class="cinema__bg" aria-hidden="true"></div>
       <div class="cinema__content reveal">
         <h2 class="cinema__title">تەکنەلۆژیا + بازرگانی</h2>
         <p class="cinema__sub">ڕاپۆرتی خۆکاری تێلیگرام و داشبۆردی بەڕێوەبردن بۆ تیمەکەت</p>
       </div>
-    </section>
+    </a>
 
     <div class="store-main">
     <section class="store-section" id="shop">
@@ -637,37 +689,33 @@
           <h2 class="store-section__title">شۆپ و کۆگای زیرەک</h2>
           <p class="store-section__sub">پلاتفۆرمی فرۆشتن و بەڕێوەبردن</p>
         </div>
-        <a class="store-section__more" href="#shop">هەمووی ببینە ←</a>
+        <a class="store-section__more" href="https://shopping.mmiraq.com/">هەمووی ببینە ←</a>
       </div>
       <div class="product-grid">
-        <article class="product-card reveal reveal-delay-1">
+        <a class="product-card reveal reveal-delay-1" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--indigo"><span class="product-card__tag">MM</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">پلاتفۆرمی شۆپی RTL</h3>
-            <p class="product-card__price">بەزووی</p>
           </div>
-        </article>
-        <article class="product-card reveal reveal-delay-2">
+        </a>
+        <a class="product-card reveal reveal-delay-2" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--cyan"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">داشبۆردی کۆگا</h3>
-            <p class="product-card__price">بەزووی</p>
           </div>
-        </article>
-        <article class="product-card reveal reveal-delay-3">
+        </a>
+        <a class="product-card reveal reveal-delay-3" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--violet"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">بەڕێوەبردنی بەرهەم</h3>
-            <p class="product-card__price">بەزووی</p>
           </div>
-        </article>
-        <article class="product-card reveal reveal-delay-4">
+        </a>
+        <a class="product-card reveal reveal-delay-4" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--gold"><span class="product-card__tag">AI</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">ئامار و ڕاپۆرت</h3>
-            <p class="product-card__price">بەزووی</p>
           </div>
-        </article>
+        </a>
       </div>
     </section>
     <section class="store-section" id="services">
@@ -676,37 +724,33 @@
           <h2 class="store-section__title">خزمەتگوزارییەکان</h2>
           <p class="store-section__sub">لۆجستیک، AI، و پشتیوانی</p>
         </div>
-        <a class="store-section__more" href="#services">هەمووی ببینە ←</a>
+        <a class="store-section__more" href="https://shopping.mmiraq.com/">هەمووی ببینە ←</a>
       </div>
       <div class="product-grid">
-        <article class="product-card reveal reveal-delay-1">
+        <a class="product-card reveal reveal-delay-1" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--cyan"><span class="product-card__tag">AI</span></div>
           <div class="product-card__body">
             <h3 class="product-card__name">ڕاپۆرتی تێلیگرام</h3>
-            <p class="product-card__price">خۆکار</p>
           </div>
-        </article>
-        <article class="product-card reveal reveal-delay-2">
+        </a>
+        <a class="product-card reveal reveal-delay-2" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--violet"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">گەیاندنی خێرا</h3>
-            <p class="product-card__price">٢٤/٧</p>
           </div>
-        </article>
-        <article class="product-card reveal reveal-delay-3">
+        </a>
+        <a class="product-card reveal reveal-delay-3" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--indigo"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">پشتیوانی کڕیار</h3>
-            <p class="product-card__price">Live</p>
           </div>
-        </article>
-        <article class="product-card reveal reveal-delay-4">
+        </a>
+        <a class="product-card reveal reveal-delay-4" href="https://shopping.mmiraq.com/">
           <div class="product-card__media product-card__media--gold"></div>
           <div class="product-card__body">
             <h3 class="product-card__name">چارەسەری تایبەت</h3>
-            <p class="product-card__price">Enterprise</p>
           </div>
-        </article>
+        </a>
       </div>
     </section>
     </div>
@@ -746,6 +790,7 @@
           <p class="site-footer__heading">بەشەکان</p>
           <div class="site-footer__nav">
             <a href="#luxury">ئێکسسوارات</a>
+            <a href="https://shopping.mmiraq.com/">فرۆشگا</a>
             <a href="#tech">تەکنەلۆژیا</a>
             <a href="#shop">شۆپ</a>
             <a href="#services">خزمەتگوزاری</a>
@@ -806,6 +851,9 @@
     var toggle = document.getElementById("menuToggle");
     var nav = document.getElementById("mainNav");
     toggle.addEventListener("click", function () { nav.classList.toggle("is-open"); });
+    nav.querySelectorAll("a").forEach(function (link) {
+      link.addEventListener("click", function () { nav.classList.remove("is-open"); });
+    });
 
     var items = document.querySelectorAll(".reveal");
     if (!items.length || !("IntersectionObserver" in window)) {
