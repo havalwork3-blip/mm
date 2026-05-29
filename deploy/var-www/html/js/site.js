@@ -1,0 +1,535 @@
+(function () {
+    var slides = document.querySelectorAll(".hero-slide");
+    var dots = document.querySelectorAll(".hero-dot");
+    var heroNext = document.getElementById("heroNext");
+    var heroPrev = document.getElementById("heroPrev");
+    var current = 0;
+    var timer;
+
+    if (slides.length && heroNext && heroPrev) {
+      function goTo(n) {
+        current = (n + slides.length) % slides.length;
+        slides.forEach(function (s, i) { s.classList.toggle("is-active", i === current); });
+        dots.forEach(function (d, i) { d.classList.toggle("is-active", i === current); });
+      }
+
+      function next() { goTo(current + 1); }
+      function resetTimer() {
+        clearInterval(timer);
+        timer = setInterval(next, 6000);
+      }
+
+      heroNext.addEventListener("click", function () { goTo(current + 1); resetTimer(); });
+      heroPrev.addEventListener("click", function () { goTo(current - 1); resetTimer(); });
+      dots.forEach(function (d) {
+        d.addEventListener("click", function () { goTo(+d.dataset.go); resetTimer(); });
+      });
+      resetTimer();
+    }
+
+    var toggle = document.getElementById("menuToggle");
+    var menuClose = document.getElementById("menuClose");
+    var sidebarOverlay = document.getElementById("sidebarOverlay");
+    var nav = document.getElementById("mainNav");
+
+    function openMenu() {
+      nav.classList.add("is-open");
+      sidebarOverlay.classList.add("is-open");
+      sidebarOverlay.setAttribute("aria-hidden", "false");
+      toggle.classList.add("is-active");
+      toggle.setAttribute("aria-expanded", "true");
+      document.body.classList.add("menu-open");
+    }
+    function closeMenu() {
+      nav.classList.remove("is-open");
+      sidebarOverlay.classList.remove("is-open");
+      sidebarOverlay.setAttribute("aria-hidden", "true");
+      toggle.classList.remove("is-active");
+      toggle.setAttribute("aria-expanded", "false");
+      document.body.classList.remove("menu-open");
+    }
+
+    toggle.addEventListener("click", function () {
+      if (nav.classList.contains("is-open")) closeMenu();
+      else openMenu();
+    });
+    if (menuClose) menuClose.addEventListener("click", closeMenu);
+    if (sidebarOverlay) sidebarOverlay.addEventListener("click", closeMenu);
+    nav.querySelectorAll("a").forEach(function (link) {
+      link.addEventListener("click", closeMenu);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && nav.classList.contains("is-open")) closeMenu();
+    });
+
+    /* Fit explore mosaic to viewport (desktop) */
+    var mosaicTilt = document.querySelector(".explore-showcase__tilt");
+    function fitExploreMosaic() {
+      if (!mosaicTilt) return;
+      mosaicTilt.style.setProperty("--mosaic-scale", "1");
+      if (window.innerWidth < 1025) return;
+      var rect = mosaicTilt.getBoundingClientRect();
+      var budget = window.innerHeight * 0.65;
+      if (rect.height > budget && budget > 0) {
+        mosaicTilt.style.setProperty("--mosaic-scale", String((budget / rect.height) * 0.98));
+      }
+    }
+    fitExploreMosaic();
+    window.addEventListener("resize", fitExploreMosaic);
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(fitExploreMosaic);
+    }
+    window.addEventListener("load", fitExploreMosaic);
+
+    /* Floating dock + back-to-top */
+    var backTop = document.getElementById("backTop");
+    var floatDock = document.getElementById("floatDock");
+    var dockSearch = document.getElementById("dockSearch");
+    var langToggle = document.getElementById("langToggle");
+    var langCode = document.getElementById("langCode");
+    var searchOpenBtn = document.getElementById("searchOpen");
+
+    if (backTop) {
+      backTop.addEventListener("click", function () {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+      window.addEventListener("scroll", function () {
+        backTop.classList.toggle("is-visible", window.scrollY > 420);
+      }, { passive: true });
+    }
+
+    if (dockSearch && searchOpenBtn) {
+      dockSearch.addEventListener("click", function () {
+        searchOpenBtn.click();
+      });
+    }
+
+    if (floatDock) {
+      var dockIndicator = document.getElementById("dockIndicator");
+      var dockBtns = floatDock.querySelectorAll(".float-dock__btn[data-dock]");
+      var pageToDock = {
+        home: "home",
+        explore: "grid",
+        luxury: "fav",
+        tech: "fav",
+        shop: "bookmark",
+        services: "bookmark",
+        about: "home",
+        terms: "home",
+        contact: "home"
+      };
+      var mainEl = document.getElementById("top");
+      var currentPage = mainEl ? mainEl.getAttribute("data-page") : "home";
+
+      function moveDockIndicator(activeBtn) {
+        if (!dockIndicator || !activeBtn) return;
+        dockIndicator.style.top = activeBtn.offsetTop + "px";
+      }
+
+      function setDockActive(dock) {
+        var activeBtn = null;
+        dockBtns.forEach(function (btn) {
+          var isActive = btn.getAttribute("data-dock") === dock;
+          btn.classList.toggle("is-active", isActive);
+          if (isActive) activeBtn = btn;
+        });
+        moveDockIndicator(activeBtn);
+      }
+
+      window.setDockActive = setDockActive;
+      setDockActive(pageToDock[currentPage] || "home");
+      window.addEventListener("resize", function () {
+        var active = floatDock.querySelector(".float-dock__btn.is-active");
+        moveDockIndicator(active);
+      });
+    }
+
+    function scrollToSection(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var header = document.querySelector(".site-header");
+      var headerH = header ? header.offsetHeight : 68;
+      var top = el.getBoundingClientRect().top + window.scrollY - headerH - 12;
+      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    }
+
+    document.querySelectorAll('a[href^="#"]:not([href="#"])').forEach(function (link) {
+      link.addEventListener("click", function (e) {
+        var hash = link.getAttribute("href");
+        if (!hash || hash === "#") return;
+        var id = hash.slice(1);
+        var target = document.getElementById(id);
+        if (!target) return;
+        e.preventDefault();
+        scrollToSection(id);
+        if (nav.classList.contains("is-open")) closeMenu();
+      });
+    });
+
+    if (langToggle && langCode) {
+      langToggle.addEventListener("click", function () {
+        var html = document.documentElement;
+        var isKu = html.getAttribute("lang") === "ckb";
+        if (isKu) {
+          html.setAttribute("lang", "en");
+          html.setAttribute("dir", "ltr");
+          langCode.textContent = "EN";
+        } else {
+          html.setAttribute("lang", "ckb");
+          html.setAttribute("dir", "rtl");
+          langCode.textContent = "KU";
+        }
+      });
+    }
+
+    /* Search */
+    var searchPanel = document.getElementById("searchPanel");
+    var searchOpen = document.getElementById("searchOpen");
+    var searchClose = document.getElementById("searchClose");
+    var searchInput = document.getElementById("searchInput");
+    var searchCount = document.getElementById("searchCount");
+    var searchSuggest = document.getElementById("searchSuggest");
+    var searchResults = document.getElementById("searchResults");
+    var productCards = document.querySelectorAll(".product-card");
+    var storeSections = document.querySelectorAll(".store-section");
+    var SHOP_URL = "https://shopping.mmiraq.com/";
+    var GLOBAL_CATALOG = [
+      { name: "کڵاوی چەرم Premium", href: "/luxury/", tone: "violet", section: "ئێکسسواراتی لوکس" },
+      { name: "کەمی چوارینە لوکس", href: "/luxury/", tone: "gold", section: "ئێکسسواراتی لوکس" },
+      { name: "ساعەتی زیرەک MM Edition", href: "/luxury/", tone: "cyan", section: "ئێکسسواراتی لوکس" },
+      { name: "جانتای دەستی دیزاین", href: "/luxury/", tone: "indigo", section: "ئێکسسواراتی لوکس" },
+      { name: "هێدسێت گەیمینگ Pro", href: "/tech/", tone: "violet", section: "تەکنەلۆژیا" },
+      { name: "ماوس RGB Wireless", href: "/tech/", tone: "cyan", section: "تەکنەلۆژیا" },
+      { name: "کیبۆرد Mechanical", href: "/tech/", tone: "gold", section: "تەکنەلۆژیا" },
+      { name: "Webcam 4K Stream", href: "/tech/", tone: "indigo", section: "تەکنەلۆژیا" },
+      { name: "پلاتفۆرمی شۆپی RTL", href: "/shop/", tone: "violet", section: "شۆپ" },
+      { name: "داشبۆردی کۆگا", href: "/shop/", tone: "cyan", section: "شۆپ" },
+      { name: "بەڕێوەبردنی بەرهەم", href: "/shop/", tone: "gold", section: "شۆپ" },
+      { name: "ئامار و ڕاپۆرت", href: "/shop/", tone: "indigo", section: "شۆپ" },
+      { name: "ڕاپۆرتی تێلیگرام", href: "/services/", tone: "violet", section: "خزمەتگوزاری" },
+      { name: "گەیاندنی خێرا", href: "/services/", tone: "cyan", section: "خزمەتگوزاری" },
+      { name: "پشتیوانی کڕیار", href: "/services/", tone: "gold", section: "خزمەتگوزاری" },
+      { name: "چارەسەری تایبەت", href: "/services/", tone: "indigo", section: "خزمەتگوزاری" }
+    ];
+
+    var catalog = GLOBAL_CATALOG.slice();
+    productCards.forEach(function (card, idx) {
+      var nameEl = card.querySelector(".product-card__name");
+      var mediaEl = card.querySelector(".product-card__media");
+      var section = card.closest(".store-section");
+      var sectionTitle = section ? section.querySelector(".store-section__title") : null;
+      var tone = "violet";
+      if (mediaEl) {
+        mediaEl.classList.forEach(function (c) {
+          var m = c.match(/product-card__media--(\w+)/);
+          if (m) tone = m[1];
+        });
+      }
+      var name = nameEl ? nameEl.textContent.trim() : "";
+      var href = card.getAttribute("href") || SHOP_URL;
+      var sectionName = sectionTitle ? sectionTitle.textContent.trim() : "";
+      var existing = catalog.findIndex(function (item) { return item.name === name; });
+      var entry = {
+        id: idx,
+        name: name,
+        href: href,
+        tone: tone,
+        section: sectionName,
+        card: card
+      };
+      if (existing >= 0) {
+        catalog[existing] = Object.assign({}, catalog[existing], entry);
+      } else if (name) {
+        entry.id = catalog.length;
+        catalog.push(entry);
+      }
+    });
+
+    function normalizeSearch(text) {
+      return (text || "").toLowerCase().replace(/\s+/g, " ").trim();
+    }
+
+    function levenshtein(a, b) {
+      if (a === b) return 0;
+      if (!a.length) return b.length;
+      if (!b.length) return a.length;
+      var row = [];
+      var i, j;
+      for (j = 0; j <= b.length; j++) row[j] = j;
+      for (i = 1; i <= a.length; i++) {
+        var prev = i;
+        for (j = 1; j <= b.length; j++) {
+          var val = a[i - 1] === b[j - 1] ? row[j - 1] : Math.min(row[j - 1], row[j], prev) + 1;
+          row[j - 1] = prev;
+          prev = val;
+        }
+        row[b.length] = prev;
+      }
+      return row[b.length];
+    }
+
+    function subsequenceScore(q, text) {
+      var qi = 0;
+      for (var i = 0; i < text.length && qi < q.length; i++) {
+        if (text[i] === q[qi]) qi++;
+      }
+      return qi / q.length;
+    }
+
+    function scoreItem(query, item) {
+      if (!query) return { score: 0, fuzzy: false, label: "" };
+      var name = normalizeSearch(item.name);
+      var section = normalizeSearch(item.section);
+      var haystack = name + " " + section;
+
+      if (name.indexOf(query) !== -1 || haystack.indexOf(query) !== -1) {
+        return { score: 100, fuzzy: false, label: "" };
+      }
+
+      var best = 0;
+      var bestWord = item.name;
+      var parts = haystack.split(/\s+/).filter(Boolean);
+      parts.push(name);
+
+      parts.forEach(function (word) {
+        if (word.indexOf(query) === 0) {
+          best = Math.max(best, 92);
+          bestWord = word;
+          return;
+        }
+        if (query.length >= 2) {
+          var dist = levenshtein(query, word);
+          var maxLen = Math.max(query.length, word.length);
+          var sim = 1 - dist / maxLen;
+          if (sim > best / 100) {
+            best = Math.max(best, sim * 100);
+            bestWord = word;
+          }
+        }
+        var sub = subsequenceScore(query, word);
+        if (sub >= 0.65) {
+          best = Math.max(best, 55 + sub * 30);
+          bestWord = word;
+        }
+      });
+
+      if (best >= 52) {
+        return { score: best, fuzzy: true, label: bestWord };
+      }
+      return { score: 0, fuzzy: false, label: "" };
+    }
+
+    function getMatches(query) {
+      if (!query) return [];
+      return catalog
+        .map(function (item) {
+          var s = scoreItem(query, item);
+          return { item: item, score: s.score, fuzzy: s.fuzzy, label: s.label };
+        })
+        .filter(function (m) { return m.score >= 52; })
+        .sort(function (a, b) { return b.score - a.score; });
+    }
+
+    function thumbClass(tone) {
+      return "search-result__thumb search-result__thumb--" + (tone || "violet");
+    }
+
+    function renderResults(matches) {
+      searchResults.innerHTML = "";
+      matches.forEach(function (m) {
+        var li = document.createElement("li");
+        var a = document.createElement("a");
+        a.className = "search-result";
+        a.href = m.item.href;
+        a.dataset.cardId = String(m.item.id);
+
+        var thumb = document.createElement("div");
+        thumb.className = thumbClass(m.item.tone);
+        thumb.setAttribute("aria-hidden", "true");
+
+        var body = document.createElement("div");
+        body.className = "search-result__body";
+
+        var name = document.createElement("span");
+        name.className = "search-result__name";
+        name.textContent = m.item.name;
+
+        var meta = document.createElement("span");
+        meta.className = "search-result__meta";
+        meta.textContent = m.item.section;
+
+        body.appendChild(name);
+        body.appendChild(meta);
+
+        if (m.fuzzy) {
+          var badge = document.createElement("span");
+          badge.className = "search-result__badge";
+          badge.textContent = "نزیکە بە: " + m.label;
+          body.appendChild(badge);
+        }
+
+        a.appendChild(thumb);
+        a.appendChild(body);
+        li.appendChild(a);
+        searchResults.appendChild(li);
+
+        a.addEventListener("click", function (e) {
+          if (m.item.card && document.body.contains(m.item.card)) {
+            e.preventDefault();
+            focusCard(m.item.card);
+            closeSearch(false);
+          }
+        });
+      });
+    }
+
+    function focusCard(card) {
+      productCards.forEach(function (c) { c.classList.remove("is-search-match"); });
+      if (!card) return;
+      card.classList.remove("is-search-hidden");
+      card.classList.add("is-search-match");
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(function () { card.classList.remove("is-search-match"); }, 2200);
+    }
+
+    function runSearch(scrollToFirst) {
+      var q = normalizeSearch(searchInput.value);
+      var matches = getMatches(q);
+      var visible = 0;
+      var hasExact = matches.some(function (m) { return !m.fuzzy; });
+
+      productCards.forEach(function (card) {
+        card.classList.remove("is-search-match");
+      });
+
+      if (!q) {
+        productCards.forEach(function (card) { card.classList.remove("is-search-hidden"); });
+        storeSections.forEach(function (section) { section.classList.remove("is-search-empty"); });
+        searchCount.hidden = true;
+        searchSuggest.hidden = true;
+        searchResults.innerHTML = "";
+        return;
+      }
+
+      var matchedNames = {};
+      matches.forEach(function (m) { matchedNames[m.item.name] = true; });
+
+      productCards.forEach(function (card) {
+        var nameEl = card.querySelector(".product-card__name");
+        var name = nameEl ? nameEl.textContent.trim() : "";
+        var hide = !matchedNames[name];
+        card.classList.toggle("is-search-hidden", hide);
+        if (!hide) visible++;
+      });
+
+      storeSections.forEach(function (section) {
+        var sectionCards = section.querySelectorAll(".product-card:not(.is-search-hidden)");
+        section.classList.toggle("is-search-empty", sectionCards.length === 0);
+      });
+
+      renderResults(matches);
+
+      searchCount.hidden = false;
+      var resultCount = productCards.length ? visible : matches.length;
+      if (resultCount > 0) {
+        var fuzzyCount = matches.filter(function (m) { return m.fuzzy; }).length;
+        searchCount.textContent = resultCount + " ئەنجام دۆزرایەوە";
+        searchCount.classList.remove("is-empty");
+        if (fuzzyCount > 0 && !hasExact) {
+          searchSuggest.hidden = false;
+          searchSuggest.textContent = "هەڵەی نووسین؟ ئەنجامە نزیکەکان پیشان دراون ↓";
+        } else {
+          searchSuggest.hidden = true;
+        }
+      } else {
+        searchCount.textContent = "هیچ کاڵایەک نەدۆزرایەوە";
+        searchCount.classList.add("is-empty");
+        if (catalog.length) {
+          searchSuggest.hidden = false;
+          var guess = catalog
+            .map(function (item) {
+              var s = scoreItem(q, item);
+              return { item: item, score: s.score, label: s.label };
+            })
+            .sort(function (a, b) { return b.score - a.score; })[0];
+          if (guess && guess.score > 25) {
+            searchSuggest.textContent = "ئایا دەگەڕێیت بۆ: «" + guess.item.name + "»؟";
+          } else {
+            searchSuggest.hidden = true;
+          }
+        }
+      }
+
+      if (scrollToFirst && matches.length > 0 && matches[0].item.card) {
+        focusCard(matches[0].item.card);
+      }
+    }
+
+    function openSearch() {
+      searchPanel.hidden = false;
+      searchPanel.classList.add("is-open");
+      searchOpen.setAttribute("aria-expanded", "true");
+      document.body.style.overflow = "hidden";
+      setTimeout(function () { searchInput.focus(); }, 50);
+    }
+
+    function closeSearch(reset) {
+      searchPanel.classList.remove("is-open");
+      searchOpen.setAttribute("aria-expanded", "false");
+      document.body.style.overflow = "";
+      if (reset) {
+        searchInput.value = "";
+        searchSuggest.hidden = true;
+        searchResults.innerHTML = "";
+        productCards.forEach(function (c) { c.classList.remove("is-search-match"); });
+        runSearch(false);
+      }
+      setTimeout(function () { searchPanel.hidden = true; }, 250);
+    }
+
+    searchOpen.addEventListener("click", openSearch);
+    searchClose.addEventListener("click", function () { closeSearch(true); });
+    searchPanel.addEventListener("click", function (e) {
+      if (e.target === searchPanel) closeSearch(true);
+    });
+    searchInput.addEventListener("input", function () { runSearch(false); });
+    searchInput.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeSearch(true);
+      if (e.key === "Enter") {
+        e.preventDefault();
+        runSearch(true);
+        closeSearch(false);
+      }
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && searchPanel.classList.contains("is-open")) closeSearch(true);
+    });
+
+    var contactForm = document.getElementById("contactForm");
+    var contactSuccess = document.getElementById("contactSuccess");
+    if (contactForm) {
+      contactForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var name = document.getElementById("contactName").value.trim();
+        var email = document.getElementById("contactEmail").value.trim();
+        var message = document.getElementById("contactMessage").value.trim();
+        var subject = encodeURIComponent("پەیام لە ماڵپەڕی MM IRAQ — " + name);
+        var body = encodeURIComponent("ناو: " + name + "\nئیمەیڵ: " + email + "\n\n" + message);
+        window.location.href = "mailto:info@mmiraq.com?subject=" + subject + "&body=" + body;
+        contactSuccess.classList.add("is-visible");
+      });
+    }
+
+
+    var items = document.querySelectorAll(".reveal");
+    if (!items.length || !("IntersectionObserver" in window)) {
+      items.forEach(function (el) { el.classList.add("is-visible"); });
+    } else {
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) { e.target.classList.add("is-visible"); obs.unobserve(e.target); }
+        });
+      }, { threshold: 0.1, rootMargin: "0px 0px -6% 0px" });
+      items.forEach(function (el) { obs.observe(el); });
+    }
+    })();

@@ -27,6 +27,15 @@ fi
 echo "==> git pull"
 git -C "${REPO_ROOT}" pull --ff-only
 
+echo "==> Sync MM IRAQ static landing (mmiraq.com)"
+if [[ -x "${SCRIPT_DIR}/sync-mmiraq-landing.sh" ]]; then
+  sudo "${SCRIPT_DIR}/sync-mmiraq-landing.sh"
+elif [[ -f "${SCRIPT_DIR}/sync-mmiraq-landing.sh" ]]; then
+  sudo bash "${SCRIPT_DIR}/sync-mmiraq-landing.sh"
+else
+  echo "WARN: sync-mmiraq-landing.sh not found; skipping static landing sync" >&2
+fi
+
 echo "==> Python dependencies"
 "${PIP}" install -r "${BACKEND}/requirements.txt"
 
