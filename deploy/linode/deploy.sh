@@ -50,6 +50,14 @@ fi
 echo "==> Django migrations"
 "${PYTHON}" "${BACKEND}/manage.py" migrate --noinput
 
+if [[ -n "${MARKETING_CMS_EMAIL:-}" && -n "${MARKETING_CMS_PASSWORD:-}" ]]; then
+  echo "==> Ensure marketing CMS editor (${MARKETING_CMS_EMAIL})"
+  "${PYTHON}" "${BACKEND}/manage.py" create_marketing_editor \
+    --email "${MARKETING_CMS_EMAIL}" \
+    --password "${MARKETING_CMS_PASSWORD}" \
+    ${MARKETING_CMS_NAME:+--name "${MARKETING_CMS_NAME}"}
+fi
+
 echo "==> Frontend build"
 if [[ -f "${FRONTEND}/package-lock.json" ]]; then
   (cd "${FRONTEND}" && npm ci && npm run build)

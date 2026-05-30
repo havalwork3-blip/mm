@@ -234,5 +234,7 @@ export async function deleteProduct(id: number) {
 }
 
 export function isMarketingAuthError(e: unknown): boolean {
-  return typeof e === 'object' && e !== null && 'status' in e && (e as { status: number }).status === 401
+  if (typeof e !== 'object' || e === null || !('status' in e)) return false
+  const status = (e as { status: number }).status
+  return status === 401 || status === 403
 }

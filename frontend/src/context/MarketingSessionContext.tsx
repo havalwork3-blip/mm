@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from 'react'
-import { fetchMarketingMe, isMarketingAuthError, restoreMarketingToken } from '../lib/marketingApi'
+import { fetchMarketingMe, isMarketingAuthError, persistMarketingToken, restoreMarketingToken } from '../lib/marketingApi'
 import type { MarketingEditorProfile } from '../lib/marketingApi'
 
 type MarketingSessionCtx = {
@@ -36,7 +36,10 @@ export function MarketingSessionProvider({ children }: { children: React.ReactNo
       const profile = await fetchMarketingMe()
       setEditor(profile)
     } catch (e) {
-      if (isMarketingAuthError(e)) setEditor(null)
+      if (isMarketingAuthError(e)) {
+        persistMarketingToken(null)
+        setEditor(null)
+      }
     } finally {
       setLoading(false)
     }

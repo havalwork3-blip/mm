@@ -47,10 +47,11 @@ export function MarketingCMSLayout() {
   }, [])
 
   useEffect(() => {
+    if (!editor) return
     void refreshStats()
     const t = setInterval(() => void refreshStats(), 60000)
     return () => clearInterval(t)
-  }, [refreshStats])
+  }, [refreshStats, editor])
 
   useEffect(() => {
     closeMobileSidebar()
