@@ -52,9 +52,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       return
     }
     try {
-      const profile = await apiJson<Me>('/api/users/me/', { shopScoped: true })
+      let profile = await apiJson<Me>('/api/users/me/')
       if (profile.is_superuser) {
         await syncSuperuserShopScope()
+        profile = await apiJson<Me>('/api/users/me/')
       }
       applyProfile(profile)
     } catch (e) {
@@ -63,6 +64,27 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         clearSessionAuth()
         setBasicAuth(null, null)
         setSuperuserShopId(null)
+      } else {
+        try {
+          localStorage.removeItem('pos_shop_id')
+        } catch {
+          /* ignore */
+        }
+        setSuperuserShopId(null)
+        try {
+          const profile = await apiJson<Me>('/api/users/me/')
+          if (profile.is_superuser) {
+            await syncSuperuserShopScope()
+          }
+          applyProfile(profile)
+        } catch (retryErr) {
+          if (isApiStatus(retryErr, 401)) {
+            setMe(null)
+            clearSessionAuth()
+            setBasicAuth(null, null)
+            setSuperuserShopId(null)
+          }
+        }
       }
     } finally {
       setLoading(false)
@@ -93,12 +115,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(
     async (email: string, password: string) => {
       const normalizedEmail = email.trim()
+      try {
+        localStorage.removeItem('pos_shop_id')
+      } catch {
+        /* ignore */
+      }
+      setSuperuserShopId(null)
       setBasicAuth(normalizedEmail, password)
       persistSessionAuth(normalizedEmail, password)
       try {
-        const profile = await apiJson<Me>('/api/users/me/', { shopScoped: true })
+        let profile = await apiJson<Me>('/api/users/me/')
         if (profile.is_superuser) {
           await syncSuperuserShopScope()
+          profile = await apiJson<Me>('/api/users/me/')
         }
         applyProfile(profile)
       } catch (e) {

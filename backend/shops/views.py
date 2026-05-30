@@ -357,7 +357,26 @@ class QrLandingCustomLinkViewSet(viewsets.ModelViewSet):
 class ShopViewSet(viewsets.ModelViewSet):
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
+    lookup_field = "pk"
     permission_classes = [IsAuthenticated, IsShopOwnerOrDjangoModelPermission]
+
+    def get_object(self):
+        from rest_framework.exceptions import NotFound
+
+        queryset = self.filter_queryset(self.get_queryset())
+        raw = str(self.kwargs.get(self.lookup_url_kwarg or self.lookup_field, "")).strip()
+        if not raw:
+            raise NotFound("Shop not found.")
+        if raw.isdigit():
+            obj = queryset.filter(pk=int(raw)).first()
+            if obj is not None:
+                self.check_object_permissions(self.request, obj)
+                return obj
+        obj = queryset.filter(slug=raw).first()
+        if obj is not None:
+            self.check_object_permissions(self.request, obj)
+            return obj
+        raise NotFound("Shop not found.")
 
     def get_queryset(self):
         qs = super().get_queryset()

@@ -406,6 +406,14 @@ export async function apiJson<T>(path: string, init: ApiFetchOptions = {}): Prom
           }
           setSuperuserShopId(null)
         }
+        if (res.status === 403 && detail === NO_SHOP_SCOPE_DETAIL) {
+          try {
+            localStorage.removeItem('pos_shop_id')
+          } catch {
+            /* ignore */
+          }
+          setSuperuserShopId(null)
+        }
         throw new ApiError(detail || `HTTP ${res.status}`, res.status)
   }
   if (res.status === 204) return undefined as T

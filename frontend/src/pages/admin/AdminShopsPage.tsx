@@ -13,12 +13,22 @@ function slugify(s: string) {
     .replace(/-+/g, '-')
 }
 
+function shopDetailApiPath(row: Pick<ShopRow, 'id' | 'slug'>): string {
+  const id = row.id
+  if (id != null && Number.isFinite(Number(id)) && Number(id) > 0) {
+    return `/api/shops/${id}/`
+  }
+  const sl = row.slug?.trim()
+  if (sl) return `/api/shops/${encodeURIComponent(sl)}/`
+  throw new Error('Shop has no valid id or slug')
+}
+
 export function AdminShopsPage() {
   const { t } = useLocale()
   const [rows, setRows] = useState<ShopRow[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [deletingSlug, setDeletingSlug] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -115,7 +125,7 @@ export function AdminShopsPage() {
 
     setEditSaving(true)
     try {
-      await apiJson(`/api/shops/${editing.id}/`, {
+      await apiJson(shopDetailApiPath(editing), {
         method: 'PATCH',
         omitShopScope: true,
         body: JSON.stringify({
@@ -139,15 +149,22 @@ export function AdminShopsPage() {
   async function deleteShop(row: ShopRow) {
     const ok = window.confirm(t('admin.deleteShopConfirm').replace('{name}', row.name))
     if (!ok) return
-    setDeletingSlug(row.slug)
+    let path: string
+    try {
+      path = shopDetailApiPath(row)
+    } catch {
+      setError(t('admin.slugRequired'))
+      return
+    }
+    setDeletingId(row.id)
     setError(null)
     try {
-      await apiJson(`/api/shops/${row.id}/`, { method: 'DELETE', omitShopScope: true })
+      await apiJson(path, { method: 'DELETE', omitShopScope: true })
       setRows((prev) => prev.filter((it) => it.id !== row.id))
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
-      setDeletingSlug(null)
+      setDeletingId(null)
     }
   }
 
@@ -277,10 +294,10 @@ export function AdminShopsPage() {
                       <button
                         type="button"
                         onClick={() => void deleteShop(r)}
-                        disabled={deletingSlug === r.slug}
+                        disabled={deletingId === r.id}
                         className="text-rose-700 hover:underline disabled:opacity-60 dark:text-rose-400"
                       >
-                        {deletingSlug === r.slug ? t('common.loading') : t('crud.delete')}
+                        {deletingId === r.id ? t('common.loading') : t('crud.delete')}
                       </button>
                     </div>
                   </td>

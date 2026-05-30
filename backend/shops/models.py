@@ -1,5 +1,6 @@
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils.text import slugify as django_slugify
 
 
 class Shop(models.Model):
@@ -36,6 +37,18 @@ class Shop(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def save(self, *args, **kwargs):
+        slug = (self.slug or "").strip()
+        if not slug:
+            base = django_slugify(self.name) or "shop"
+            candidate = base
+            n = 2
+            while Shop.objects.filter(slug=candidate).exclude(pk=self.pk).exists():
+                candidate = f"{base}-{n}"
+                n += 1
+            self.slug = candidate
+        super().save(*args, **kwargs)
 
 
 class ShopScopedModel(models.Model):
