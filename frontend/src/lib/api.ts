@@ -110,6 +110,17 @@ const NO_SHOP_SCOPE_DETAIL =
   'No shop scope: assign a shop to this user, pass shop_id, or include shop in the request body (superuser).'
 
 function translateApiDetail(detail: string): string {
+  const lowered = detail.toLowerCase()
+  if (
+    lowered.includes('invalid username/password') ||
+    lowered.includes('invalid email or password')
+  ) {
+    const lang =
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('ui_lang') : null) || 'ku'
+    if (lang === 'ar') return 'البريد الإلكتروني أو كلمة المرور غير صحيحة.'
+    if (lang === 'en') return 'Invalid email or password.'
+    return 'ئیمەیڵ یان وشەی نهێنی هەڵەیە.'
+  }
   if (detail !== NO_SHOP_SCOPE_DETAIL) return detail
   const lang = (typeof localStorage !== 'undefined' ? localStorage.getItem('ui_lang') : null) || 'ku'
   if (lang === 'ar') {

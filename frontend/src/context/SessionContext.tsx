@@ -88,8 +88,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      setBasicAuth(email, password)
-      persistSessionAuth(email, password)
+      const normalizedEmail = email.trim()
+      setBasicAuth(normalizedEmail, password)
+      persistSessionAuth(normalizedEmail, password)
       try {
         const profile = await apiJson<Me>('/api/users/me/', { shopScoped: true })
         applyProfile(profile)

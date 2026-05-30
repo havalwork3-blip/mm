@@ -872,7 +872,11 @@ export function HomePage() {
               placeholder={t('pos.passwordPlaceholder')}
               autoComplete="current-password"
             />
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && (
+              <p className="text-sm text-red-600" dir="ltr">
+                {error}
+              </p>
+            )}
             <button
               type="submit"
               className="w-full rounded-lg bg-violet-600 py-2.5 font-medium text-white"

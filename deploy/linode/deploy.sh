@@ -71,6 +71,13 @@ if [[ -n "${MARKETING_CMS_EMAIL:-}" && -n "${MARKETING_CMS_PASSWORD:-}" ]]; then
     ${MARKETING_CMS_NAME:+--name "${MARKETING_CMS_NAME}"}
 fi
 
+if [[ -n "${SUPERUSER_EMAIL:-}" && -n "${SUPERUSER_PASSWORD:-}" ]]; then
+  echo "==> Ensure dashboard superuser (${SUPERUSER_EMAIL})"
+  "${PYTHON}" "${BACKEND}/manage.py" ensure_superuser \
+    --email "${SUPERUSER_EMAIL}" \
+    --password "${SUPERUSER_PASSWORD}"
+fi
+
 echo "==> Frontend build"
 if [[ -f "${FRONTEND}/package-lock.json" ]]; then
   (cd "${FRONTEND}" && npm ci && npm run build)
