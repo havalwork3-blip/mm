@@ -9,7 +9,7 @@ import {
 import {
   apiJson,
   clearSessionAuth,
-  isApiStatus,
+  isApiAuthFailure,
   persistSessionAuth,
   restoreSessionAuth,
   setBasicAuth,
@@ -59,7 +59,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       }
       applyProfile(profile)
     } catch (e) {
-      if (isApiStatus(e, 401)) {
+      if (isApiAuthFailure(e)) {
         setMe(null)
         clearSessionAuth()
         setBasicAuth(null, null)
@@ -78,7 +78,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           }
           applyProfile(profile)
         } catch (retryErr) {
-          if (isApiStatus(retryErr, 401)) {
+          if (isApiAuthFailure(retryErr)) {
             setMe(null)
             clearSessionAuth()
             setBasicAuth(null, null)
@@ -131,7 +131,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         }
         applyProfile(profile)
       } catch (e) {
-        if (isApiStatus(e, 401)) {
+        if (isApiAuthFailure(e)) {
           setMe(null)
           clearSessionAuth()
           setBasicAuth(null, null)

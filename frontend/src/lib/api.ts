@@ -113,7 +113,9 @@ function translateApiDetail(detail: string): string {
   const lowered = detail.toLowerCase()
   if (
     lowered.includes('invalid username/password') ||
-    lowered.includes('invalid email or password')
+    lowered.includes('invalid email or password') ||
+    lowered.includes('authentication credentials were not provided') ||
+    lowered.includes('credentials were not provided')
   ) {
     const lang =
       (typeof localStorage !== 'undefined' ? localStorage.getItem('ui_lang') : null) || 'ku'
@@ -142,6 +144,20 @@ export class ApiError extends Error {
 
 export function isApiStatus(error: unknown, status: number): boolean {
   return error instanceof ApiError && error.status === status
+}
+
+/** Login failures on this API often return 403 (not 401) when session cookies interfere. */
+export function isApiAuthFailure(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return false
+  if (error.status === 401) return true
+  if (error.status !== 403) return false
+  const detail = error.message.toLowerCase()
+  return (
+    detail.includes('invalid email or password') ||
+    detail.includes('invalid username/password') ||
+    detail.includes('authentication credentials were not provided') ||
+    detail.includes('credentials were not provided')
+  )
 }
 
 export function setBasicAuth(user: string | null, pass: string | null) {
@@ -244,8 +260,12 @@ export function buildApiUrl(
 ): string {
   let p = path.startsWith('/') ? path : `/${path}`
   const sid = scopedShopIdForRequest(shopScoped)
+  const isMeEndpoint = p.startsWith('/api/users/me')
   const attachShopId =
-    Boolean(sid) && !omitShopScope && (shopScoped || !getGlobalView())
+    !isMeEndpoint &&
+    Boolean(sid) &&
+    !omitShopScope &&
+    (shopScoped || !getGlobalView())
   if (attachShopId && sid) {
     const join = p.includes('?') ? '&' : '?'
     p = `${p}${join}shop_id=${encodeURIComponent(sid)}`
@@ -276,7 +296,7 @@ export async function apiFetch(path: string, init: ApiFetchOptions = {}) {
   const cache: RequestCache | undefined =
     rest.cache ??
     (method === 'GET' || method === 'HEAD' ? 'no-store' : ('default' as RequestCache))
-  return fetch(url, { ...rest, headers, cache })
+  return fetch(url, { ...rest, headers, cache, credentials: 'omit' })
 }
 
 async function apiFetchWithBase(
@@ -287,8 +307,12 @@ async function apiFetchWithBase(
   const { omitShopScope, shopScoped, ...rest } = init
   let p = path.startsWith('/') ? path : `/${path}`
   const sid = scopedShopIdForRequest(Boolean(shopScoped))
+  const isMeEndpoint = p.startsWith('/api/users/me')
   const attachShopId =
-    Boolean(sid) && !omitShopScope && (Boolean(shopScoped) || !getGlobalView())
+    !isMeEndpoint &&
+    Boolean(sid) &&
+    !omitShopScope &&
+    (Boolean(shopScoped) || !getGlobalView())
   if (attachShopId && sid) {
     const join = p.includes('?') ? '&' : '?'
     p = `${p}${join}shop_id=${encodeURIComponent(sid)}`
@@ -308,7 +332,7 @@ async function apiFetchWithBase(
   const cache: RequestCache | undefined =
     rest.cache ??
     (method === 'GET' || method === 'HEAD' ? 'no-store' : ('default' as RequestCache))
-  return fetch(url, { ...rest, headers, cache })
+  return fetch(url, { ...rest, headers, cache, credentials: 'omit' })
 }
 
 function formatJsonErrorValue(value: unknown): string {
