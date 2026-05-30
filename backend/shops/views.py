@@ -451,8 +451,11 @@ class ReceiptSettingsView(APIView):
     def _get_or_create(self, request) -> ReceiptSettings:
         shop_id = require_shop_id(request)
         defaults = {}
-        if getattr(request.user, "shop_id", None) == shop_id:
-            defaults["shop_name_en"] = getattr(request.user.shop, "name", "")
+        user_shop_id = getattr(request.user, "shop_id", None)
+        if user_shop_id == shop_id:
+            user_shop = getattr(request.user, "shop", None)
+            if user_shop is not None:
+                defaults["shop_name_en"] = getattr(user_shop, "name", "")
         obj, _ = ReceiptSettings.objects.get_or_create(shop_id=shop_id, defaults=defaults)
         return obj
 
@@ -511,11 +514,7 @@ class ShopSettingsView(APIView):
     http_method_names = ["get", "put", "patch", "options", "head"]
 
     def _get_or_create(self, request) -> ShopSettings:
-        from rest_framework.exceptions import NotFound
-
         shop_id = require_shop_id(request)
-        if not Shop.objects.filter(pk=shop_id).exists():
-            raise NotFound("Shop not found.")
         obj, _ = ShopSettings.objects.get_or_create(shop_id=shop_id)
         return obj
 

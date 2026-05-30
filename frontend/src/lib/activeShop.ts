@@ -1,4 +1,4 @@
-import { getSuperuserShopId, setSuperuserShopId } from './api'
+import { apiJson, getSuperuserShopId, setSuperuserShopId } from './api'
 import type { Me, ShopRow } from '../types/api'
 
 /** Superuser shop scope saved in memory or localStorage (not the dashboard modal draft). */
@@ -40,6 +40,25 @@ export function reconcilePosShopId(shops: ShopRow[]): string | null {
     if (fallback) setSuperuserShopId(fallback)
     else setSuperuserShopId(null)
     return fallback
+  }
+}
+
+/** Superuser: fetch shops and fix stale `pos_shop_id` before tenant API calls. */
+export async function syncSuperuserShopScope(): Promise<string | null> {
+  try {
+    const data = await apiJson<ShopRow[] | { results: ShopRow[] }>('/api/shops/', {
+      omitShopScope: true,
+    })
+    const list = Array.isArray(data) ? data : data.results
+    return reconcilePosShopId(list)
+  } catch {
+    try {
+      localStorage.removeItem('pos_shop_id')
+    } catch {
+      /* ignore */
+    }
+    setSuperuserShopId(null)
+    return null
   }
 }
 

@@ -4,10 +4,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
+
+
+def _assert_shop_exists(shop_id: int) -> int:
+    from shops.models import Shop
+
+    if not Shop.objects.filter(pk=shop_id).exists():
+        raise NotFound("Shop not found.")
+    return shop_id
 
 
 def get_shop_id_for_request(request: HttpRequest) -> int | None:
@@ -24,14 +32,14 @@ def get_shop_id_for_request(request: HttpRequest) -> int | None:
         sid = request.query_params.get("shop_id") or request.headers.get("X-Shop-ID")
         if sid is not None and str(sid).strip() != "":
             try:
-                return int(sid)
+                return _assert_shop_exists(int(sid))
             except (TypeError, ValueError) as exc:
                 raise ValidationError({"shop_id": "Invalid shop id."}) from exc
         if getattr(user, "shop_id", None):
-            return int(user.shop_id)
+            return _assert_shop_exists(int(user.shop_id))
         return None
     if getattr(user, "shop_id", None):
-        return int(user.shop_id)
+        return _assert_shop_exists(int(user.shop_id))
     return None
 
 
@@ -53,7 +61,7 @@ def require_shop_id(request: HttpRequest) -> int:
             raw = data.get("shop")
             if raw is not None and str(raw).strip() != "":
                 try:
-                    return int(raw)
+                    return _assert_shop_exists(int(raw))
                 except (TypeError, ValueError) as exc:
                     raise ValidationError({"shop": "Invalid shop id."}) from exc
     raise PermissionDenied(

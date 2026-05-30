@@ -12,11 +12,11 @@ initOfflineAutoSync()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <LocaleProvider>
-      <ThemeProvider>
-        <SessionProvider>
+      <SessionProvider>
+        <ThemeProvider>
           <App />
-        </SessionProvider>
-      </ThemeProvider>
+        </ThemeProvider>
+      </SessionProvider>
     </LocaleProvider>
   </StrictMode>,
 )

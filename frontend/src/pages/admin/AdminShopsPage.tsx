@@ -154,7 +154,7 @@ export function AdminShopsPage() {
   function openEdit(row: ShopRow) {
     setEditing(row)
     setEditName(row.name)
-    setEditSlug(row.slug)
+    setEditSlug(row.slug?.trim() || slugify(row.name))
     setEditOnlineEnabled(Boolean(row.online_storefront_enabled))
     setEditStorefrontHost(row.storefront_host || '')
     setEditError(null)
@@ -252,7 +252,9 @@ export function AdminShopsPage() {
                   <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
                     {r.name}
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs">{r.slug}</td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {r.slug?.trim() ? r.slug : '—'}
+                  </td>
                   <td className="px-4 py-3">
                     {r.online_storefront_enabled ? (
                       <span className="font-mono text-xs text-violet-700 dark:text-violet-300">

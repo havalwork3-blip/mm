@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { useSession } from './SessionContext'
 import { reconcilePosShopId } from '../lib/activeShop'
 import { apiJson, restoreSessionAuth } from '../lib/api'
 import {
@@ -26,6 +27,7 @@ const DEFAULT_MODE: ThemeMode = 'light'
 const Ctx = createContext<ThemeCtx | null>(null)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const { me, loading: sessionLoading } = useSession()
   const [palette, setPalette] = useState<ThemePalette>(THEME_PALETTE_DEFAULTS)
   const [mode, setMode] = useState<ThemeMode>(DEFAULT_MODE)
   const resolvedMode: 'light' | 'dark' = mode === 'dark' ? 'dark' : 'light'
@@ -66,15 +68,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const loadFromApi = async () => {
+      if (sessionLoading || !me) return
       if (!restoreSessionAuth()) return
       try {
-        const me = await apiJson<{ is_superuser: boolean; shop: number | null }>('/api/users/me/')
-        if (!me.is_superuser && me.shop === null) return
-
         if (me.is_superuser) {
-          const shops = await apiJson<ShopRow[] | { results: ShopRow[] }>('/api/shops/')
+          const shops = await apiJson<ShopRow[] | { results: ShopRow[] }>('/api/shops/', {
+            omitShopScope: true,
+          })
           const list = Array.isArray(shops) ? shops : shops.results
           if (!reconcilePosShopId(list)) return
+        } else if (me.shop === null) {
+          return
         }
 
         const settings = await apiJson<ShopSettingsRow>('/api/shop-settings/', {
@@ -92,7 +96,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       void loadFromApi()
     }, 120)
     return () => window.clearTimeout(deferId)
-  }, [])
+  }, [me, sessionLoading])
 
   const value = useMemo(
     () => ({

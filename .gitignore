@@ -1,2 +1,8 @@
 # Local database backups (see run-backup-daily.ps1)
 backups/
+
+# Local secrets and databases — never commit
+backend/.env
+backend/db.sqlite3
+backend/**/__pycache__/
+frontend/.env.local

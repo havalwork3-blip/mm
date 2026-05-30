@@ -15,6 +15,7 @@ import {
   setBasicAuth,
   setSuperuserShopId,
 } from '../lib/api'
+import { syncSuperuserShopScope } from '../lib/activeShop'
 import type { Me } from '../types/api'
 
 type SessionCtx = {
@@ -52,6 +53,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       const profile = await apiJson<Me>('/api/users/me/', { shopScoped: true })
+      if (profile.is_superuser) {
+        await syncSuperuserShopScope()
+      }
       applyProfile(profile)
     } catch (e) {
       if (isApiStatus(e, 401)) {
@@ -93,6 +97,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       persistSessionAuth(normalizedEmail, password)
       try {
         const profile = await apiJson<Me>('/api/users/me/', { shopScoped: true })
+        if (profile.is_superuser) {
+          await syncSuperuserShopScope()
+        }
         applyProfile(profile)
       } catch (e) {
         if (isApiStatus(e, 401)) {

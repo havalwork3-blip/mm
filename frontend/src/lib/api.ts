@@ -396,8 +396,17 @@ export async function apiJson<T>(path: string, init: ApiFetchOptions = {}): Prom
         /* ignore */
       }
     }
-    detail = translateApiDetail(sanitizeApiErrorText(detail, res.status))
-    throw new ApiError(detail || `HTTP ${res.status}`, res.status)
+        detail = translateApiDetail(sanitizeApiErrorText(detail, res.status))
+        if (res.status === 404 && detail.toLowerCase().includes('shop not found')) {
+          try {
+            localStorage.removeItem('pos_shop_id')
+            localStorage.removeItem('pos_offline_queue_v1')
+          } catch {
+            /* ignore */
+          }
+          setSuperuserShopId(null)
+        }
+        throw new ApiError(detail || `HTTP ${res.status}`, res.status)
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
