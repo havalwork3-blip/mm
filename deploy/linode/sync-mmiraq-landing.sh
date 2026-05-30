@@ -20,6 +20,7 @@ rsync -av --delete \
   --exclude 'build_pages.py' \
   --exclude 'fix_asset_paths.py' \
   --exclude 'inline_assets.py' \
+  --exclude 'brand-custom.webp' \
   "${SRC}/" "${WEB_ROOT}/"
 
 echo "==> Verify key assets"

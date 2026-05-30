@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .brand_utils import optimize_brand_logo_upload, serialize_brand
+from .brand_utils import optimize_brand_logo_upload, serialize_brand, sync_brand_logo_to_webroot
 from .authentication import MarketingTokenAuthentication
 from .defaults import default_sections, default_translations
 from .models import (
@@ -137,6 +137,7 @@ class MarketingSiteAdminView(APIView):
                     content.brand_logo.delete(save=False)
                 content.brand_logo = None
             content.save()
+            sync_brand_logo_to_webroot(content)
             return Response(MarketingSiteContentSerializer(content, context={"request": request}).data)
 
         ser = MarketingSiteContentSerializer(
@@ -168,6 +169,7 @@ class MarketingSiteAdminView(APIView):
             content.brand_logo.delete(save=False)
             content.brand_logo = None
         content.save(update_fields=["translations", "sections", "brand_name", "brand_logo", "updated_at"])
+        sync_brand_logo_to_webroot(content)
         return Response(MarketingSiteContentSerializer(content, context={"request": request}).data)
 
 

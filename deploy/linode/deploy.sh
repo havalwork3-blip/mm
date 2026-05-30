@@ -56,6 +56,12 @@ fi
 
 echo "==> Django migrations"
 "${PYTHON}" "${BACKEND}/manage.py" migrate --noinput
+echo "==> Sync CMS brand logo to mmiraq.com web root"
+MARKETING_BRAND_LOGO_WEBROOT="${WEB_ROOT:-/var/www/html}/brand-custom.webp" \
+  "${PYTHON}" "${BACKEND}/manage.py" sync_marketing_brand_logo || true
+if [[ -f "${WEB_ROOT:-/var/www/html}/brand-custom.webp" ]]; then
+  sudo chown www-data:www-data "${WEB_ROOT:-/var/www/html}/brand-custom.webp" 2>/dev/null || true
+fi
 
 if [[ -n "${MARKETING_CMS_EMAIL:-}" && -n "${MARKETING_CMS_PASSWORD:-}" ]]; then
   echo "==> Ensure marketing CMS editor (${MARKETING_CMS_EMAIL})"

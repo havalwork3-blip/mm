@@ -65,12 +65,14 @@
       text-decoration: none; flex-shrink: 0;
     }
     .header-logo {
-      width: 2.75rem; height: 2.75rem; object-fit: contain;
+      width: 3.25rem; height: 3.25rem; object-fit: contain;
       flex-shrink: 0;
       filter: drop-shadow(0 2px 8px rgba(139,92,246,0.35));
     }
     .header-logo--cms {
       filter: none;
+      width: 3.5rem;
+      height: 3.5rem;
     }
     .brand__name {
       font-size: 1.05rem; font-weight: 800; letter-spacing: 0.04em;
@@ -1526,7 +1528,8 @@
 
       /* Header */
       .site-header__inner { gap: 0.5rem; padding-inline: 0.85rem; }
-      .header-logo { width: 2rem; height: 2rem; }
+      .header-logo { width: 2.25rem; height: 2.25rem; }
+      .header-logo--cms { width: 2.5rem; height: 2.5rem; }
       .brand__name { font-size: 0.85rem; }
       .icon-btn, .menu-toggle { width: 2.1rem; height: 2.1rem; border-radius: 8px; }
 
@@ -2420,22 +2423,28 @@ window.MMI18n = (function () {
       });
       document.title = document.title.replace(/^MM IRAQ/, name);
     }
-    if (logo && logo !== defaultLogo) {
-      var bust = cacheKey || brand.updated_at || "";
+    if (!logo) return;
+    var bust = cacheKey || brand.updated_at || "";
+    var isDefault = /\/logo-optimized\.webp(?:\?|$)/.test(logo);
+    document.querySelectorAll(".header-logo, .footer-logo").forEach(function (img) {
+      if (isDefault) {
+        img.classList.remove("header-logo--cms");
+        img.onerror = null;
+        img.src = defaultLogo;
+        return;
+      }
       var src = logo;
       if (bust) {
         src += (logo.indexOf("?") >= 0 ? "&" : "?") + "v=" + encodeURIComponent(String(bust));
       }
-      document.querySelectorAll(".header-logo, .footer-logo").forEach(function (img) {
-        img.classList.add("header-logo--cms");
-        img.onerror = function () {
-          img.onerror = null;
-          img.classList.remove("header-logo--cms");
-          img.src = defaultLogo;
-        };
-        img.src = src;
-      });
-    }
+      img.classList.add("header-logo--cms");
+      img.onerror = function () {
+        img.onerror = null;
+        img.classList.remove("header-logo--cms");
+        img.src = defaultLogo;
+      };
+      img.src = src;
+    });
   }
 
   function loadFromCms(callback) {

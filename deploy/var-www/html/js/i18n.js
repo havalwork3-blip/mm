@@ -457,22 +457,28 @@ window.MMI18n = (function () {
       });
       document.title = document.title.replace(/^MM IRAQ/, name);
     }
-    if (logo && logo !== defaultLogo) {
-      var bust = cacheKey || brand.updated_at || "";
+    if (!logo) return;
+    var bust = cacheKey || brand.updated_at || "";
+    var isDefault = /\/logo-optimized\.webp(?:\?|$)/.test(logo);
+    document.querySelectorAll(".header-logo, .footer-logo").forEach(function (img) {
+      if (isDefault) {
+        img.classList.remove("header-logo--cms");
+        img.onerror = null;
+        img.src = defaultLogo;
+        return;
+      }
       var src = logo;
       if (bust) {
         src += (logo.indexOf("?") >= 0 ? "&" : "?") + "v=" + encodeURIComponent(String(bust));
       }
-      document.querySelectorAll(".header-logo, .footer-logo").forEach(function (img) {
-        img.classList.add("header-logo--cms");
-        img.onerror = function () {
-          img.onerror = null;
-          img.classList.remove("header-logo--cms");
-          img.src = defaultLogo;
-        };
-        img.src = src;
-      });
-    }
+      img.classList.add("header-logo--cms");
+      img.onerror = function () {
+        img.onerror = null;
+        img.classList.remove("header-logo--cms");
+        img.src = defaultLogo;
+      };
+      img.src = src;
+    });
   }
 
   function loadFromCms(callback) {

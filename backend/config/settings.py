@@ -132,6 +132,10 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+MARKETING_BRAND_LOGO_WEBROOT = os.environ.get(
+    "MARKETING_BRAND_LOGO_WEBROOT",
+    str(BASE_DIR.parent / "deploy" / "var-www" / "html" / "brand-custom.webp"),
+)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

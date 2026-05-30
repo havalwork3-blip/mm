@@ -26,8 +26,11 @@ export function MarketingSettingsPage() {
   const currentLogo = useMemo(() => {
     if (logoPreview) return logoPreview
     if (clearLogo) return '/logo-optimized.webp'
-    return content?.brand_logo_url || '/logo-optimized.webp'
-  }, [logoPreview, clearLogo, content?.brand_logo_url])
+    const base = content?.brand_logo_url || '/logo-optimized.webp'
+    if (!content?.updated_at || base.includes('logo-optimized.webp')) return base
+    const sep = base.includes('?') ? '&' : '?'
+    return `${base}${sep}v=${encodeURIComponent(content.updated_at)}`
+  }, [logoPreview, clearLogo, content?.brand_logo_url, content?.updated_at])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -154,12 +157,12 @@ export function MarketingSettingsPage() {
           </div>
           <div>
             <label className="mb-2 block text-sm text-slate-300">لۆگۆ</label>
-            <div className="mb-3 flex h-28 items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950 p-4">
-              <img src={currentLogo} alt="" className="max-h-full max-w-full object-contain" />
+            <div className="mb-3 flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-700 bg-slate-950 p-4">
+              <img src={currentLogo} alt="" className="h-28 w-28 object-contain" />
             </div>
             <input
               type="file"
-              accept="image/*"
+              accept="image/png,image/jpeg,image/webp,image/gif"
               onChange={(e) => {
                 const f = e.target.files?.[0] || null
                 setLogoFile(f)
