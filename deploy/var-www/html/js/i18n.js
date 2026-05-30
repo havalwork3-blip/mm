@@ -443,22 +443,34 @@ window.MMI18n = (function () {
     return attempt();
   }
 
-  function applySiteBrand(brand) {
+  function applySiteBrand(brand, cacheKey) {
     if (!brand) return;
     var name = brand.site_name || brand.name || "";
     var logo = brand.logo_url || "";
+    var defaultLogo = "/logo-optimized.webp";
     if (name) {
       document.querySelectorAll(".brand__name, .site-footer__brand").forEach(function (el) {
         el.textContent = name;
       });
-      document.querySelectorAll(".header-logo, .logo-img").forEach(function (img) {
+      document.querySelectorAll(".header-logo, .footer-logo").forEach(function (img) {
         img.alt = name;
       });
       document.title = document.title.replace(/^MM IRAQ/, name);
     }
-    if (logo) {
-      document.querySelectorAll(".header-logo, .logo-img, .footer-logo").forEach(function (img) {
-        img.src = logo;
+    if (logo && logo !== defaultLogo) {
+      var bust = cacheKey || brand.updated_at || "";
+      var src = logo;
+      if (bust) {
+        src += (logo.indexOf("?") >= 0 ? "&" : "?") + "v=" + encodeURIComponent(String(bust));
+      }
+      document.querySelectorAll(".header-logo, .footer-logo").forEach(function (img) {
+        img.classList.add("header-logo--cms");
+        img.onerror = function () {
+          img.onerror = null;
+          img.classList.remove("header-logo--cms");
+          img.src = defaultLogo;
+        };
+        img.src = src;
       });
     }
   }
@@ -467,7 +479,9 @@ window.MMI18n = (function () {
     fetchPublicApi("/api/public/marketing-site/")
       .then(function (data) {
         if (data && data.is_published && data.translations) mergeTranslations(data.translations);
-        if (data && data.is_published && data.brand) applySiteBrand(data.brand);
+        if (data && data.is_published && data.brand) {
+          applySiteBrand(data.brand, data.updated_at || data.brand.updated_at);
+        }
       })
       .catch(function () {})
       .finally(function () { if (callback) callback(); });

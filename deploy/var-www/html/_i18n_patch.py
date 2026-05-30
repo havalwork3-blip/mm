@@ -9,6 +9,7 @@ SITE = (ROOT / "js" / "site.js").read_text(encoding="utf-8")
 JS_BUNDLE = I18N + "\n" + SITE
 
 REPLACEMENTS = [
+    ('width="184" height="184"', 'width="44" height="44"'),
     ('<nav class="nav" id="mainNav" aria-label="ناڤیگەیشن">',
      '<nav class="nav" id="mainNav" data-i18n-aria="ui.navAria">'),
     ('<span class="nav__sidebar-title">مێنیو</span>',

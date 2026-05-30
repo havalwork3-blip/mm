@@ -176,7 +176,7 @@ def patch_links(content: str) -> str:
 def clean_logo(content: str, logo_src: str) -> str:
     content = re.sub(
         r'<img class="logo-img header-logo"[^>]+>',
-        f'<img class="logo-img header-logo" src="{logo_src}" alt="MM IRAQ" width="184" height="184" decoding="async" fetchpriority="high" />',
+        f'<img class="logo-img header-logo" src="{logo_src}" alt="MM IRAQ" width="44" height="44" decoding="async" fetchpriority="high" />',
         content,
         count=1,
     )

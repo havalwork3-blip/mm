@@ -54,7 +54,11 @@
     }
     .header-logo {
       width: 2.75rem; height: 2.75rem; object-fit: contain;
-      filter: drop-shadow(0 4px 16px rgba(139,92,246,0.45));
+      flex-shrink: 0;
+      filter: drop-shadow(0 2px 8px rgba(139,92,246,0.35));
+    }
+    .header-logo--cms {
+      filter: none;
     }
     .brand__name {
       font-size: 1.05rem; font-weight: 800; letter-spacing: 0.04em;

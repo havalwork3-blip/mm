@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .brand_utils import serialize_brand
+from .brand_utils import optimize_brand_logo_upload, serialize_brand
 from .authentication import MarketingTokenAuthentication
 from .defaults import default_sections, default_translations
 from .models import (
@@ -128,7 +128,10 @@ class MarketingSiteAdminView(APIView):
             if "brand_name" in request.data:
                 content.brand_name = str(request.data.get("brand_name") or "").strip() or "MM IRAQ"
             if request.FILES.get("brand_logo"):
-                content.brand_logo = request.FILES["brand_logo"]
+                try:
+                    content.brand_logo = optimize_brand_logo_upload(request.FILES["brand_logo"])
+                except ValueError as exc:
+                    return Response({"detail": str(exc)}, status=400)
             if str(request.data.get("clear_brand_logo", "")).lower() in {"1", "true", "yes", "on"}:
                 if content.brand_logo:
                     content.brand_logo.delete(save=False)
