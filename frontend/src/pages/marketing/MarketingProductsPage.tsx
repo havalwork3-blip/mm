@@ -1,4 +1,4 @@
-import { ImagePlus, Loader2, Plus, Save, Trash2, X } from 'lucide-react'
+import { ImagePlus, Loader2, Plus, Save, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   createProduct,
@@ -47,7 +47,7 @@ export function MarketingProductsPage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [catForm, setCatForm] = useState(emptyTitle())
-  const [lang, setLang] = useState<Lang>('ckb')
+  const displayLang: Lang = 'ckb'
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -111,7 +111,7 @@ export function MarketingProductsPage() {
       }
       if (editing === 'new') {
         await createProduct(payload, imageFile)
-      } else if (editing && editing !== 'new') {
+      } else if (editing) {
         await updateProduct(editing.id, payload, imageFile)
       }
       setEditing(null)
@@ -190,7 +190,7 @@ export function MarketingProductsPage() {
                 key={c.id}
                 className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-xs text-slate-300"
               >
-                {c.title[lang] || c.title.ckb || c.title.en}
+                {c.title[displayLang] || c.title.ckb || c.title.en}
                 <button
                   type="button"
                   className="text-red-400 hover:text-red-300"
@@ -241,7 +241,7 @@ export function MarketingProductsPage() {
                   style={p.image_url ? { backgroundImage: `url(${p.image_url})` } : undefined}
                 />
                 <div className="p-4">
-                  <p className="font-medium text-white">{p.title[lang] || p.title.ckb || p.title.en}</p>
+                  <p className="font-medium text-white">{p.title[displayLang] || p.title.ckb || p.title.en}</p>
                   <p className="mt-1 text-xs text-slate-500">
                     {p.is_published ? 'بڵاوکراوە' : 'شاردراوە'}
                     {p.tag?.key ? ` · ${p.tag.key}` : ''}
@@ -331,7 +331,7 @@ export function MarketingProductsPage() {
                 <option value="">بێ کاتەگۆری</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.title[lang] || c.title.ckb}
+                    {c.title[displayLang] || c.title.ckb}
                   </option>
                 ))}
               </select>
