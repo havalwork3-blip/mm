@@ -251,6 +251,9 @@
     }
 
     /* ── Search ── */
+    .search-panel[hidden] {
+      display: none !important;
+    }
     .search-panel {
       position: fixed;
       inset: 0;
@@ -502,6 +505,10 @@
       font-size: 1.15rem;
       cursor: pointer;
       flex-shrink: 0;
+      position: relative;
+      z-index: 3;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
       transition: color 0.2s, border-color 0.2s, background 0.2s;
     }
     .menu-toggle svg {
@@ -524,11 +531,13 @@
       -webkit-backdrop-filter: blur(4px);
       opacity: 0;
       visibility: hidden;
+      pointer-events: none;
       transition: opacity 0.3s ease, visibility 0.3s;
     }
     .sidebar-overlay.is-open {
       opacity: 1;
       visibility: visible;
+      pointer-events: auto;
     }
     .nav__sidebar-head {
       display: none;
@@ -1375,6 +1384,9 @@
       .hero-carousel { max-height: 320px; min-height: 200px; aspect-ratio: 16 / 9; }
       .store-main { padding: 1.5rem 1rem; }
 
+      .site-header {
+        z-index: 200;
+      }
       .site-header__inner {
         justify-content: space-between;
         width: 100%;
@@ -1385,7 +1397,8 @@
         order: 2;
         margin-inline-start: auto;
         flex-shrink: 0;
-        z-index: 2;
+        position: relative;
+        z-index: 210;
       }
       .menu-toggle { display: inline-flex !important; }
 
@@ -1393,9 +1406,9 @@
         position: fixed;
         top: 0;
         bottom: 0;
-        inset-inline-start: 0;
-        inset-inline-end: auto;
-        z-index: 150;
+        right: 0;
+        left: auto;
+        z-index: 180;
         flex: none;
         flex-direction: column;
         align-items: stretch;
@@ -1411,11 +1424,13 @@
         -webkit-overflow-scrolling: touch;
         transform: translate3d(100%, 0, 0);
         visibility: hidden;
+        pointer-events: none;
         transition: transform 0.35s var(--ease), visibility 0.35s;
       }
       .nav.is-open {
         transform: translate3d(0, 0, 0);
         visibility: visible;
+        pointer-events: auto;
       }
       .nav__sidebar-head {
         display: flex;

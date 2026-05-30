@@ -8,7 +8,7 @@ from .authentication import MarketingTokenAuthentication
 from .defaults import default_sections, default_translations
 from .models import ContactMessage, MarketingAuthToken, MarketingEditor, MarketingSiteContent
 from .permissions import IsMarketingEditor
-from .public_api import PUBLIC_API_HEADERS, PublicMarketingApiView
+from .public_api import PublicMarketingApiView
 from .serializers import (
     ContactMessageSerializer,
     MarketingEditorSerializer,
@@ -88,7 +88,7 @@ class PublicMarketingSiteView(PublicMarketingApiView):
             "sections": content.sections or {},
             "updated_at": content.updated_at.isoformat() if content.updated_at else None,
         }
-        return Response(payload, headers=PUBLIC_API_HEADERS)
+        return Response(payload)
 
 
 class MarketingSiteAdminView(APIView):
@@ -158,7 +158,7 @@ class PublicContactSubmitView(PublicMarketingApiView):
                 {"detail": "Database not ready. Run: python manage.py migrate"},
                 status=503,
             )
-        return Response({"id": msg.id, "detail": "Message received."}, status=201, headers=PUBLIC_API_HEADERS)
+        return Response({"id": msg.id, "detail": "Message received."}, status=201)
 
 
 class MarketingContactStatsView(APIView):

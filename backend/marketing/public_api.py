@@ -4,12 +4,9 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-# Public marketing JSON — safe to expose with wildcard CORS (no cookies/auth).
+# Public marketing JSON responses — cache only; CORS handled by django-cors-headers.
 PUBLIC_API_HEADERS = {
     "Cache-Control": "no-store, max-age=0",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Accept",
 }
 
 
