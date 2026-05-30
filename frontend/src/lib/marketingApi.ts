@@ -16,6 +16,42 @@ export type MarketingSiteContent = {
   updated_at: string | null
 }
 
+export type ContactMessageRow = {
+  id: number
+  name: string
+  email: string
+  message: string
+  lang: string
+  is_read: boolean
+  ip_address: string | null
+  created_at: string
+}
+
+export type ContactStats = { total: number; unread: number }
+
+export type LocalizedText = { ckb?: string; ar?: string; en?: string }
+
+export type MarketingProductCategory = {
+  id: number
+  page: string
+  title: LocalizedText
+  sort_order: number
+  is_published: boolean
+}
+
+export type MarketingProductCard = {
+  id: number
+  page: string
+  category_id: number | null
+  title: LocalizedText
+  tag: { key?: string; text?: LocalizedText }
+  image_url: string | null
+  link_url: string
+  tone: string
+  sort_order: number
+  is_published: boolean
+}
+
 export function getMarketingApiBase(): string {
   if (typeof window !== 'undefined') {
     const { hostname, origin } = window.location
@@ -111,6 +147,90 @@ export async function importMarketingDefaults() {
     method: 'POST',
     body: JSON.stringify({ action: 'import_defaults' }),
   })
+}
+
+export async function fetchContactStats() {
+  return marketingApiJson<ContactStats>('/api/marketing/contact/stats/')
+}
+
+export async function fetchContactMessages(unreadOnly = false) {
+  const q = unreadOnly ? '?unread=1' : ''
+  return marketingApiJson<ContactMessageRow[]>(`/api/marketing/contact/${q}`)
+}
+
+export async function patchContactMessage(id: number, data: { is_read: boolean }) {
+  return marketingApiJson<ContactMessageRow>(`/api/marketing/contact/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteContactMessage(id: number) {
+  return marketingApiJson<void>(`/api/marketing/contact/${id}/`, { method: 'DELETE' })
+}
+
+export async function marketingApiForm<T>(path: string, form: FormData, method = 'POST'): Promise<T> {
+  const base = getMarketingApiBase()
+  const url = `${base}${path.startsWith('/') ? path : `/${path}`}`
+  const headers = new Headers()
+  const token = restoreMarketingToken()
+  if (token) headers.set('Authorization', `MarketingToken ${token}`)
+  const res = await fetch(url, { method, headers, body: form })
+  if (!res.ok) {
+    let detail = res.statusText
+    try {
+      const body = (await res.json()) as { detail?: string }
+      if (body.detail) detail = body.detail
+    } catch {
+      /* ignore */
+    }
+    throw Object.assign(new Error(detail), { status: res.status })
+  }
+  if (res.status === 204) return undefined as T
+  return (await res.json()) as T
+}
+
+export async function fetchProductCategories(page: string) {
+  return marketingApiJson<MarketingProductCategory[]>(`/api/marketing/product-categories/?page=${encodeURIComponent(page)}`)
+}
+
+export async function createProductCategory(data: Partial<MarketingProductCategory>) {
+  return marketingApiJson<MarketingProductCategory>('/api/marketing/product-categories/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteProductCategory(id: number) {
+  return marketingApiJson<void>(`/api/marketing/product-categories/${id}/`, { method: 'DELETE' })
+}
+
+export async function fetchProducts(page: string) {
+  return marketingApiJson<MarketingProductCard[]>(`/api/marketing/products/?page=${encodeURIComponent(page)}`)
+}
+
+export async function createProduct(data: Record<string, unknown>, image?: File | null) {
+  const form = new FormData()
+  Object.entries(data).forEach(([k, v]) => {
+    if (v === undefined || v === null) return
+    form.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v))
+  })
+  if (image) form.append('image', image)
+  return marketingApiForm<MarketingProductCard>('/api/marketing/products/', form)
+}
+
+export async function updateProduct(id: number, data: Record<string, unknown>, image?: File | null) {
+  const form = new FormData()
+  Object.entries(data).forEach(([k, v]) => {
+    if (v === undefined || v === null) return
+    form.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v))
+  })
+  if (image) form.append('image', image)
+  return marketingApiForm<MarketingProductCard>(`/api/marketing/products/${id}/`, form, 'PATCH')
+}
+
+export async function deleteProduct(id: number) {
+  return marketingApiJson<void>(`/api/marketing/products/${id}/`, { method: 'DELETE' })
 }
 
 export function isMarketingAuthError(e: unknown): boolean {

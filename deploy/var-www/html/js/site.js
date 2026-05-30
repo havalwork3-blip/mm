@@ -176,6 +176,9 @@
       }
       MMI18n.loadFromCms(function () {
         MMI18n.init();
+        loadMarketingProducts(function () {
+          if (window.mmRebuildSearchCatalog) window.mmRebuildSearchCatalog();
+        });
       });
     } else if (langToggle && langCode) {
       langToggle.addEventListener("click", function () {
@@ -190,6 +193,105 @@
           html.setAttribute("dir", "rtl");
           langCode.textContent = "KU";
         }
+      });
+    }
+
+    function getMarketingApiBase() {
+      if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+        return "http://127.0.0.1:8001";
+      }
+      return "https://dashboard.mmiraq.com";
+    }
+
+    function mmProductTitle(p, lang) {
+      lang = lang || (window.MMI18n ? MMI18n.getLang() : "ckb");
+      if (!p.title) return "";
+      return p.title[lang] || p.title.ckb || p.title.ar || p.title.en || "";
+    }
+
+    function mmProductTag(p, lang) {
+      lang = lang || (window.MMI18n ? MMI18n.getLang() : "ckb");
+      var t = p.tag || {};
+      if (t.text) return t.text[lang] || t.text.ckb || t.text.en || "";
+      if (t.key && window.MMI18n) {
+        var k = MMI18n.t("tag." + t.key);
+        return k !== "tag." + t.key ? k : t.key;
+      }
+      return t.key || "";
+    }
+
+    function buildProductCardHtml(p, delay) {
+      var title = mmProductTitle(p);
+      var tag = mmProductTag(p);
+      var href = p.link_url || ("/" + p.page + "/");
+      var tone = p.tone || "violet";
+      var imgStyle = p.image_url ? " style=\"background-image:url('" + String(p.image_url).replace(/'/g, "%27") + "')\"" : "";
+      var imgClass = p.image_url ? " product-card__media--has-img" : "";
+      var tagHtml = tag ? "<span class=\"product-card__tag\">" + tag + "</span>" : "";
+      var delayClass = delay ? " reveal reveal-delay-" + delay : " reveal";
+      return "<a class=\"product-card" + delayClass + "\" href=\"" + href + "\" data-mm-product-id=\"" + p.id + "\">" +
+        "<div class=\"product-card__media product-card__media--" + tone + imgClass + "\"" + imgStyle + ">" + tagHtml + "</div>" +
+        "<div class=\"product-card__body\"><h3 class=\"product-card__name\">" + title + "</h3></div></a>";
+    }
+
+    function renderProductsMount(mount, data) {
+      mount._mmProductData = data;
+      var cats = data.categories || [];
+      var products = data.products || [];
+      var html = "";
+      if (cats.length) {
+        cats.forEach(function (cat) {
+          var lang = window.MMI18n ? MMI18n.getLang() : "ckb";
+          var catTitle = (cat.title && (cat.title[lang] || cat.title.ckb || cat.title.en)) || "";
+          var catProducts = products.filter(function (p) { return p.category_id === cat.id; });
+          if (!catProducts.length) return;
+          html += "<div class=\"product-category-block\"><h3 class=\"product-category__title\">" + catTitle + "</h3><div class=\"product-grid\">";
+          catProducts.forEach(function (p, i) { html += buildProductCardHtml(p, (i % 4) + 1); });
+          html += "</div></div>";
+        });
+        var loose = products.filter(function (p) { return !p.category_id; });
+        if (loose.length) {
+          html += "<div class=\"product-grid\">";
+          loose.forEach(function (p, i) { html += buildProductCardHtml(p, (i % 4) + 1); });
+          html += "</div>";
+        }
+      } else {
+        html += "<div class=\"product-grid\">";
+        products.forEach(function (p, i) { html += buildProductCardHtml(p, (i % 4) + 1); });
+        html += "</div>";
+      }
+      mount.innerHTML = html;
+      mount.querySelectorAll(".reveal").forEach(function (el) {
+        if ("IntersectionObserver" in window) return;
+        el.classList.add("is-visible");
+      });
+    }
+
+    function loadMarketingProducts(done) {
+      var mounts = document.querySelectorAll("[data-mm-products]");
+      if (!mounts.length) { if (done) done(); return; }
+      var pending = mounts.length;
+      mounts.forEach(function (mount) {
+        var page = mount.getAttribute("data-mm-products");
+        fetch(getMarketingApiBase() + "/api/public/marketing-products/?page=" + encodeURIComponent(page))
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (data) {
+            if (data && data.products && data.products.length) renderProductsMount(mount, data);
+          })
+          .catch(function () {})
+          .finally(function () {
+            pending -= 1;
+            if (pending <= 0 && done) done();
+          });
+      });
+    }
+
+    if (window.MMI18n) {
+      document.addEventListener("mm:langchange", function () {
+        document.querySelectorAll("[data-mm-products]").forEach(function (mount) {
+          if (mount._mmProductData) renderProductsMount(mount, mount._mmProductData);
+        });
+        if (window.mmRebuildSearchCatalog) window.mmRebuildSearchCatalog();
       });
     }
 
@@ -246,37 +348,47 @@
     }
 
     var catalog = GLOBAL_CATALOG.slice();
-    productCards.forEach(function (card, idx) {
-      var nameEl = card.querySelector(".product-card__name");
-      var mediaEl = card.querySelector(".product-card__media");
-      var section = card.closest(".store-section");
-      var sectionTitle = section ? section.querySelector(".store-section__title") : null;
-      var tone = "violet";
-      if (mediaEl) {
-        mediaEl.classList.forEach(function (c) {
-          var m = c.match(/product-card__media--(\w+)/);
-          if (m) tone = m[1];
-        });
-      }
-      var name = nameEl ? nameEl.textContent.trim() : "";
-      var href = card.getAttribute("href") || SHOP_URL;
-      var sectionName = sectionTitle ? sectionTitle.textContent.trim() : "";
-      var existing = catalog.findIndex(function (item) { return item.name === name; });
-      var entry = {
-        id: idx,
-        name: name,
-        href: href,
-        tone: tone,
-        section: sectionName,
-        card: card
-      };
-      if (existing >= 0) {
-        catalog[existing] = Object.assign({}, catalog[existing], entry);
-      } else if (name) {
-        entry.id = catalog.length;
-        catalog.push(entry);
-      }
-    });
+
+    window.mmRebuildSearchCatalog = function () {
+      catalog = GLOBAL_CATALOG.slice();
+      hydrateCatalog();
+      var cards = document.querySelectorAll(".product-card");
+      cards.forEach(function (card, idx) {
+        var nameEl = card.querySelector(".product-card__name");
+        var mediaEl = card.querySelector(".product-card__media");
+        var section = card.closest(".store-section");
+        var sectionTitle = section ? section.querySelector(".store-section__title") : null;
+        var catTitle = card.closest(".product-category-block");
+        var catHeading = catTitle ? catTitle.querySelector(".product-category__title") : null;
+        var tone = "violet";
+        if (mediaEl) {
+          mediaEl.classList.forEach(function (c) {
+            var m = c.match(/product-card__media--(\w+)/);
+            if (m && m[1] !== "has" && m[1] !== "img") tone = m[1];
+          });
+        }
+        var name = nameEl ? nameEl.textContent.trim() : "";
+        var href = card.getAttribute("href") || SHOP_URL;
+        var sectionName = catHeading ? catHeading.textContent.trim() : (sectionTitle ? sectionTitle.textContent.trim() : "");
+        var existing = catalog.findIndex(function (item) { return item.card === card; });
+        var entry = {
+          id: idx,
+          name: name,
+          href: href,
+          tone: tone,
+          section: sectionName,
+          card: card
+        };
+        if (existing >= 0) {
+          catalog[existing] = Object.assign({}, catalog[existing], entry);
+        } else if (name) {
+          entry.id = catalog.length;
+          catalog.push(entry);
+        }
+      });
+    };
+
+    window.mmRebuildSearchCatalog();
 
     function normalizeSearch(text) {
       return (text || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -542,16 +654,49 @@
 
     var contactForm = document.getElementById("contactForm");
     var contactSuccess = document.getElementById("contactSuccess");
+    var contactBtn = contactForm ? contactForm.querySelector(".contact-form__btn") : null;
     if (contactForm) {
       contactForm.addEventListener("submit", function (e) {
         e.preventDefault();
-        var name = document.getElementById("contactName").value.trim();
-        var email = document.getElementById("contactEmail").value.trim();
-        var message = document.getElementById("contactMessage").value.trim();
-        var subject = encodeURIComponent((window.MMI18n ? MMI18n.t("contact.mailSub") : "پەیام لە ماڵپەڕی MM IRAQ — ") + name);
-        var body = encodeURIComponent((window.MMI18n ? MMI18n.t("contact.name") : "ناو") + ": " + name + "\n" + (window.MMI18n ? MMI18n.t("contact.email") : "ئیمەیڵ") + ": " + email + "\n\n" + message);
-        window.location.href = "mailto:info@mmiraq.com?subject=" + subject + "&body=" + body;
-        contactSuccess.classList.add("is-visible");
+        var nameEl = document.getElementById("contactName");
+        var emailEl = document.getElementById("contactEmail");
+        var msgEl = document.getElementById("contactMessage");
+        var honeypot = document.getElementById("contactWebsite");
+        var name = nameEl ? nameEl.value.trim() : "";
+        var email = emailEl ? emailEl.value.trim() : "";
+        var message = msgEl ? msgEl.value.trim() : "";
+        if (!name || !email || !message) return;
+        var api = "https://dashboard.mmiraq.com/api/public/marketing-contact/";
+        if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+          api = "http://127.0.0.1:8001/api/public/marketing-contact/";
+        }
+        var lang = window.MMI18n ? MMI18n.getLang() : "ckb";
+        if (contactBtn) contactBtn.disabled = true;
+        fetch(api, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name,
+            email: email,
+            message: message,
+            lang: lang,
+            website: honeypot ? honeypot.value : ""
+          })
+        }).then(function (r) {
+          if (!r.ok) throw new Error("fail");
+          contactForm.reset();
+          if (contactSuccess) {
+            contactSuccess.textContent = window.MMI18n ? MMI18n.t("contact.ok") : "پەیامەکەت نێردرا — سوپاس!";
+            contactSuccess.classList.add("is-visible");
+          }
+        }).catch(function () {
+          if (contactSuccess) {
+            contactSuccess.textContent = window.MMI18n ? MMI18n.t("contact.err") : "ناردن سەرکەوتوو نەبوو.";
+            contactSuccess.classList.add("is-visible");
+          }
+        }).finally(function () {
+          if (contactBtn) contactBtn.disabled = false;
+        });
       });
     }
 

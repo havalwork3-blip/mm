@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import MarketingAuthToken, MarketingEditor, MarketingSiteContent
+from .models import ContactMessage, MarketingAuthToken, MarketingEditor, MarketingProductCard, MarketingProductCategory, MarketingSiteContent
 
 
 @admin.register(MarketingEditor)
@@ -21,3 +21,24 @@ class MarketingAuthTokenAdmin(admin.ModelAdmin):
 @admin.register(MarketingSiteContent)
 class MarketingSiteContentAdmin(admin.ModelAdmin):
     list_display = ("id", "is_published", "updated_at")
+
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    list_display = ("name", "email", "is_read", "lang", "created_at")
+    list_filter = ("is_read", "lang")
+    search_fields = ("name", "email", "message")
+    readonly_fields = ("created_at", "ip_address", "user_agent")
+
+
+@admin.register(MarketingProductCategory)
+class MarketingProductCategoryAdmin(admin.ModelAdmin):
+    list_display = ("page", "sort_order", "is_published", "updated_at")
+    list_filter = ("page", "is_published")
+
+
+@admin.register(MarketingProductCard)
+class MarketingProductCardAdmin(admin.ModelAdmin):
+    list_display = ("page", "sort_order", "is_published", "tone", "updated_at")
+    list_filter = ("page", "is_published", "tone")
+    search_fields = ("title", "link_url")

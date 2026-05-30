@@ -32,17 +32,17 @@ export function MarketingLoginPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-slate-100">
-      <div className="border-b border-slate-800 bg-slate-900/80 px-4 py-4">
+    <div className="min-h-dvh bg-slate-950 text-slate-100" dir="rtl">
+      <div className="border-b border-slate-800 bg-slate-900/80 px-4 py-4 pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="mx-auto flex max-w-lg items-center gap-3">
-          <img src="/brand-logo.png" alt="" className="h-11 w-11 rounded-lg object-contain" />
-          <div>
-            <p className="font-semibold text-white">MM IRAQ — Site CMS</p>
+          <img src="/brand-logo.png" alt="" className="h-10 w-10 shrink-0 rounded-lg object-contain sm:h-11 sm:w-11" />
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-white">MM IRAQ — Site CMS</p>
             <p className="text-xs text-slate-400">چوونەژوورەوەی تایبەت بۆ بەڕێوەبردنی mmiraq.com</p>
           </div>
         </div>
       </div>
-      <main className="mx-auto max-w-lg px-4 py-12">
+      <main className="mx-auto max-w-lg px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))] sm:py-12">
         <p className="mb-6 text-sm leading-relaxed text-slate-400">
           ئەم چوونەژوورەوەیە جیاوازە لە سیستەمی POS و فرۆشگا. تەنها بۆ دەستکاری ماڵپەڕی سەرەکی
           mmiraq.com بەکاردێت.

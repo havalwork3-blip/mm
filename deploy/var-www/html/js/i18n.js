@@ -91,8 +91,9 @@ window.MMI18n = (function () {
         store: "فرۆشگا", email: "ئیمەیڵ", region: "ناوچە", regionV: "عێراق — گەیاندن بۆ هەموو شارەکان",
         tg: "تێلیگرام", tgV: "پشتیوانی ڕاستەوخۆ", name: "ناو", namePh: "ناوی تۆ", msg: "پەیام",
         msgPh: "پەیامەکەت لێرە بنووسە...", send: "ناردنی پەیام",
-        note: "دوگمەی ناردن ئیمەیڵەکەت دەکاتەوە بۆ ناردنی پەیام.",
-        ok: "پەیامەکەت ئامادەیە — ئیمەیڵەکەت بکەرەوە بۆ ناردن.",
+        note: "پەیامەکەت ڕاستەوخۆ دەنێردرێت بۆ تیمەکەمان.",
+        ok: "پەیامەکەت نێردرا — سوپاس!",
+        err: "ناردن سەرکەوتوو نەبوو. دووبارە هەوڵبدەرەوە.",
         mailSub: "پەیام لە ماڵپەڕی MM IRAQ — "
       },
       products: {
@@ -193,7 +194,8 @@ window.MMI18n = (function () {
         store: "المتجر", email: "البريد", region: "المنطقة", regionV: "العراق — توصيل لجميع المدن",
         tg: "تيليغرام", tgV: "دعم مباشر", name: "الاسم", namePh: "اسمك", msg: "الرسالة",
         msgPh: "اكتب رسالتك هنا...", send: "إرسال الرسالة",
-        note: "زر الإرسال يفتح بريدك لإرسال الرسالة.", ok: "رسالتك جاهزة — افتح بريدك للإرسال.",
+        note: "تُرسل رسالتك مباشرة إلى فريقنا.", ok: "تم إرسال رسالتك — شكراً!",
+        err: "فشل الإرسال. حاول مرة أخرى.",
         mailSub: "رسالة من موقع MM IRAQ — "
       },
       products: {
@@ -295,7 +297,8 @@ window.MMI18n = (function () {
         store: "Store", email: "Email", region: "Region", regionV: "Iraq — delivery to all cities",
         tg: "Telegram", tgV: "Live support", name: "Name", namePh: "Your name", msg: "Message",
         msgPh: "Write your message here...", send: "Send message",
-        note: "Send opens your email client to deliver the message.", ok: "Your message is ready — open your email to send.",
+        note: "Your message is sent directly to our team.", ok: "Message sent — thank you!",
+        err: "Could not send. Please try again.",
         mailSub: "Message from MM IRAQ website — "
       },
       products: {

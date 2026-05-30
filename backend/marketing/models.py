@@ -87,3 +87,84 @@ class MarketingSiteContent(models.Model):
         if changed:
             obj.save(update_fields=["translations", "sections", "updated_at"])
         return obj
+
+
+class ContactMessage(models.Model):
+    """Visitor message from mmiraq.com contact form."""
+
+    name = models.CharField(max_length=120)
+    email = models.EmailField()
+    message = models.TextField()
+    lang = models.CharField(max_length=8, blank=True, default="ckb")
+    is_read = models.BooleanField(default=False)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=300, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.name} <{self.email}>"
+
+
+class MarketingProductCategory(models.Model):
+    class Page(models.TextChoices):
+        LUXURY = "luxury", "Luxury"
+        TECH = "tech", "Technology"
+        SHOP = "shop", "Shop"
+        SERVICES = "services", "Services"
+
+    page = models.CharField(max_length=32, choices=Page.choices, db_index=True)
+    title = models.JSONField(default=dict, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_published = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["page", "sort_order", "id"]
+        verbose_name_plural = "Marketing product categories"
+
+    def __str__(self) -> str:
+        t = self.title if isinstance(self.title, dict) else {}
+        return t.get("ckb") or t.get("en") or f"{self.page} #{self.pk}"
+
+
+class MarketingProductCard(models.Model):
+    class Page(models.TextChoices):
+        LUXURY = "luxury", "Luxury"
+        TECH = "tech", "Technology"
+        SHOP = "shop", "Shop"
+        SERVICES = "services", "Services"
+
+    class Tone(models.TextChoices):
+        VIOLET = "violet", "Violet"
+        CYAN = "cyan", "Cyan"
+        GOLD = "gold", "Gold"
+        INDIGO = "indigo", "Indigo"
+
+    page = models.CharField(max_length=32, choices=Page.choices, db_index=True)
+    category = models.ForeignKey(
+        MarketingProductCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+    )
+    title = models.JSONField(default=dict, blank=True)
+    tag = models.JSONField(default=dict, blank=True)
+    image = models.ImageField(upload_to="marketing-products/%Y/%m/", blank=True, null=True)
+    link_url = models.CharField(max_length=500, blank=True, default="")
+    tone = models.CharField(max_length=16, choices=Tone.choices, default=Tone.VIOLET)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_published = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["page", "sort_order", "id"]
+
+    def __str__(self) -> str:
+        t = self.title if isinstance(self.title, dict) else {}
+        return t.get("ckb") or t.get("en") or f"Product #{self.pk}"

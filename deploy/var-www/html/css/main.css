@@ -963,6 +963,22 @@
     .product-card__media--cyan { background: linear-gradient(145deg, #0c1f2e, #0e4f6e); }
     .product-card__media--indigo { background: linear-gradient(145deg, #121530, #312e81); }
     .product-card__media--gold { background: linear-gradient(145deg, #1f1808, #4a3a0a); }
+    .product-card__media--has-img {
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .product-card__media--has-img::before { opacity: 0.35; }
+    .product-card__media--has-img::after { opacity: 0; }
+    .product-category-block { margin-bottom: 1.75rem; }
+    .product-category-block:last-child { margin-bottom: 0; }
+    .product-category__title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-muted, #a8a29e);
+      margin: 0 0 0.85rem;
+      padding-inline: 0.15rem;
+    }
     .product-card__tag {
       position: absolute; top: 0.65rem; inset-inline-start: 0.65rem;
       padding: 0.2rem 0.55rem; border-radius: 6px;

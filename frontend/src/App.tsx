@@ -27,8 +27,12 @@ import { MerchantOnlineOrdersPage } from './pages/merchant/MerchantOnlineOrdersP
 import { MerchantOnlinePricingPage } from './pages/merchant/MerchantOnlinePricingPage'
 import { MerchantOnlineShopPage } from './pages/merchant/MerchantOnlineShopPage'
 import { MarketingCMSLayout } from './pages/marketing/MarketingCMSLayout'
+import { MarketingContactInboxPage } from './pages/marketing/MarketingContactInboxPage'
+import { MarketingContentPage } from './pages/marketing/MarketingContentPage'
 import { MarketingLoginPage } from './pages/marketing/MarketingLoginPage'
-import { MarketingSiteEditorPage } from './pages/marketing/MarketingSiteEditorPage'
+import { MarketingOverviewPage } from './pages/marketing/MarketingOverviewPage'
+import { MarketingProductsPage } from './pages/marketing/MarketingProductsPage'
+import { MarketingSettingsPage } from './pages/marketing/MarketingSettingsPage'
 import { MarketingSessionProvider } from './context/MarketingSessionContext'
 import { StorefrontRoutes } from './pages/storefront/StorefrontRoutes'
 
@@ -49,7 +53,11 @@ function App() {
         <Routes>
           <Route path="/site-cms/login" element={<MarketingLoginPage />} />
           <Route path="/site-cms" element={<MarketingCMSLayout />}>
-            <Route index element={<MarketingSiteEditorPage />} />
+            <Route index element={<MarketingOverviewPage />} />
+            <Route path="content/:section" element={<MarketingContentPage />} />
+            <Route path="products" element={<MarketingProductsPage />} />
+            <Route path="inbox" element={<MarketingContactInboxPage />} />
+            <Route path="settings" element={<MarketingSettingsPage />} />
           </Route>
           <Route path="/qr-code" element={<QrCodeSocialLandingPage />} />
         <Route path="/store/*" element={<StorefrontRoutes />} />
