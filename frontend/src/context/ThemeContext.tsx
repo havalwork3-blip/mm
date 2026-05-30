@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { apiJson, restoreSessionAuth, setSuperuserShopId } from '../lib/api'
+import { reconcilePosShopId } from '../lib/activeShop'
+import { apiJson, restoreSessionAuth } from '../lib/api'
 import {
   THEME_PALETTE_DEFAULTS,
   applyThemePalette,
@@ -71,15 +72,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (!me.is_superuser && me.shop === null) return
 
         if (me.is_superuser) {
-          const scoped = localStorage.getItem('pos_shop_id')?.trim()
-          if (!scoped) {
-            const shops = await apiJson<ShopRow[] | { results: ShopRow[] }>('/api/shops/')
-            const list = Array.isArray(shops) ? shops : shops.results
-            if (!list[0]) return
-            const fallback = String(list[0].id)
-            localStorage.setItem('pos_shop_id', fallback)
-            setSuperuserShopId(fallback)
-          }
+          const shops = await apiJson<ShopRow[] | { results: ShopRow[] }>('/api/shops/')
+          const list = Array.isArray(shops) ? shops : shops.results
+          if (!reconcilePosShopId(list)) return
         }
 
         const settings = await apiJson<ShopSettingsRow>('/api/shop-settings/', {

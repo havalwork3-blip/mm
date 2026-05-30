@@ -115,7 +115,7 @@ export function AdminShopsPage() {
 
     setEditSaving(true)
     try {
-      await apiJson(`/api/shops/${encodeURIComponent(editing.slug)}/`, {
+      await apiJson(`/api/shops/${editing.id}/`, {
         method: 'PATCH',
         omitShopScope: true,
         body: JSON.stringify({
@@ -142,7 +142,7 @@ export function AdminShopsPage() {
     setDeletingSlug(row.slug)
     setError(null)
     try {
-      await apiJson(`/api/shops/${row.slug}/`, { method: 'DELETE', omitShopScope: true })
+      await apiJson(`/api/shops/${row.id}/`, { method: 'DELETE', omitShopScope: true })
       setRows((prev) => prev.filter((it) => it.id !== row.id))
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))

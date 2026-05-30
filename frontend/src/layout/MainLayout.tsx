@@ -33,6 +33,7 @@ import { useSession } from '../context/SessionContext'
 import { useTheme } from '../context/ThemeContext'
 import { useOnlineOrdersPendingCount } from '../hooks/useOnlineOrdersPendingCount'
 import { apiJson, getGlobalView, setGlobalView, setSuperuserShopId } from '../lib/api'
+import { reconcilePosShopId } from '../lib/activeShop'
 import { hasPerm } from '../lib/permissions'
 import type { Me, ShopRow } from '../types/api'
 
@@ -427,7 +428,10 @@ function MainLayoutShell() {
     if (!me?.is_superuser) return
     try {
       const data = await apiJson<ShopRow[] | { results: ShopRow[] }>('/api/shops/')
-      setShops(Array.isArray(data) ? data : data.results)
+      const list = Array.isArray(data) ? data : data.results
+      setShops(list)
+      reconcilePosShopId(list)
+      setShopTick((n) => n + 1)
     } catch {
       setShops([])
     }

@@ -357,7 +357,6 @@ class QrLandingCustomLinkViewSet(viewsets.ModelViewSet):
 class ShopViewSet(viewsets.ModelViewSet):
     queryset = Shop.objects.all()
     serializer_class = ShopSerializer
-    lookup_field = "slug"
     permission_classes = [IsAuthenticated, IsShopOwnerOrDjangoModelPermission]
 
     def get_queryset(self):
@@ -512,7 +511,11 @@ class ShopSettingsView(APIView):
     http_method_names = ["get", "put", "patch", "options", "head"]
 
     def _get_or_create(self, request) -> ShopSettings:
+        from rest_framework.exceptions import NotFound
+
         shop_id = require_shop_id(request)
+        if not Shop.objects.filter(pk=shop_id).exists():
+            raise NotFound("Shop not found.")
         obj, _ = ShopSettings.objects.get_or_create(shop_id=shop_id)
         return obj
 
