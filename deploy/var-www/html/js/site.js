@@ -196,20 +196,18 @@
       });
     }
 
-    function getMarketingApiBase() {
-      if (window.MMI18n && typeof MMI18n.getMarketingApiBase === "function") {
-        return MMI18n.getMarketingApiBase();
+    function fetchMarketingApi(path, options) {
+      if (window.MMI18n && typeof MMI18n.fetchPublicApi === "function") {
+        return MMI18n.fetchPublicApi(path, options);
       }
-      if (typeof window !== "undefined" && window.location) {
-        var h = window.location.hostname;
-        if (h === "localhost" || h === "127.0.0.1") {
-          return "http://127.0.0.1:8001";
-        }
-        if (h === "mmiraq.com" || h === "www.mmiraq.com") {
-          return window.location.origin;
-        }
-      }
-      return "https://dashboard.mmiraq.com";
+      var base = window.MMI18n && typeof MMI18n.getMarketingApiBase === "function"
+        ? MMI18n.getMarketingApiBase()
+        : "https://dashboard.mmiraq.com";
+      return fetch(base + path, Object.assign({ cache: "no-store" }, options || {})).then(function (r) {
+        if (!r.ok) throw new Error("bad status");
+        if (r.status === 204) return null;
+        return r.json();
+      });
     }
 
     function mmProductTitle(p, lang) {
@@ -282,8 +280,7 @@
       var pending = mounts.length;
       mounts.forEach(function (mount) {
         var page = mount.getAttribute("data-mm-products");
-        fetch(getMarketingApiBase() + "/api/public/marketing-products/?page=" + encodeURIComponent(page), { cache: "no-store" })
-          .then(function (r) { return r.ok ? r.json() : null; })
+        fetchMarketingApi("/api/public/marketing-products/?page=" + encodeURIComponent(page))
           .then(function (data) {
             if (data && data.products && data.products.length) renderProductsMount(mount, data);
           })
@@ -675,10 +672,9 @@
         var email = emailEl ? emailEl.value.trim() : "";
         var message = msgEl ? msgEl.value.trim() : "";
         if (!name || !email || !message) return;
-        var api = getMarketingApiBase() + "/api/public/marketing-contact/";
         var lang = window.MMI18n ? MMI18n.getLang() : "ckb";
         if (contactBtn) contactBtn.disabled = true;
-        fetch(api, {
+        fetchMarketingApi("/api/public/marketing-contact/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -688,8 +684,7 @@
             lang: lang,
             website: honeypot ? honeypot.value : ""
           })
-        }).then(function (r) {
-          if (!r.ok) throw new Error("fail");
+        }).then(function () {
           contactForm.reset();
           if (contactSuccess) {
             contactSuccess.textContent = window.MMI18n ? MMI18n.t("contact.ok") : "پەیامەکەت نێردرا — سوپاس!";

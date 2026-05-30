@@ -408,23 +408,43 @@ window.MMI18n = (function () {
     });
   }
 
-  function getMarketingApiBase() {
+  function marketingApiBases() {
+    var bases = [];
     if (typeof window !== "undefined" && window.location) {
       var h = window.location.hostname;
       if (h === "localhost" || h === "127.0.0.1") {
-        return "http://127.0.0.1:8001";
+        return ["http://127.0.0.1:8001"];
       }
       if (h === "mmiraq.com" || h === "www.mmiraq.com") {
-        return window.location.origin;
+        bases.push(window.location.origin);
       }
     }
-    return "https://dashboard.mmiraq.com";
+    bases.push("https://dashboard.mmiraq.com");
+    return bases;
+  }
+
+  function getMarketingApiBase() {
+    return marketingApiBases()[0];
+  }
+
+  function fetchPublicApi(path, options) {
+    options = options || {};
+    var bases = marketingApiBases();
+    var index = 0;
+    function attempt() {
+      if (index >= bases.length) return Promise.reject(new Error("marketing api unavailable"));
+      var url = bases[index++] + path;
+      return fetch(url, Object.assign({ cache: "no-store" }, options)).then(function (r) {
+        if (!r.ok) throw new Error("bad status");
+        if (r.status === 204) return null;
+        return r.json();
+      }).catch(function () { return attempt(); });
+    }
+    return attempt();
   }
 
   function loadFromCms(callback) {
-    var api = getMarketingApiBase() + "/api/public/marketing-site/";
-    fetch(api, { cache: "no-store" })
-      .then(function (r) { return r.ok ? r.json() : null; })
+    fetchPublicApi("/api/public/marketing-site/")
       .then(function (data) {
         if (data && data.is_published && data.translations) mergeTranslations(data.translations);
       })
@@ -438,7 +458,8 @@ window.MMI18n = (function () {
 
   return {
     t: t, applyLang: applyLang, getLang: getLang, cycleLang: cycleLang, init: init,
-    mergeTranslations: mergeTranslations, loadFromCms: loadFromCms, getMarketingApiBase: getMarketingApiBase,
+    mergeTranslations: mergeTranslations, loadFromCms: loadFromCms,
+    getMarketingApiBase: getMarketingApiBase, fetchPublicApi: fetchPublicApi,
     LANGS: LANGS, T: T
   };
 })();

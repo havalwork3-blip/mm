@@ -192,10 +192,17 @@ elif _cors_regex_env:
     CORS_ALLOWED_ORIGIN_REGEXES = [
         r.strip() for r in _cors_regex_env.split(",") if r.strip()
     ]
-elif not _cors_env and not DEBUG:
-    CORS_ALLOWED_ORIGIN_REGEXES = _DEFAULT_MMIRAq_CORS_REGEXES
 else:
-    CORS_ALLOWED_ORIGIN_REGEXES = []
+    CORS_ALLOWED_ORIGIN_REGEXES = list(_DEFAULT_MMIRAq_CORS_REGEXES)
+
+# Always allow the public marketing site to call dashboard APIs (even when CORS_ALLOWED_ORIGINS is set).
+if not CORS_ALLOW_ALL_ORIGINS and not DEBUG:
+    _mmiraq_public = ("https://mmiraq.com", "https://www.mmiraq.com")
+    _origin_set = set(CORS_ALLOWED_ORIGINS)
+    for _origin in _mmiraq_public:
+        if _origin not in _origin_set:
+            CORS_ALLOWED_ORIGINS.append(_origin)
+            _origin_set.add(_origin)
 
 _csrf_env = os.environ.get("CSRF_TRUSTED_ORIGINS", "").strip()
 if _csrf_env:

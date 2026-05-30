@@ -40,6 +40,15 @@ echo "==> Reload Nginx"
 nginx -t
 systemctl reload nginx
 
+if [[ -f "${SCRIPT_DIR}/nginx-mmiraq.conf" ]] && [[ -d /etc/nginx/sites-available ]]; then
+  echo "==> Ensure mmiraq.com API proxy is installed"
+  cp "${SCRIPT_DIR}/nginx-mmiraq.conf" /etc/nginx/sites-available/mmiraq
+  ln -sf /etc/nginx/sites-available/mmiraq /etc/nginx/sites-enabled/mmiraq
+  nginx -t
+  systemctl reload nginx
+fi
+
 echo "==> Done. Test:"
+echo "  curl -sI https://mmiraq.com/api/public/marketing-site/"
 echo "  curl -I https://mmiraq.com/css/main.css"
 echo "  curl -I https://mmiraq.com/luxury/"

@@ -8,6 +8,7 @@ from .authentication import MarketingTokenAuthentication
 from .defaults import default_sections, default_translations
 from .models import ContactMessage, MarketingAuthToken, MarketingEditor, MarketingSiteContent
 from .permissions import IsMarketingEditor
+from .public_api import PUBLIC_API_HEADERS, PublicMarketingApiView
 from .serializers import (
     ContactMessageSerializer,
     MarketingEditorSerializer,
@@ -70,10 +71,7 @@ class MarketingMeView(APIView):
         return Response(MarketingEditorSerializer(request.user).data)
 
 
-class PublicMarketingSiteView(APIView):
-    permission_classes = [AllowAny]
-    authentication_classes = []
-
+class PublicMarketingSiteView(PublicMarketingApiView):
     def get(self, request):
         try:
             content = MarketingSiteContent.load()
@@ -90,7 +88,7 @@ class PublicMarketingSiteView(APIView):
             "sections": content.sections or {},
             "updated_at": content.updated_at.isoformat() if content.updated_at else None,
         }
-        return Response(payload, headers={"Cache-Control": "no-store, max-age=0"})
+        return Response(payload, headers=PUBLIC_API_HEADERS)
 
 
 class MarketingSiteAdminView(APIView):
@@ -139,10 +137,7 @@ class MarketingSiteAdminView(APIView):
         return Response(MarketingSiteContentSerializer(content).data)
 
 
-class PublicContactSubmitView(APIView):
-    permission_classes = [AllowAny]
-    authentication_classes = []
-
+class PublicContactSubmitView(PublicMarketingApiView):
     def post(self, request):
         ser = PublicContactSubmitSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
@@ -163,7 +158,7 @@ class PublicContactSubmitView(APIView):
                 {"detail": "Database not ready. Run: python manage.py migrate"},
                 status=503,
             )
-        return Response({"id": msg.id, "detail": "Message received."}, status=201)
+        return Response({"id": msg.id, "detail": "Message received."}, status=201, headers=PUBLIC_API_HEADERS)
 
 
 class MarketingContactStatsView(APIView):

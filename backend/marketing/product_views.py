@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 from .authentication import MarketingTokenAuthentication
 from .models import MarketingProductCard, MarketingProductCategory
 from .permissions import IsMarketingEditor
+from .public_api import PUBLIC_API_HEADERS, PublicMarketingApiView
 from .product_defaults import default_product_cards
 from .serializers import (
     MarketingProductCardSerializer,
@@ -91,10 +92,7 @@ def _parse_product_payload(data) -> dict:
     return out
 
 
-class PublicMarketingProductsView(APIView):
-    permission_classes = [AllowAny]
-    authentication_classes = []
-
+class PublicMarketingProductsView(PublicMarketingApiView):
     def get(self, request):
         page = (request.query_params.get("page") or "").strip().lower()
         if page not in {"luxury", "tech", "shop", "services"}:
@@ -118,7 +116,7 @@ class PublicMarketingProductsView(APIView):
                 "categories": [_serialize_category(request, c) for c in categories],
                 "products": [_serialize_product(request, p) for p in products],
             },
-            headers={"Cache-Control": "no-store, max-age=0"},
+            headers=PUBLIC_API_HEADERS,
         )
 
 
