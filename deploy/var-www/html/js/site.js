@@ -168,7 +168,16 @@
       });
     });
 
-    if (langToggle && langCode) {
+    if (window.MMI18n) {
+      if (langToggle && langCode) {
+        langToggle.addEventListener("click", function () {
+          MMI18n.cycleLang();
+        });
+      }
+      MMI18n.loadFromCms(function () {
+        MMI18n.init();
+      });
+    } else if (langToggle && langCode) {
       langToggle.addEventListener("click", function () {
         var html = document.documentElement;
         var isKu = html.getAttribute("lang") === "ckb";
@@ -196,23 +205,45 @@
     var storeSections = document.querySelectorAll(".store-section");
     var SHOP_URL = "https://shopping.mmiraq.com/";
     var GLOBAL_CATALOG = [
-      { name: "کڵاوی چەرم Premium", href: "/luxury/", tone: "violet", section: "ئێکسسواراتی لوکس" },
-      { name: "کەمی چوارینە لوکس", href: "/luxury/", tone: "gold", section: "ئێکسسواراتی لوکس" },
-      { name: "ساعەتی زیرەک MM Edition", href: "/luxury/", tone: "cyan", section: "ئێکسسواراتی لوکس" },
-      { name: "جانتای دەستی دیزاین", href: "/luxury/", tone: "indigo", section: "ئێکسسواراتی لوکس" },
-      { name: "هێدسێت گەیمینگ Pro", href: "/tech/", tone: "violet", section: "تەکنەلۆژیا" },
-      { name: "ماوس RGB Wireless", href: "/tech/", tone: "cyan", section: "تەکنەلۆژیا" },
-      { name: "کیبۆرد Mechanical", href: "/tech/", tone: "gold", section: "تەکنەلۆژیا" },
-      { name: "Webcam 4K Stream", href: "/tech/", tone: "indigo", section: "تەکنەلۆژیا" },
-      { name: "پلاتفۆرمی شۆپی RTL", href: "/shop/", tone: "violet", section: "شۆپ" },
-      { name: "داشبۆردی کۆگا", href: "/shop/", tone: "cyan", section: "شۆپ" },
-      { name: "بەڕێوەبردنی بەرهەم", href: "/shop/", tone: "gold", section: "شۆپ" },
-      { name: "ئامار و ڕاپۆرت", href: "/shop/", tone: "indigo", section: "شۆپ" },
-      { name: "ڕاپۆرتی تێلیگرام", href: "/services/", tone: "violet", section: "خزمەتگوزاری" },
-      { name: "گەیاندنی خێرا", href: "/services/", tone: "cyan", section: "خزمەتگوزاری" },
-      { name: "پشتیوانی کڕیار", href: "/services/", tone: "gold", section: "خزمەتگوزاری" },
-      { name: "چارەسەری تایبەت", href: "/services/", tone: "indigo", section: "خزمەتگوزاری" }
+      { i18n: "products.p1", href: "/luxury/", tone: "violet", sectionKey: "sections.luxury" },
+      { i18n: "products.p2", href: "/luxury/", tone: "gold", sectionKey: "sections.luxury" },
+      { i18n: "products.p3", href: "/luxury/", tone: "cyan", sectionKey: "sections.luxury" },
+      { i18n: "products.p4", href: "/luxury/", tone: "indigo", sectionKey: "sections.luxury" },
+      { i18n: "products.p5", href: "/tech/", tone: "violet", sectionKey: "sections.tech" },
+      { i18n: "products.p6", href: "/tech/", tone: "cyan", sectionKey: "sections.tech" },
+      { i18n: "products.p7", href: "/tech/", tone: "gold", sectionKey: "sections.tech" },
+      { i18n: "products.p8", href: "/tech/", tone: "indigo", sectionKey: "sections.tech" },
+      { i18n: "products.p9", href: "/shop/", tone: "violet", sectionKey: "sections.shop" },
+      { i18n: "products.p10", href: "/shop/", tone: "cyan", sectionKey: "sections.shop" },
+      { i18n: "products.p11", href: "/shop/", tone: "gold", sectionKey: "sections.shop" },
+      { i18n: "products.p12", href: "/shop/", tone: "indigo", sectionKey: "sections.shop" },
+      { i18n: "products.p13", href: "/services/", tone: "violet", sectionKey: "sections.services" },
+      { i18n: "products.p14", href: "/services/", tone: "cyan", sectionKey: "sections.services" },
+      { i18n: "products.p15", href: "/services/", tone: "gold", sectionKey: "sections.services" },
+      { i18n: "products.p16", href: "/services/", tone: "indigo", sectionKey: "sections.services" }
     ];
+
+    function catalogItemName(item) {
+      if (item.i18n && window.MMI18n) return MMI18n.t(item.i18n);
+      return item.name || "";
+    }
+    function catalogItemSection(item) {
+      if (item.sectionKey && window.MMI18n) return MMI18n.t(item.sectionKey);
+      return item.section || "";
+    }
+    function hydrateCatalog() {
+      GLOBAL_CATALOG.forEach(function (item) {
+        item.name = catalogItemName(item);
+        item.section = catalogItemSection(item);
+      });
+    }
+    hydrateCatalog();
+    if (window.MMI18n) {
+      document.addEventListener("mm:langchange", function () {
+        hydrateCatalog();
+        if (searchInput && normalizeSearch(searchInput.value)) runSearch(false);
+      });
+    }
 
     var catalog = GLOBAL_CATALOG.slice();
     productCards.forEach(function (card, idx) {
@@ -366,7 +397,7 @@
         if (m.fuzzy) {
           var badge = document.createElement("span");
           badge.className = "search-result__badge";
-          badge.textContent = "نزیکە بە: " + m.label;
+          badge.textContent = (window.MMI18n ? MMI18n.t("search.near") : "نزیکە بە: ") + m.label;
           body.appendChild(badge);
         }
 
@@ -435,16 +466,16 @@
       var resultCount = productCards.length ? visible : matches.length;
       if (resultCount > 0) {
         var fuzzyCount = matches.filter(function (m) { return m.fuzzy; }).length;
-        searchCount.textContent = resultCount + " ئەنجام دۆزرایەوە";
+        searchCount.textContent = resultCount + (window.MMI18n ? MMI18n.t("search.found") : " ئەنجام دۆزرایەوە");
         searchCount.classList.remove("is-empty");
         if (fuzzyCount > 0 && !hasExact) {
           searchSuggest.hidden = false;
-          searchSuggest.textContent = "هەڵەی نووسین؟ ئەنجامە نزیکەکان پیشان دراون ↓";
+          searchSuggest.textContent = window.MMI18n ? MMI18n.t("search.typo") : "هەڵەی نووسین؟ ئەنجامە نزیکەکان پیشان دراون ↓";
         } else {
           searchSuggest.hidden = true;
         }
       } else {
-        searchCount.textContent = "هیچ کاڵایەک نەدۆزرایەوە";
+        searchCount.textContent = window.MMI18n ? MMI18n.t("search.none") : "هیچ کاڵایەک نەدۆزرایەوە";
         searchCount.classList.add("is-empty");
         if (catalog.length) {
           searchSuggest.hidden = false;
@@ -455,7 +486,9 @@
             })
             .sort(function (a, b) { return b.score - a.score; })[0];
           if (guess && guess.score > 25) {
-            searchSuggest.textContent = "ئایا دەگەڕێیت بۆ: «" + guess.item.name + "»؟";
+            var lk = window.MMI18n ? MMI18n.t("search.looking") : "ئایا دەگەڕێیت بۆ: «";
+            var le = window.MMI18n ? MMI18n.t("search.lookingEnd") : "»؟";
+            searchSuggest.textContent = lk + guess.item.name + le;
           } else {
             searchSuggest.hidden = true;
           }
@@ -515,8 +548,8 @@
         var name = document.getElementById("contactName").value.trim();
         var email = document.getElementById("contactEmail").value.trim();
         var message = document.getElementById("contactMessage").value.trim();
-        var subject = encodeURIComponent("پەیام لە ماڵپەڕی MM IRAQ — " + name);
-        var body = encodeURIComponent("ناو: " + name + "\nئیمەیڵ: " + email + "\n\n" + message);
+        var subject = encodeURIComponent((window.MMI18n ? MMI18n.t("contact.mailSub") : "پەیام لە ماڵپەڕی MM IRAQ — ") + name);
+        var body = encodeURIComponent((window.MMI18n ? MMI18n.t("contact.name") : "ناو") + ": " + name + "\n" + (window.MMI18n ? MMI18n.t("contact.email") : "ئیمەیڵ") + ": " + email + "\n\n" + message);
         window.location.href = "mailto:info@mmiraq.com?subject=" + subject + "&body=" + body;
         contactSuccess.classList.add("is-visible");
       });

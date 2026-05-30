@@ -26,6 +26,10 @@ import { AdminQrSocialPage } from './pages/admin/AdminQrSocialPage'
 import { MerchantOnlineOrdersPage } from './pages/merchant/MerchantOnlineOrdersPage'
 import { MerchantOnlinePricingPage } from './pages/merchant/MerchantOnlinePricingPage'
 import { MerchantOnlineShopPage } from './pages/merchant/MerchantOnlineShopPage'
+import { MarketingCMSLayout } from './pages/marketing/MarketingCMSLayout'
+import { MarketingLoginPage } from './pages/marketing/MarketingLoginPage'
+import { MarketingSiteEditorPage } from './pages/marketing/MarketingSiteEditorPage'
+import { MarketingSessionProvider } from './context/MarketingSessionContext'
 import { StorefrontRoutes } from './pages/storefront/StorefrontRoutes'
 
 const storefrontHost = isStorefrontMode()
@@ -41,8 +45,13 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/qr-code" element={<QrCodeSocialLandingPage />} />
+      <MarketingSessionProvider>
+        <Routes>
+          <Route path="/site-cms/login" element={<MarketingLoginPage />} />
+          <Route path="/site-cms" element={<MarketingCMSLayout />}>
+            <Route index element={<MarketingSiteEditorPage />} />
+          </Route>
+          <Route path="/qr-code" element={<QrCodeSocialLandingPage />} />
         <Route path="/store/*" element={<StorefrontRoutes />} />
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomePage />} />
@@ -78,7 +87,8 @@ function App() {
           <Route path="/admin/qr-social" element={<Navigate to="/system/qr-social" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+        </Routes>
+      </MarketingSessionProvider>
     </BrowserRouter>
   )
 }

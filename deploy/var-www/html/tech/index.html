@@ -1355,9 +1355,9 @@
     .reveal-delay-4 { transition-delay: 0.32s; }
 
     @media (max-width: 900px) {
-      .lang-pill { display: none; }
       .header-actions .icon-btn { display: none; }
       .menu-toggle { display: inline-flex !important; }
+      .lang-pill { display: inline-flex !important; }
     }
     @media (max-width: 1280px) {
       .product-grid { grid-template-columns: repeat(3, 1fr); }
@@ -1718,43 +1718,43 @@
         <img class="logo-img header-logo" src="/logo-optimized.webp" alt="MM IRAQ" width="184" height="184" decoding="async" fetchpriority="high" />
         <span class="brand__name">MM IRAQ</span>
       </a>
-      <nav class="nav" id="mainNav" aria-label="ناڤیگەیشن">
+      <nav class="nav" id="mainNav" data-i18n-aria="ui.navAria">
         <div class="nav__sidebar-head">
-          <span class="nav__sidebar-title">مێنیو</span>
-          <button class="nav__close" type="button" id="menuClose" aria-label="داخستن">×</button>
+          <span class="nav__sidebar-title" data-i18n="ui.menu">مێنیو</span>
+          <button class="nav__close" type="button" id="menuClose" data-i18n-aria="ui.close">×</button>
         </div>
         <a class="nav__link" href="/luxury/">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
-          ئێکسسوارات
+          <span data-i18n="nav.luxury">ئێکسسوارات</span>
         </a>
         <a class="nav__link" href="/explore/">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-          گەڕان
+          <span data-i18n="nav.explore">گەڕان</span>
         </a>
         <a class="nav__link nav__link--active" href="/tech/">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-          تەکنەلۆژیا
+          <span data-i18n="nav.tech">تەکنەلۆژیا</span>
         </a>
         <a class="nav__link" href="/shop/">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-          شۆپی ئۆنلاین
+          <span data-i18n="nav.shop">شۆپی ئۆنلاین</span>
         </a>
         <a class="nav__link" href="/services/">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-          خزمەتگوزاری
+          <span data-i18n="nav.services">خزمەتگوزاری</span>
         </a>
-        <a class="nav__link" href="/about/">زیاتر</a>
-        <a class="nav__sidebar-shop shop-cta" href="https://shopping.mmiraq.com/">ئێستا بازاری بکە</a>
+        <a class="nav__link" href="/about/"><span data-i18n="nav.more">زیاتر</span></a>
+        <a class="nav__sidebar-shop shop-cta" href="https://shopping.mmiraq.com/" data-i18n="ui.shopCta">ئێستا بازاری بکە</a>
       </nav>
       <div class="header-actions">
-        <a class="shop-cta" href="https://shopping.mmiraq.com/">ئێستا بازاری بکە</a>
-        <button class="icon-btn" type="button" id="searchOpen" aria-label="گەڕان" aria-expanded="false" aria-controls="searchPanel">
+        <a class="shop-cta" href="https://shopping.mmiraq.com/" data-i18n="ui.shopCta">ئێستا بازاری بکە</a>
+        <button class="icon-btn" type="button" id="searchOpen" data-i18n-aria="ui.search" aria-expanded="false" aria-controls="searchPanel">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
-        <button class="lang-pill" type="button" id="langToggle" aria-label="گۆڕینی زمان">
+        <button class="lang-pill" type="button" id="langToggle" data-i18n-aria="ui.langSwitch">
           <span class="lang-pill__code" id="langCode">KU</span>
         </button>
-        <button class="menu-toggle" type="button" id="menuToggle" aria-label="مێنیو" aria-expanded="false" aria-controls="mainNav">
+        <button class="menu-toggle" type="button" id="menuToggle" data-i18n-aria="ui.menu" aria-expanded="false" aria-controls="mainNav">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
         </button>
       </div>
@@ -1763,13 +1763,13 @@
 
   <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
 
-  <div class="search-panel" id="searchPanel" role="dialog" aria-modal="true" aria-label="گەڕان" hidden>
+  <div class="search-panel" id="searchPanel" role="dialog" aria-modal="true" data-i18n-aria="search.aria" hidden>
     <div class="search-panel__box">
       <div class="search-panel__row">
-        <input class="search-panel__input" type="search" id="searchInput" placeholder="ناوی کاڵا بنووسە..." autocomplete="off" />
-        <button class="search-panel__close" type="button" id="searchClose" aria-label="داخستن">×</button>
+        <input class="search-panel__input" type="search" id="searchInput" data-i18n-placeholder="search.placeholder" placeholder="ناوی کاڵا بنووسە..." autocomplete="off" />
+        <button class="search-panel__close" type="button" id="searchClose" data-i18n-aria="ui.close">×</button>
       </div>
-      <p class="search-panel__hint">ناوی کاڵا بنووسە — وێنە و پێشنیاری نزیک پیشان دەدرێت</p>
+      <p class="search-panel__hint" data-i18n="search.hint">ناوی کاڵا بنووسە — وێنە و پێشنیاری نزیک پیشان دەدرێت</p>
       <p class="search-panel__count" id="searchCount" hidden></p>
       <p class="search-panel__suggest" id="searchSuggest" hidden></p>
       <ul class="search-results" id="searchResults"></ul>
@@ -1781,45 +1781,45 @@
     <section class="store-section" id="tech">
       <div class="store-section__head reveal">
         <div>
-          <h2 class="store-section__title">ئامێر و تەکنەلۆژیا</h2>
-          <p class="store-section__sub">هێدسێت، ماوس، کیبۆرد، و زیاتر</p>
+          <h2 class="store-section__title" data-i18n="tech.title">ئامێر و تەکنەلۆژیا</h2>
+          <p class="store-section__sub" data-i18n="tech.sub">هێدسێت، ماوس، کیبۆرد، و زیاتر</p>
         </div>
-        <a class="store-section__more" href="/tech/">هەمووی ببینە ←</a>
+        <a class="store-section__more" href="/tech/" data-i18n="ui.seeAll">هەمووی ببینە ←</a>
       </div>
       <div class="product-grid">
         <a class="product-card reveal reveal-delay-1" href="/tech/">
-          <div class="product-card__media product-card__media--cyan"><span class="product-card__tag">-١٥٪</span></div>
+          <div class="product-card__media product-card__media--cyan"><span class="product-card__tag" data-i18n="tag.discount">-١٥٪</span></div>
           <div class="product-card__body">
-            <h3 class="product-card__name">هێدسێت گەیمینگ Pro</h3>
+            <h3 class="product-card__name" data-i18n="products.p5">هێدسێت گەیمینگ Pro</h3>
           </div>
         </a>
         <a class="product-card reveal reveal-delay-2" href="/tech/">
           <div class="product-card__media product-card__media--violet"></div>
           <div class="product-card__body">
-            <h3 class="product-card__name">ماوس RGB Wireless</h3>
+            <h3 class="product-card__name" data-i18n="products.p6">ماوس RGB Wireless</h3>
           </div>
         </a>
         <a class="product-card reveal reveal-delay-3" href="/tech/">
-          <div class="product-card__media product-card__media--indigo"><span class="product-card__tag">Premium</span></div>
+          <div class="product-card__media product-card__media--indigo"><span class="product-card__tag" data-i18n="tag.premium">Premium</span></div>
           <div class="product-card__body">
-            <h3 class="product-card__name">کیبۆرد Mechanical</h3>
+            <h3 class="product-card__name" data-i18n="products.p7">کیبۆرد Mechanical</h3>
           </div>
         </a>
         <a class="product-card reveal reveal-delay-4" href="/tech/">
           <div class="product-card__media product-card__media--gold"></div>
           <div class="product-card__body">
-            <h3 class="product-card__name">Webcam 4K Stream</h3>
+            <h3 class="product-card__name" data-i18n="products.p8">Webcam 4K Stream</h3>
           </div>
         </a>
       </div>
     </section>
     </div>
 
-    <a class="cinema cinema--b cinema--link" href="/services/" aria-label="تەکنەلۆژیا و بازرگانی">
+    <a class="cinema cinema--b cinema--link" href="/services/" data-i18n-aria="tech.cinemaA">
       <div class="cinema__bg" aria-hidden="true"></div>
       <div class="cinema__content reveal">
-        <h2 class="cinema__title">تەکنەلۆژیا + بازرگانی</h2>
-        <p class="cinema__sub">ڕاپۆرتی خۆکاری تێلیگرام و داشبۆردی بەڕێوەبردن بۆ تیمەکەت</p>
+        <h2 class="cinema__title" data-i18n="tech.cinemaT">تەکنەلۆژیا + بازرگانی</h2>
+        <p class="cinema__sub" data-i18n="tech.cinemaS">ڕاپۆرتی خۆکاری تێلیگرام و داشبۆردی بەڕێوەبردن بۆ تیمەکەت</p>
       </div>
     </a>
   </main>
@@ -1829,28 +1829,28 @@
       <div class="site-footer__top">
         <div>
           <p class="site-footer__brand">MM IRAQ</p>
-          <p class="site-footer__tagline">فرۆشگای ئێکسسواراتی مۆدێرن — لوکس، تەکنەلۆژیا، و خزمەتگوزاری لە یەک شوێن.</p>
+          <p class="site-footer__tagline" data-i18n="footer.tagline">فرۆشگای ئێکسسواراتی مۆدێرن — لوکس، تەکنەلۆژیا، و خزمەتگوزاری لە یەک شوێن.</p>
         </div>
-        <nav aria-label="گەڕان">
-          <p class="site-footer__heading">بەشەکان</p>
+        <nav aria-label="sections">
+          <p class="site-footer__heading" data-i18n="footer.sections">بەشەکان</p>
           <div class="site-footer__nav">
-            <a href="/luxury/">ئێکسسوارات</a>
-            <a href="/shop/">فرۆشگا</a>
-            <a href="/tech/">تەکنەلۆژیا</a>
-            <a href="/shop/">شۆپ</a>
-            <a href="/services/">خزمەتگوزاری</a>
+            <a href="/luxury/" data-i18n="nav.luxury">ئێکسسوارات</a>
+            <a href="/shop/" data-i18n="footer.store">فرۆشگا</a>
+            <a href="/tech/" data-i18n="nav.tech">تەکنەلۆژیا</a>
+            <a href="/shop/" data-i18n="footer.shopShort">شۆپ</a>
+            <a href="/services/" data-i18n="nav.services">خزمەتگوزاری</a>
           </div>
         </nav>
-        <nav aria-label="یارمەتی">
-          <p class="site-footer__heading">یارمەتی</p>
+        <nav aria-label="help">
+          <p class="site-footer__heading" data-i18n="footer.help">یارمەتی</p>
           <div class="site-footer__nav">
-            <a href="/contact/">پەیوەندی</a>
-            <a href="/about/">دەربارە</a>
-            <a href="/terms/">مەرج و ڕێساکان</a>
+            <a href="/contact/" data-i18n="footer.contact">پەیوەندی</a>
+            <a href="/about/" data-i18n="footer.about">دەربارە</a>
+            <a href="/terms/" data-i18n="footer.terms">مەرج و ڕێساکان</a>
           </div>
         </nav>
         <div>
-          <p class="site-footer__heading">تۆڕە کۆمەڵایەتییەکان</p>
+          <p class="site-footer__heading" data-i18n="footer.social">تۆڕە کۆمەڵایەتییەکان</p>
           <div class="socials">
             <a class="social-link" href="#" aria-label="Instagram"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>
             <a class="social-link" href="#" aria-label="Snapchat"><svg viewBox="0 0 24 24"><path d="M12.206.793c.99 0 4.347.276 5.93 3.821.529 1.193.403 3.219.299 4.847l-.003.06c-.012.18-.022.345-.03.51.075.045.203.09.401.09.3-.016.659-.12 1.033-.301.165-.088.344-.104.464-.104.182 0 .359.029.509.09.45.149.734.479.734.838.015.449-.39.839-1.213 1.168-.089.029-.209.075-.344.119-.45.135-1.139.36-1.333.81-.09.224-.061.524.12.868l.015.015c.06.136 1.526 3.475 4.791 4.014.255.044.435.27.42.509 0 .075-.015.149-.045.225-.24.569-1.273.988-3.146 1.271-.059.091-.12.375-.164.57-.029.179-.074.36-.134.553-.076.271-.27.405-.555.405h-.03c-.135 0-.313-.031-.538-.074-.36-.075-.765-.135-1.273-.135-.3 0-.599.015-.913.074-.6.104-1.123.464-1.723.884-.753.555-1.509 1.064-2.646 1.064-.06 0-.119-.015-.18-.015h-.149c-1.138 0-1.894-.509-2.647-1.064-.599-.42-1.107-.779-1.707-.884-.314-.045-.629-.074-.928-.074-.509 0-.904.074-1.281.149-.211.043-.391.074-.54.074-.374 0-.523-.224-.583-.42-.061-.192-.09-.389-.135-.567-.046-.181-.105-.494-.166-.57-1.918-.222-2.95-.642-3.189-1.226-.031-.063-.052-.12-.061-.165-.015-.225.165-.465.42-.509 3.264-.54 4.73-3.879 4.791-4.02l.016-.029c.18-.345.224-.645.119-.869-.181-.394-.854-.658-1.333-.809-.121-.029-.24-.074-.346-.119-1.107-.435-1.257-.93-1.197-1.273.09-.479.674-.793 1.168-.793.146 0 .27.029.383.074.42.194.789.3 1.104.3.234 0 .384-.06.465-.105l-.047-.569c-.098-1.626-.225-3.651.307-4.837C7.392 1.077 10.739.793 11.727.793h.479z"/></svg></a>
@@ -1859,38 +1859,38 @@
         </div>
       </div>
       <div class="site-footer__bottom">
-        <p>&copy; 2026 MM IRAQ. هەموو مافەکان پارێزراون.</p>
-        <p>ئێکسسوارات &middot; تەکنەلۆژیا &middot; عێراق</p>
+        <p data-i18n="footer.copy">&copy; 2026 MM IRAQ. هەموو مافەکان پارێزراون.</p>
+        <p data-i18n="footer.line2">ئێکسسوارات &middot; تەکنەلۆژیا &middot; عێراق</p>
       </div>
     </div>
   </footer>
 
-  <nav class="float-dock" id="floatDock" aria-label="ناڤیگەیشنی خێرا">
+  <nav class="float-dock" id="floatDock" data-i18n-aria="ui.navAria">
     <span class="float-dock__indicator" id="dockIndicator" aria-hidden="true"></span>
-    <a class="float-dock__btn" href="/" data-dock="home" aria-label="سەرەوە">
+    <a class="float-dock__btn" href="/" data-dock="home" data-i18n-aria="ui.dockHome">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     </a>
-    <a class="float-dock__btn" href="/explore/" data-dock="grid" aria-label="گەڕان">
+    <a class="float-dock__btn" href="/explore/" data-dock="grid" data-i18n-aria="ui.dockExplore">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     </a>
-    <a class="float-dock__btn is-active" href="/luxury/" data-dock="fav" aria-label="دڵخواز">
+    <a class="float-dock__btn is-active" href="/luxury/" data-dock="fav" data-i18n-aria="ui.dockFav">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     </a>
-    <a class="float-dock__btn" href="/shop/" data-dock="bookmark" aria-label="فرۆشگا">
+    <a class="float-dock__btn" href="/shop/" data-dock="bookmark" data-i18n-aria="ui.dockShop">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
     </a>
-    <button class="float-dock__btn" type="button" id="dockSearch" aria-label="گەڕان">
+    <button class="float-dock__btn" type="button" id="dockSearch" data-i18n-aria="ui.search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     </button>
   </nav>
 
   <div class="float-actions">
-    <button class="back-top" type="button" id="backTop" aria-label="گەڕانەوە بۆ سەرەوە">
+    <button class="back-top" type="button" id="backTop" data-i18n-aria="ui.backTop">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="18 15 12 9 6 15"/></svg>
     </button>
-    <a class="chat-fab" href="/contact/" aria-label="پەیاممان بنێرە">
+    <a class="chat-fab" href="/contact/" data-i18n-aria="ui.chat">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      <span>پەیاممان بنێرە</span>
+      <span data-i18n="ui.chat">پەیاممان بنێرە</span>
     </a>
   </div>
 
@@ -1898,6 +1898,438 @@
 
 
   <script>
+/* MM IRAQ — Kurdish (ckb), Arabic (ar), English (en) */
+window.MMI18n = (function () {
+  var LANGS = ["ckb", "ar", "en"];
+  var META = {
+    ckb: { dir: "rtl", code: "KU", htmlLang: "ckb" },
+    ar: { dir: "rtl", code: "AR", htmlLang: "ar" },
+    en: { dir: "ltr", code: "EN", htmlLang: "en" }
+  };
+
+  var T = {
+    ckb: {
+      ui: {
+        navAria: "ناڤیگەیشن", menu: "مێنیو", close: "داخستن", search: "گەڕان",
+        langSwitch: "گۆڕینی زمان", shopCta: "ئێستا بازاری بکە", seeAll: "هەمووی ببینە ←",
+        backTop: "گەڕانەوە بۆ سەرەوە", chat: "پەیاممان بنێرە",
+        dockHome: "سەرەوە", dockExplore: "گەڕان", dockFav: "دڵخواز", dockShop: "فرۆشگا"
+      },
+      nav: { luxury: "ئێکسسوارات", explore: "گەڕان", tech: "تەکنەلۆژیا", shop: "شۆپی ئۆنلاین", services: "خزمەتگوزاری", more: "زیاتر" },
+      footer: {
+        tagline: "فرۆشگای ئێکسسواراتی مۆدێرن — لوکس، تەکنەلۆژیا، و خزمەتگوزاری لە یەک شوێن.",
+        sections: "بەشەکان", help: "یارمەتی", social: "تۆڕە کۆمەڵایەتییەکان",
+        store: "فرۆشگا", shopShort: "شۆپ", contact: "پەیوەندی", about: "دەربارە", terms: "مەرج و ڕێساکان",
+        copy: "© 2026 MM IRAQ. هەموو مافەکان پارێزراون.", line2: "ئێکسسوارات · تەکنەلۆژیا · عێراق"
+      },
+      search: {
+        aria: "گەڕان", placeholder: "ناوی کاڵا بنووسە...", hint: "ناوی کاڵا بنووسە — وێنە و پێشنیاری نزیک پیشان دەدرێت",
+        found: " ئەنجام دۆزرایەوە", none: "هیچ کاڵایەک نەدۆزرایەوە",
+        typo: "هەڵەی نووسین؟ ئەنجامە نزیکەکان پیشان دراون ↓",
+        looking: "ئایا دەگەڕێیت بۆ: «", lookingEnd: "»؟", near: "نزیکە بە: "
+      },
+      cta: { shop: "ئێستا بازاری بکە", learn: "زیاتر بزانە", start: "دەست پێ بکە", explore: "ئێستا بگەڕێ", aboutMore: "زیاتر دەربارەمان بزانە ←" },
+      hero: {
+        aria: "بانێری سەرەکی", prev: "پێشوو", next: "دواتر", s1: "سلاید ١", s2: "سلاید ٢", s3: "سلاید ٣",
+        h1: "ئێکسسواراتی <span>لوکس و مۆدێرن</span>", h1sub: "کۆمەڵێک بەرهەمی premium بۆ ستایلی ژیانت — کوالیتی بەرز، دیزاینی جوان.",
+        h2: "شۆپی <span>زیرەک MM IRAQ</span>", h2sub: "فرۆشگای ئۆنلاینی RTL، کۆگا، و بەڕێوەبردنی بەرهەم لە یەک پلاتفۆرم.",
+        h3: "گەیاندنی <span>خێرا و متمانەپێکراو</span>", h3sub: "لۆجستیکی پێشکەوتوو و چاودێری کاتی ڕاستەقینە بۆ هەموو داواکارییەک."
+      },
+      feat: {
+        d1: "گەیاندنی خێرا", d1s: "گەیاندن بۆ هەموو عێراق",
+        q1: "کوالیتی premium", q1s: "بەرهەمی ڕەسەن و متمانەپێکراو",
+        s1: "پشتیوانی ٢٤/٧", s1s: "لە تێلیگرام و تەلەفۆن",
+        p1: "پارەدانێکی سەلامەت", p1s: "COD و گەڕانەوەی ئاسان"
+      },
+      homeAbout: {
+        label: "ئێمە کێین", title: "بەخێربێیت بۆ جیهانی MM IRAQ",
+        lead: "لەم پێڕستەدا لوکس، تەکنەلۆژیا، و خزمەتگوزاری لە یەک ئەزموونی تەواودا کۆدەکرێنەوە — بۆ ئەو کەسانەی ستایل و کارامەیی هاوکات گرنگیان پێ دەدەن. ئێمە نەک تەنها فرۆشگایەکین، بەڵکو هاوبەشی بازرگانی و تەکنەلۆژیایین بۆ عێراق.",
+        c1t: "کۆمەڵێک هەڵبژاردە", c1d: "ئێکسسواراتی لوکس، ئامێری تەکنەلۆژیا، و شۆپی زیرەک — هەمووی لە ژێر یەک براند.",
+        c2t: "دروستکراو بۆ عێراق", c2d: "گەیاندن، پشتیوانی RTL، و خزمەتگوزاری ناوخۆیی بۆ هەموو شارەکان.",
+        c3t: "زیرەک و خێرا", c3d: "کۆگای ئۆتۆمات، ڕاپۆرتی AI، و چاودێری داواکاری بە کاتی ڕاستەقینە."
+      },
+      explore: { title: "زیاتر لە MM IRAQ بگەڕێ" },
+      showcase: {
+        s1: "ئێکسسوارات", s2: "هێدسێتی پڕۆ", s3: "MM IRAQ", s4: "MM Control",
+        s5: "پشکی Elite", s6: "کورسی Elite", s7: "کیی Mech", s8: "ماوس Elite",
+        s9: "ساعەتی زیرەک", s10: "ئامێری تەکنە", s11: "دەنگی ستودیۆ",
+        s12: "MM KILLSWITCH", s13: "MM ROUX", s14: "Wireless Pro"
+      },
+      tag: { new: "نوێ", hot: "Hot", premium: "Premium", ai: "AI", mm: "MM", discount: "-١٥٪" },
+      sections: { luxury: "ئێکسسواراتی لوکس", tech: "تەکنەلۆژیا", shop: "شۆپ", services: "خزمەتگوزاری" },
+      luxury: {
+        title: "ئێکسسواراتی لوکس", sub: "هەڵبژاردەی دەستچێن و ستایلی premium",
+        cinemaT: "کۆڵێکشنێکی نوێ — وەرزی ٢٠٢٦", cinemaS: "دیزاینی تایبەت MM IRAQ بۆ ئەو کەسانەی ستایل و کوالیتی گرنگی پێ دەدەن",
+        cinemaA: "کۆڵێکشنێکی نوێ"
+      },
+      tech: {
+        title: "ئامێر و تەکنەلۆژیا", sub: "هێدسێت، ماوس، کیبۆرد، و زیاتر",
+        cinemaT: "تەکنەلۆژیا + بازرگانی", cinemaS: "ڕاپۆرتی خۆکاری تێلیگرام و داشبۆردی بەڕێوەبردن بۆ تیمەکەت", cinemaA: "تەکنەلۆژیا و بازرگانی"
+      },
+      shop: { title: "شۆپ و کۆگای زیرەک", sub: "پلاتفۆرمی فرۆشتن و بەڕێوەبردن" },
+      services: { title: "خزمەتگوزارییەکان", sub: "لۆجستیک، AI، و پشتیوانی" },
+      about: {
+        label: "دەربارە", title: "دەربارەی MM IRAQ",
+        lead: "MM IRAQ ناوەندێکی مۆدێرنە بۆ بازرگانی ئێکسسوارات، تەکنەلۆژیا، و خزمەتگوزاری پێشکەوتوو لە عێراق. ئامانجمان دابینکردنی ئەزموونێکی premiumـە — لە هەڵبژاردنی بەرهەمەوە تا گەیاندن و پشتیوانی.",
+        l1: "ئێکسسواراتی لوکس و مۆدێرن بۆ کڕیارانی جیاواز", l2: "فرۆشگای ئۆنلاینی RTL و سیستەمی کۆگای زیرەک",
+        l3: "ڕاپۆرتی خۆکاری تێلیگرام و چارەسەری بازرگانی", l4: "گەیاندنی خێرا و پشتیوانی بەردەوام",
+        st1n: "+١٠٠", st1t: "بەرهەمی جیاواز", st2n: "٢٤/٧", st2t: "پشتیوانی", st3n: "🇮🇶", st3t: "گەیاندن بۆ عێراق"
+      },
+      terms: {
+        label: "مەرج و ڕێساکان", title: "مەرج و ڕێساکانی بەکارهێنان",
+        lead: "بە بەکارهێنانی ماڵپەڕ و خزمەتگوزارییەکانی MM IRAQ، ڕازی دەبیت بەم مەرجانە. تکایە بە وردی بیخوێنەرەوە.",
+        l1: "هەموو نرخ و بەردەستی بەرهەمەکان دەتوانن بگۆڕدرێن بەبێ ئاگاداری پێشوەخت.",
+        l2: "داواکارییەکان دوای پشتڕاستکردنەوە پرۆسێس دەکرێن؛ MM IRAQ مافی هەڵوەشاندنەوەی داواکاری هەیە لە حاڵەتی کێشەدا.",
+        l3: "گەیاندن بەپێی شار و ناوچە جیاواز دەبێت؛ کاتی گەیاندن پێشبینییە نەک گەرەنتی.",
+        l4: "گەڕانەوەی بەرهەم تەنها لە حاڵەتی کەموکوڕی یان هەڵەدا قبوڵ دەکرێت، بەپێی سیاسەتی فرۆشگا.",
+        l5: "زانیاری کەسی کڕیار بە شێوەی پارێزراو بەکاردەهێنرێت تەنها بۆ مەبەستی داواکاری و پشتیوانی.",
+        l6: "هەر گۆڕانکارییەک لەم مەرجانە لەسەر ئەم پەڕەیە بڵاو دەکرێتەوە."
+      },
+      contact: {
+        label: "پەیوەندی", title: "پەیوەندیمان پێوە بکە",
+        lead: "پرسیار، پێشنیار، یان داواکاری هاوکاری؟ تیمەکەمان ئامادەیە یارمەتیت بدات.",
+        store: "فرۆشگا", email: "ئیمەیڵ", region: "ناوچە", regionV: "عێراق — گەیاندن بۆ هەموو شارەکان",
+        tg: "تێلیگرام", tgV: "پشتیوانی ڕاستەوخۆ", name: "ناو", namePh: "ناوی تۆ", msg: "پەیام",
+        msgPh: "پەیامەکەت لێرە بنووسە...", send: "ناردنی پەیام",
+        note: "دوگمەی ناردن ئیمەیڵەکەت دەکاتەوە بۆ ناردنی پەیام.",
+        ok: "پەیامەکەت ئامادەیە — ئیمەیڵەکەت بکەرەوە بۆ ناردن.",
+        mailSub: "پەیام لە ماڵپەڕی MM IRAQ — "
+      },
+      products: {
+        p1: "کڵاوی چەرم Premium", p2: "کەمی چوارینە لوکس", p3: "ساعەتی زیرەک MM Edition", p4: "جانتای دەستی دیزاین",
+        p5: "هێدسێت گەیمینگ Pro", p6: "ماوس RGB Wireless", p7: "کیبۆرد Mechanical", p8: "Webcam 4K Stream",
+        p9: "پلاتفۆرمی شۆپی RTL", p10: "داشبۆردی کۆگا", p11: "بەڕێوەبردنی بەرهەم", p12: "ئامار و ڕاپۆرت",
+        p13: "ڕاپۆرتی تێلیگرام", p14: "گەیاندنی خێرا", p15: "پشتیوانی کڕیار", p16: "چارەسەری تایبەت"
+      },
+      meta: {
+        homeTitle: "MM IRAQ — فرۆشگای ئێکسسوارات", homeDesc: "MM IRAQ — فرۆشگای ئێکسسواراتی لوکس، تەکنەلۆژیا، و خزمەتگوزاری پێشکەوتوو",
+        luxuryTitle: "ئێکسسواراتی لوکس — MM IRAQ", luxuryDesc: "هەڵبژاردەی دەستچێن و ستایلی premium",
+        techTitle: "تەکنەلۆژیا — MM IRAQ", techDesc: "ئامێر و تەکنەلۆژیا",
+        shopTitle: "شۆپ — MM IRAQ", shopDesc: "شۆپ و کۆگای زیرەک",
+        servicesTitle: "خزمەتگوزاری — MM IRAQ", servicesDesc: "لۆجستیک، AI، و پشتیوانی",
+        exploreTitle: "گەڕان — MM IRAQ", exploreDesc: "زیاتر لە MM IRAQ بگەڕێ",
+        aboutTitle: "دەربارە — MM IRAQ", aboutDesc: "دەربارەی MM IRAQ",
+        termsTitle: "مەرج و ڕێساکان — MM IRAQ", termsDesc: "مەرج و ڕێساکانی بەکارهێنان",
+        contactTitle: "پەیوەندی — MM IRAQ", contactDesc: "پەیوەندیمان پێوە بکە"
+      }
+    },
+    ar: {
+      ui: {
+        navAria: "التنقل", menu: "القائمة", close: "إغلاق", search: "بحث",
+        langSwitch: "تغيير اللغة", shopCta: "تسوق الآن", seeAll: "عرض الكل ←",
+        backTop: "العودة للأعلى", chat: "أرسل رسالة",
+        dockHome: "الرئيسية", dockExplore: "استكشاف", dockFav: "المفضلة", dockShop: "المتجر"
+      },
+      nav: { luxury: "الإكسسوارات", explore: "استكشاف", tech: "التكنولوجيا", shop: "المتجر الإلكتروني", services: "الخدمات", more: "المزيد" },
+      footer: {
+        tagline: "متجر إكسسوارات عصري — فخامة، تكنولوجيا، وخدمات في مكان واحد.",
+        sections: "الأقسام", help: "المساعدة", social: "الشبكات الاجتماعية",
+        store: "المتجر", shopShort: "شوب", contact: "اتصل بنا", about: "من نحن", terms: "الشروط",
+        copy: "© 2026 MM IRAQ. جميع الحقوق محفوظة.", line2: "إكسسوارات · تكنولوجيا · العراق"
+      },
+      search: {
+        aria: "بحث", placeholder: "اكتب اسم المنتج...", hint: "اكتب اسم المنتج — ستظهر الصور والاقتراحات القريبة",
+        found: " نتيجة", none: "لم يُعثر على أي منتج",
+        typo: "خطأ إملائي؟ تم عرض نتائج قريبة ↓",
+        looking: "هل تبحث عن: «", lookingEnd: "»؟", near: "قريب من: "
+      },
+      cta: { shop: "تسوق الآن", learn: "اعرف المزيد", start: "ابدأ الآن", explore: "استكشف الآن", aboutMore: "المزيد عنا ←" },
+      hero: {
+        aria: "البانر الرئيسي", prev: "السابق", next: "التالي", s1: "شريحة ١", s2: "شريحة ٢", s3: "شريحة ٣",
+        h1: "إكسسوارات <span>فاخرة وعصرية</span>", h1sub: "مجموعة منتجات premium لأسلوب حياتك — جودة عالية وتصميم أنيق.",
+        h2: "متجر <span>MM IRAQ الذكي</span>", h2sub: "متجر RTL، مخزون، وإدارة منتجات في منصة واحدة.",
+        h3: "توصيل <span>سريع وموثوق</span>", h3sub: "لوجستيات متقدمة وتتبع فوري لكل طلب."
+      },
+      feat: {
+        d1: "توصيل سريع", d1s: "لجميع أنحاء العراق",
+        q1: "جودة premium", q1s: "منتجات أصلية وموثوقة",
+        s1: "دعم ٢٤/٧", s1s: "عبر تيليغرام والهاتف",
+        p1: "دفع آمن", p1s: "COD وإرجاع سهل"
+      },
+      homeAbout: {
+        label: "من نحن", title: "مرحباً بك في عالم MM IRAQ",
+        lead: "هنا نجمع الفخامة والتكنولوجيا والخدمات في تجربة واحدة — لمن يقدّر الأسلوب والعملية معاً. نحن شريك تجاري وتقني في العراق، وليس مجرد متجر.",
+        c1t: "تشكيلة متنوعة", c1d: "إكسسوارات فاخرة، أجهزة تقنية، ومتجر ذكي — تحت علامة واحدة.",
+        c2t: "صُنع للعراق", c2d: "توصيل، دعم RTL، وخدمات محلية لجميع المدن.",
+        c3t: "ذكي وسريع", c3d: "مخزون آلي، تقارير AI، وتتبع الطلبات لحظياً."
+      },
+      explore: { title: "استكشف المزيد من MM IRAQ" },
+      showcase: {
+        s1: "الإكسسوارات", s2: "سماعة Pro", s3: "MM IRAQ", s4: "MM Control",
+        s5: "وسادة Elite", s6: "كرسي Elite", s7: "مفتاح Mech", s8: "فأرة Elite",
+        s9: "ساعة ذكية", s10: "معدات تقنية", s11: "صوت استوديو",
+        s12: "MM KILLSWITCH", s13: "MM ROUX", s14: "Wireless Pro"
+      },
+      tag: { new: "جديد", hot: "رائج", premium: "Premium", ai: "AI", mm: "MM", discount: "-15%" },
+      sections: { luxury: "إكسسوارات فاخرة", tech: "التكنولوجيا", shop: "المتجر", services: "الخدمات" },
+      luxury: {
+        title: "إكسسوارات فاخرة", sub: "اختيار يدوي وأسلوب premium",
+        cinemaT: "مجموعة جديدة — موسم ٢٠٢٦", cinemaS: "تصميم حصري من MM IRAQ لمن يقدّر الأسلوب والجودة",
+        cinemaA: "مجموعة جديدة"
+      },
+      tech: {
+        title: "أجهزة وتكنولوجيا", sub: "سماعات، فأرة، لوحة مفاتيح، والمزيد",
+        cinemaT: "تكنولوجيا + أعمال", cinemaS: "تقارير تيليغرام تلقائية ولوحة إدارة لفريقك", cinemaA: "تكنولوجيا وأعمال"
+      },
+      shop: { title: "متجر ومخزون ذكي", sub: "منصة بيع وإدارة" },
+      services: { title: "الخدمات", sub: "لوجستيات، AI، ودعم" },
+      about: {
+        label: "من نحن", title: "عن MM IRAQ",
+        lead: "MM IRAQ مركز عصري للتجارة في الإكسسوارات والتكنولوجيا والخدمات المتقدمة في العراق. هدفنا تجربة premium — من اختيار المنتج إلى التوصيل والدعم.",
+        l1: "إكسسوارات فاخرة وعصرية لعملاء متنوعين", l2: "متجر RTL ونظام مخزون ذكي",
+        l3: "تقارير تيليغرام تلقائية وحلول أعمال", l4: "توصيل سريع ودعم مستمر",
+        st1n: "+١٠٠", st1t: "منتج متنوع", st2n: "٢٤/٧", st2t: "دعم", st3n: "🇮🇶", st3t: "توصيل للعراق"
+      },
+      terms: {
+        label: "الشروط", title: "شروط الاستخدام",
+        lead: "باستخدام موقع وخدمات MM IRAQ، فإنك توافق على هذه الشروط. يرجى قراءتها بعناية.",
+        l1: "قد تتغير الأسعار والتوفر دون إشعار مسبق.", l2: "تُعالَج الطلبات بعد التأكيد؛ يحق لـ MM IRAQ إلغاء الطلب عند وجود مشكلة.",
+        l3: "يختلف التوصيل حسب المدينة والمنطقة؛ الوقت تقديري وليس ضماناً.", l4: "يُقبل الإرجاع فقط عند النقص أو الخطأ، وفق سياسة المتجر.",
+        l5: "تُستخدم بيانات العملاء بشكل آمن فقط لأغراض الطلب والدعم.", l6: "أي تغيير في هذه الشروط يُنشر على هذه الصفحة."
+      },
+      contact: {
+        label: "اتصل بنا", title: "تواصل معنا",
+        lead: "سؤال أو اقتراح أو طلب مساعدة؟ فريقنا جاهز لمساعدتك.",
+        store: "المتجر", email: "البريد", region: "المنطقة", regionV: "العراق — توصيل لجميع المدن",
+        tg: "تيليغرام", tgV: "دعم مباشر", name: "الاسم", namePh: "اسمك", msg: "الرسالة",
+        msgPh: "اكتب رسالتك هنا...", send: "إرسال الرسالة",
+        note: "زر الإرسال يفتح بريدك لإرسال الرسالة.", ok: "رسالتك جاهزة — افتح بريدك للإرسال.",
+        mailSub: "رسالة من موقع MM IRAQ — "
+      },
+      products: {
+        p1: "قبعة جلد Premium", p2: "نظارات فاخرة", p3: "ساعة ذكية MM Edition", p4: "حقيبة يد Designer",
+        p5: "سماعة Gaming Pro", p6: "فأرة RGB Wireless", p7: "لوحة Mechanical", p8: "Webcam 4K Stream",
+        p9: "منصة متجر RTL", p10: "لوحة المخزون", p11: "إدارة المنتجات", p12: "إحصائيات وتقارير",
+        p13: "تقرير تيليغرام", p14: "توصيل سريع", p15: "دعم العملاء", p16: "حلول مخصصة"
+      },
+      meta: {
+        homeTitle: "MM IRAQ — متجر الإكسسوارات", homeDesc: "MM IRAQ — إكسسوارات فاخرة، تكنولوجيا، وخدمات متقدمة",
+        luxuryTitle: "إكسسوارات فاخرة — MM IRAQ", luxuryDesc: "اختيار يدوي وأسلوب premium",
+        techTitle: "التكنولوجيا — MM IRAQ", techDesc: "أجهزة وتكنولوجيا",
+        shopTitle: "المتجر — MM IRAQ", shopDesc: "متجر ومخزون ذكي",
+        servicesTitle: "الخدمات — MM IRAQ", servicesDesc: "لوجستيات، AI، ودعم",
+        exploreTitle: "استكشاف — MM IRAQ", exploreDesc: "استكشف المزيد من MM IRAQ",
+        aboutTitle: "من نحن — MM IRAQ", aboutDesc: "عن MM IRAQ",
+        termsTitle: "الشروط — MM IRAQ", termsDesc: "شروط الاستخدام",
+        contactTitle: "اتصل بنا — MM IRAQ", contactDesc: "تواصل معنا"
+      }
+    },
+    en: {
+      ui: {
+        navAria: "Navigation", menu: "Menu", close: "Close", search: "Search",
+        langSwitch: "Switch language", shopCta: "Shop now", seeAll: "See all ←",
+        backTop: "Back to top", chat: "Send a message",
+        dockHome: "Home", dockExplore: "Explore", dockFav: "Favorites", dockShop: "Store"
+      },
+      nav: { luxury: "Accessories", explore: "Explore", tech: "Technology", shop: "Online shop", services: "Services", more: "More" },
+      footer: {
+        tagline: "Modern accessories store — luxury, tech, and services in one place.",
+        sections: "Sections", help: "Help", social: "Social media",
+        store: "Store", shopShort: "Shop", contact: "Contact", about: "About", terms: "Terms",
+        copy: "© 2026 MM IRAQ. All rights reserved.", line2: "Accessories · Technology · Iraq"
+      },
+      search: {
+        aria: "Search", placeholder: "Type product name...", hint: "Type a product name — images and close matches will appear",
+        found: " results found", none: "No products found",
+        typo: "Typo? Showing close matches ↓",
+        looking: "Are you looking for: «", lookingEnd: "»?", near: "Close to: "
+      },
+      cta: { shop: "Shop now", learn: "Learn more", start: "Get started", explore: "Explore now", aboutMore: "Learn more about us ←" },
+      hero: {
+        aria: "Main banner", prev: "Previous", next: "Next", s1: "Slide 1", s2: "Slide 2", s3: "Slide 3",
+        h1: "Luxury & <span>modern accessories</span>", h1sub: "A premium product range for your lifestyle — high quality, beautiful design.",
+        h2: "MM IRAQ <span>smart shop</span>", h2sub: "RTL online store, inventory, and product management in one platform.",
+        h3: "<span>Fast & reliable</span> delivery", h3sub: "Advanced logistics and real-time tracking for every order."
+      },
+      feat: {
+        d1: "Fast delivery", d1s: "Delivery across Iraq",
+        q1: "Premium quality", q1s: "Authentic, trusted products",
+        s1: "24/7 support", s1s: "Via Telegram and phone",
+        p1: "Secure payment", p1s: "COD and easy returns"
+      },
+      homeAbout: {
+        label: "Who we are", title: "Welcome to the MM IRAQ world",
+        lead: "Here luxury, technology, and services come together in one complete experience — for those who value style and practicality. We are a business and tech partner in Iraq, not just a store.",
+        c1t: "One curated range", c1d: "Luxury accessories, tech gear, and a smart shop — under one brand.",
+        c2t: "Built for Iraq", c2d: "Delivery, RTL support, and local service for every city.",
+        c3t: "Smart & fast", c3d: "Automated inventory, AI reports, and real-time order tracking."
+      },
+      explore: { title: "Explore more from MM IRAQ" },
+      showcase: {
+        s1: "Accessories", s2: "Pro Headset", s3: "MM IRAQ", s4: "MM Control",
+        s5: "Elite Pillow", s6: "Elite Chair", s7: "Mech Key", s8: "Elite Mouse",
+        s9: "Smart Watch", s10: "Tech Gear", s11: "Studio Audio",
+        s12: "MM KILLSWITCH", s13: "MM ROUX", s14: "Wireless Pro"
+      },
+      tag: { new: "New", hot: "Hot", premium: "Premium", ai: "AI", mm: "MM", discount: "-15%" },
+      sections: { luxury: "Luxury accessories", tech: "Technology", shop: "Shop", services: "Services" },
+      luxury: {
+        title: "Luxury accessories", sub: "Handpicked pieces and premium style",
+        cinemaT: "New collection — Season 2026", cinemaS: "Exclusive MM IRAQ design for those who value style and quality",
+        cinemaA: "New collection"
+      },
+      tech: {
+        title: "Devices & technology", sub: "Headsets, mice, keyboards, and more",
+        cinemaT: "Technology + business", cinemaS: "Automated Telegram reports and a management dashboard for your team",
+        cinemaA: "Technology and business"
+      },
+      shop: { title: "Smart shop & inventory", sub: "Sales and management platform" },
+      services: { title: "Services", sub: "Logistics, AI, and support" },
+      about: {
+        label: "About", title: "About MM IRAQ",
+        lead: "MM IRAQ is a modern hub for accessories commerce, technology, and advanced services in Iraq. Our goal is a premium experience — from product selection to delivery and support.",
+        l1: "Luxury and modern accessories for diverse customers", l2: "RTL online store and smart inventory system",
+        l3: "Automated Telegram reports and business solutions", l4: "Fast delivery and ongoing support",
+        st1n: "100+", st1t: "Unique products", st2n: "24/7", st2t: "Support", st3n: "🇮🇶", st3t: "Delivery in Iraq"
+      },
+      terms: {
+        label: "Terms", title: "Terms of use",
+        lead: "By using the MM IRAQ website and services, you agree to these terms. Please read them carefully.",
+        l1: "Prices and availability may change without prior notice.", l2: "Orders are processed after confirmation; MM IRAQ may cancel an order if issues arise.",
+        l3: "Delivery varies by city and region; times are estimates, not guarantees.", l4: "Returns are accepted only for defects or errors, per store policy.",
+        l5: "Customer data is used securely only for order and support purposes.", l6: "Any changes to these terms will be posted on this page."
+      },
+      contact: {
+        label: "Contact", title: "Contact us",
+        lead: "Questions, suggestions, or need help? Our team is ready to assist.",
+        store: "Store", email: "Email", region: "Region", regionV: "Iraq — delivery to all cities",
+        tg: "Telegram", tgV: "Live support", name: "Name", namePh: "Your name", msg: "Message",
+        msgPh: "Write your message here...", send: "Send message",
+        note: "Send opens your email client to deliver the message.", ok: "Your message is ready — open your email to send.",
+        mailSub: "Message from MM IRAQ website — "
+      },
+      products: {
+        p1: "Premium Leather Cap", p2: "Luxury Square Glasses", p3: "MM Edition Smart Watch", p4: "Designer Handbag",
+        p5: "Gaming Headset Pro", p6: "RGB Wireless Mouse", p7: "Mechanical Keyboard", p8: "Webcam 4K Stream",
+        p9: "RTL Shop Platform", p10: "Inventory Dashboard", p11: "Product Management", p12: "Analytics & Reports",
+        p13: "Telegram Report", p14: "Express Delivery", p15: "Customer Support", p16: "Custom Solutions"
+      },
+      meta: {
+        homeTitle: "MM IRAQ — Accessories Store", homeDesc: "MM IRAQ — luxury accessories, technology, and advanced services",
+        luxuryTitle: "Luxury Accessories — MM IRAQ", luxuryDesc: "Handpicked pieces and premium style",
+        techTitle: "Technology — MM IRAQ", techDesc: "Devices and technology",
+        shopTitle: "Shop — MM IRAQ", shopDesc: "Smart shop and inventory",
+        servicesTitle: "Services — MM IRAQ", servicesDesc: "Logistics, AI, and support",
+        exploreTitle: "Explore — MM IRAQ", exploreDesc: "Explore more from MM IRAQ",
+        aboutTitle: "About — MM IRAQ", aboutDesc: "About MM IRAQ",
+        termsTitle: "Terms — MM IRAQ", termsDesc: "Terms of use",
+        contactTitle: "Contact — MM IRAQ", contactDesc: "Contact us"
+      }
+    }
+  };
+
+  function t(key, lang) {
+    lang = lang || getLang();
+    var parts = key.split(".");
+    var obj = T[lang];
+    for (var i = 0; i < parts.length; i++) {
+      if (!obj || obj[parts[i]] === undefined) return key;
+      obj = obj[parts[i]];
+    }
+    return obj;
+  }
+
+  function applyLang(lang) {
+    if (LANGS.indexOf(lang) === -1) lang = "ckb";
+    localStorage.setItem("mm-lang", lang);
+    var meta = META[lang];
+    document.documentElement.lang = meta.htmlLang;
+    document.documentElement.dir = meta.dir;
+    var codeEl = document.getElementById("langCode");
+    if (codeEl) codeEl.textContent = meta.code;
+
+    document.querySelectorAll("[data-i18n]").forEach(function (el) {
+      var key = el.getAttribute("data-i18n");
+      var val = t(key, lang);
+      if (el.getAttribute("data-i18n-html") === "1") el.innerHTML = val;
+      else el.textContent = val;
+    });
+
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(function (el) {
+      el.placeholder = t(el.getAttribute("data-i18n-placeholder"), lang);
+    });
+
+    document.querySelectorAll("[data-i18n-aria]").forEach(function (el) {
+      el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria"), lang));
+    });
+
+    document.querySelectorAll("[data-i18n-title]").forEach(function (el) {
+      el.title = t(el.getAttribute("data-i18n-title"), lang);
+    });
+
+    var page = document.getElementById("top");
+    var pageKey = page ? page.getAttribute("data-page") : "home";
+    var titleKey = "meta." + pageKey + "Title";
+    var descKey = "meta." + pageKey + "Desc";
+    if (T[lang].meta[pageKey + "Title"]) {
+      document.title = t(titleKey, lang);
+    }
+    var metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc && T[lang].meta[pageKey + "Desc"]) {
+      metaDesc.content = t(descKey, lang);
+    }
+
+    document.dispatchEvent(new CustomEvent("mm:langchange", { detail: { lang: lang } }));
+  }
+
+  function getLang() {
+    var s = localStorage.getItem("mm-lang");
+    return LANGS.indexOf(s) !== -1 ? s : "ckb";
+  }
+
+  function cycleLang() {
+    var i = LANGS.indexOf(getLang());
+    var next = LANGS[(i + 1) % LANGS.length];
+    applyLang(next);
+    return next;
+  }
+
+  function deepMerge(target, source) {
+    if (!source || typeof source !== "object") return target;
+    Object.keys(source).forEach(function (key) {
+      var sv = source[key];
+      var tv = target[key];
+      if (sv && typeof sv === "object" && !Array.isArray(sv) && tv && typeof tv === "object" && !Array.isArray(tv)) {
+        deepMerge(tv, sv);
+      } else if (sv !== undefined && sv !== null) {
+        target[key] = sv;
+      }
+    });
+    return target;
+  }
+
+  function mergeTranslations(remote) {
+    if (!remote || typeof remote !== "object") return;
+    LANGS.forEach(function (lang) {
+      if (remote[lang]) deepMerge(T[lang], remote[lang]);
+    });
+  }
+
+  function loadFromCms(callback) {
+    var api = "https://dashboard.mmiraq.com/api/public/marketing-site/";
+    if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+      api = "http://127.0.0.1:8001/api/public/marketing-site/";
+    }
+    fetch(api)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (data && data.is_published && data.translations) mergeTranslations(data.translations);
+      })
+      .catch(function () {})
+      .finally(function () { if (callback) callback(); });
+  }
+
+  function init() {
+    applyLang(getLang());
+  }
+
+  return {
+    t: t, applyLang: applyLang, getLang: getLang, cycleLang: cycleLang, init: init,
+    mergeTranslations: mergeTranslations, loadFromCms: loadFromCms,
+    LANGS: LANGS, T: T
+  };
+})();
+
 (function () {
     var slides = document.querySelectorAll(".hero-slide");
     var dots = document.querySelectorAll(".hero-dot");
@@ -2068,7 +2500,16 @@
       });
     });
 
-    if (langToggle && langCode) {
+    if (window.MMI18n) {
+      if (langToggle && langCode) {
+        langToggle.addEventListener("click", function () {
+          MMI18n.cycleLang();
+        });
+      }
+      MMI18n.loadFromCms(function () {
+        MMI18n.init();
+      });
+    } else if (langToggle && langCode) {
       langToggle.addEventListener("click", function () {
         var html = document.documentElement;
         var isKu = html.getAttribute("lang") === "ckb";
@@ -2096,23 +2537,45 @@
     var storeSections = document.querySelectorAll(".store-section");
     var SHOP_URL = "https://shopping.mmiraq.com/";
     var GLOBAL_CATALOG = [
-      { name: "کڵاوی چەرم Premium", href: "/luxury/", tone: "violet", section: "ئێکسسواراتی لوکس" },
-      { name: "کەمی چوارینە لوکس", href: "/luxury/", tone: "gold", section: "ئێکسسواراتی لوکس" },
-      { name: "ساعەتی زیرەک MM Edition", href: "/luxury/", tone: "cyan", section: "ئێکسسواراتی لوکس" },
-      { name: "جانتای دەستی دیزاین", href: "/luxury/", tone: "indigo", section: "ئێکسسواراتی لوکس" },
-      { name: "هێدسێت گەیمینگ Pro", href: "/tech/", tone: "violet", section: "تەکنەلۆژیا" },
-      { name: "ماوس RGB Wireless", href: "/tech/", tone: "cyan", section: "تەکنەلۆژیا" },
-      { name: "کیبۆرد Mechanical", href: "/tech/", tone: "gold", section: "تەکنەلۆژیا" },
-      { name: "Webcam 4K Stream", href: "/tech/", tone: "indigo", section: "تەکنەلۆژیا" },
-      { name: "پلاتفۆرمی شۆپی RTL", href: "/shop/", tone: "violet", section: "شۆپ" },
-      { name: "داشبۆردی کۆگا", href: "/shop/", tone: "cyan", section: "شۆپ" },
-      { name: "بەڕێوەبردنی بەرهەم", href: "/shop/", tone: "gold", section: "شۆپ" },
-      { name: "ئامار و ڕاپۆرت", href: "/shop/", tone: "indigo", section: "شۆپ" },
-      { name: "ڕاپۆرتی تێلیگرام", href: "/services/", tone: "violet", section: "خزمەتگوزاری" },
-      { name: "گەیاندنی خێرا", href: "/services/", tone: "cyan", section: "خزمەتگوزاری" },
-      { name: "پشتیوانی کڕیار", href: "/services/", tone: "gold", section: "خزمەتگوزاری" },
-      { name: "چارەسەری تایبەت", href: "/services/", tone: "indigo", section: "خزمەتگوزاری" }
+      { i18n: "products.p1", href: "/luxury/", tone: "violet", sectionKey: "sections.luxury" },
+      { i18n: "products.p2", href: "/luxury/", tone: "gold", sectionKey: "sections.luxury" },
+      { i18n: "products.p3", href: "/luxury/", tone: "cyan", sectionKey: "sections.luxury" },
+      { i18n: "products.p4", href: "/luxury/", tone: "indigo", sectionKey: "sections.luxury" },
+      { i18n: "products.p5", href: "/tech/", tone: "violet", sectionKey: "sections.tech" },
+      { i18n: "products.p6", href: "/tech/", tone: "cyan", sectionKey: "sections.tech" },
+      { i18n: "products.p7", href: "/tech/", tone: "gold", sectionKey: "sections.tech" },
+      { i18n: "products.p8", href: "/tech/", tone: "indigo", sectionKey: "sections.tech" },
+      { i18n: "products.p9", href: "/shop/", tone: "violet", sectionKey: "sections.shop" },
+      { i18n: "products.p10", href: "/shop/", tone: "cyan", sectionKey: "sections.shop" },
+      { i18n: "products.p11", href: "/shop/", tone: "gold", sectionKey: "sections.shop" },
+      { i18n: "products.p12", href: "/shop/", tone: "indigo", sectionKey: "sections.shop" },
+      { i18n: "products.p13", href: "/services/", tone: "violet", sectionKey: "sections.services" },
+      { i18n: "products.p14", href: "/services/", tone: "cyan", sectionKey: "sections.services" },
+      { i18n: "products.p15", href: "/services/", tone: "gold", sectionKey: "sections.services" },
+      { i18n: "products.p16", href: "/services/", tone: "indigo", sectionKey: "sections.services" }
     ];
+
+    function catalogItemName(item) {
+      if (item.i18n && window.MMI18n) return MMI18n.t(item.i18n);
+      return item.name || "";
+    }
+    function catalogItemSection(item) {
+      if (item.sectionKey && window.MMI18n) return MMI18n.t(item.sectionKey);
+      return item.section || "";
+    }
+    function hydrateCatalog() {
+      GLOBAL_CATALOG.forEach(function (item) {
+        item.name = catalogItemName(item);
+        item.section = catalogItemSection(item);
+      });
+    }
+    hydrateCatalog();
+    if (window.MMI18n) {
+      document.addEventListener("mm:langchange", function () {
+        hydrateCatalog();
+        if (searchInput && normalizeSearch(searchInput.value)) runSearch(false);
+      });
+    }
 
     var catalog = GLOBAL_CATALOG.slice();
     productCards.forEach(function (card, idx) {
@@ -2266,7 +2729,7 @@
         if (m.fuzzy) {
           var badge = document.createElement("span");
           badge.className = "search-result__badge";
-          badge.textContent = "نزیکە بە: " + m.label;
+          badge.textContent = (window.MMI18n ? MMI18n.t("search.near") : "نزیکە بە: ") + m.label;
           body.appendChild(badge);
         }
 
@@ -2335,16 +2798,16 @@
       var resultCount = productCards.length ? visible : matches.length;
       if (resultCount > 0) {
         var fuzzyCount = matches.filter(function (m) { return m.fuzzy; }).length;
-        searchCount.textContent = resultCount + " ئەنجام دۆزرایەوە";
+        searchCount.textContent = resultCount + (window.MMI18n ? MMI18n.t("search.found") : " ئەنجام دۆزرایەوە");
         searchCount.classList.remove("is-empty");
         if (fuzzyCount > 0 && !hasExact) {
           searchSuggest.hidden = false;
-          searchSuggest.textContent = "هەڵەی نووسین؟ ئەنجامە نزیکەکان پیشان دراون ↓";
+          searchSuggest.textContent = window.MMI18n ? MMI18n.t("search.typo") : "هەڵەی نووسین؟ ئەنجامە نزیکەکان پیشان دراون ↓";
         } else {
           searchSuggest.hidden = true;
         }
       } else {
-        searchCount.textContent = "هیچ کاڵایەک نەدۆزرایەوە";
+        searchCount.textContent = window.MMI18n ? MMI18n.t("search.none") : "هیچ کاڵایەک نەدۆزرایەوە";
         searchCount.classList.add("is-empty");
         if (catalog.length) {
           searchSuggest.hidden = false;
@@ -2355,7 +2818,9 @@
             })
             .sort(function (a, b) { return b.score - a.score; })[0];
           if (guess && guess.score > 25) {
-            searchSuggest.textContent = "ئایا دەگەڕێیت بۆ: «" + guess.item.name + "»؟";
+            var lk = window.MMI18n ? MMI18n.t("search.looking") : "ئایا دەگەڕێیت بۆ: «";
+            var le = window.MMI18n ? MMI18n.t("search.lookingEnd") : "»؟";
+            searchSuggest.textContent = lk + guess.item.name + le;
           } else {
             searchSuggest.hidden = true;
           }
@@ -2415,8 +2880,8 @@
         var name = document.getElementById("contactName").value.trim();
         var email = document.getElementById("contactEmail").value.trim();
         var message = document.getElementById("contactMessage").value.trim();
-        var subject = encodeURIComponent("پەیام لە ماڵپەڕی MM IRAQ — " + name);
-        var body = encodeURIComponent("ناو: " + name + "\nئیمەیڵ: " + email + "\n\n" + message);
+        var subject = encodeURIComponent((window.MMI18n ? MMI18n.t("contact.mailSub") : "پەیام لە ماڵپەڕی MM IRAQ — ") + name);
+        var body = encodeURIComponent((window.MMI18n ? MMI18n.t("contact.name") : "ناو") + ": " + name + "\n" + (window.MMI18n ? MMI18n.t("contact.email") : "ئیمەیڵ") + ": " + email + "\n\n" + message);
         window.location.href = "mailto:info@mmiraq.com?subject=" + subject + "&body=" + body;
         contactSuccess.classList.add("is-visible");
       });

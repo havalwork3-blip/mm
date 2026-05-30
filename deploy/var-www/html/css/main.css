@@ -1343,9 +1343,9 @@
     .reveal-delay-4 { transition-delay: 0.32s; }
 
     @media (max-width: 900px) {
-      .lang-pill { display: none; }
       .header-actions .icon-btn { display: none; }
       .menu-toggle { display: inline-flex !important; }
+      .lang-pill { display: inline-flex !important; }
     }
     @media (max-width: 1280px) {
       .product-grid { grid-template-columns: repeat(3, 1fr); }
