@@ -36,7 +36,10 @@ from .dashboard_tools import (
     suppliers_purchase_archive,
 )
 from shops.models import Shop
-from shops.storefront_hosts import normalize_storefront_host
+from shops.storefront_hosts import (
+    normalize_storefront_host,
+    resolve_storefront_shop_for_host,
+)
 
 from .models import (
     Category,
@@ -862,15 +865,9 @@ def _storefront_shop_from_request(request):
     """Resolve shop by ?host= or ?shop_id= (must have online storefront enabled)."""
     raw_host = (request.query_params.get("host") or "").strip()
     if raw_host:
-        host = normalize_storefront_host(raw_host)
-        if host:
-            shop = Shop.objects.filter(
-                storefront_host=host,
-                is_active=True,
-                online_storefront_enabled=True,
-            ).first()
-            if shop is not None:
-                return shop
+        shop = resolve_storefront_shop_for_host(raw_host)
+        if shop is not None:
+            return shop
 
     raw_shop = (request.query_params.get("shop_id") or "").strip()
     if not raw_shop:
@@ -892,13 +889,7 @@ def public_storefront_resolve(request):
     """GET /api/public/storefront/resolve/?host=rada.mmiraq.com — map host to shop."""
     shop = _storefront_shop_from_request(request)
     if shop is None and not (request.query_params.get("host") or request.query_params.get("shop_id")):
-        host = normalize_storefront_host(request.get_host().split(":")[0])
-        if host:
-            shop = Shop.objects.filter(
-                storefront_host=host,
-                is_active=True,
-                online_storefront_enabled=True,
-            ).first()
+        shop = resolve_storefront_shop_for_host(request.get_host().split(":")[0])
     if shop is None:
         return Response(
             {"detail": "Online storefront not found for this address."},

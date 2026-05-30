@@ -32,6 +32,16 @@ _allowed_hosts_raw = os.environ.get("ALLOWED_HOSTS") or os.environ.get(
 )
 ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_raw.split(",") if h.strip()]
 
+# Map public marketing hosts to a shop's canonical storefront_host (or shop id).
+# Example: shopping.mmiraq.com=haval.mmiraq.com
+_STOREFRONT_ALIASES_RAW = os.environ.get(
+    "STOREFRONT_HOST_ALIASES",
+    "shopping.mmiraq.com=haval.mmiraq.com",
+)
+from shops.storefront_hosts import parse_storefront_host_aliases
+
+STOREFRONT_HOST_ALIASES = parse_storefront_host_aliases(_STOREFRONT_ALIASES_RAW)
+
 # Tenant storefront subdomains (e.g. mmch.mmiraq.com) — leading dot matches all subdomains.
 _extra_allowed_hosts = os.environ.get(
     "DJANGO_EXTRA_ALLOWED_HOSTS",

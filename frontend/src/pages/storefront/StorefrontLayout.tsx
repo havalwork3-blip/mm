@@ -278,7 +278,9 @@ export function StorefrontLayout() {
         <main className={`relative z-10 flex-1 pb-6 ${SF_MAIN}`}>
           {shopError ? (
             <div className="mx-4 mt-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {shopError}
+              <p dir="ltr" className="text-start">
+                {shopError}
+              </p>
             </div>
           ) : shopLoading ? (
             <div className="flex flex-col items-center gap-3 py-24">

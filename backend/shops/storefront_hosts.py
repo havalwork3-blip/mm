@@ -43,3 +43,53 @@ def validate_storefront_host(host: str) -> str:
     if not _HOST_RE.match(normalized):
         raise ValueError("Enter a valid hostname (e.g. rada.mmiraq.com).")
     return normalized
+
+
+def parse_storefront_host_aliases(raw: str) -> dict[str, str]:
+    """Parse ``alias=target`` pairs (comma-separated).
+
+    *target* is another storefront hostname or a numeric shop id.
+    """
+    out: dict[str, str] = {}
+    for part in str(raw or "").split(","):
+        part = part.strip()
+        if not part or "=" not in part:
+            continue
+        alias_raw, target_raw = part.split("=", 1)
+        alias = normalize_storefront_host(alias_raw.strip())
+        target = target_raw.strip()
+        if alias and target:
+            out[alias] = target
+    return out
+
+
+def resolve_storefront_shop_for_host(host: str, aliases: dict[str, str] | None = None):
+    """Return an active shop with online storefront for *host*, following optional aliases."""
+    from shops.models import Shop
+
+    normalized = normalize_storefront_host(host)
+    if not normalized:
+        return None
+
+    qs = Shop.objects.filter(is_active=True, online_storefront_enabled=True)
+
+    shop = qs.filter(storefront_host=normalized).first()
+    if shop is not None:
+        return shop
+
+    if aliases is None:
+        from django.conf import settings
+
+        aliases = getattr(settings, "STOREFRONT_HOST_ALIASES", {})
+
+    target = (aliases or {}).get(normalized)
+    if not target:
+        return None
+
+    if target.isdigit():
+        return qs.filter(pk=int(target)).first()
+
+    canonical = normalize_storefront_host(target)
+    if not canonical:
+        return None
+    return qs.filter(storefront_host=canonical).first()
