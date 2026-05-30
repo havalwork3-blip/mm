@@ -51,10 +51,8 @@
     /* ── Header ── */
     .site-header {
       position: sticky; top: 0; z-index: 100;
-      background: rgba(5,5,8,0.92);
+      background: rgba(5, 5, 8, 0.97);
       border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
     }
     .site-header__inner {
       max-width: 1400px; margin: 0 auto;
@@ -537,7 +535,7 @@
     .sidebar-overlay {
       position: fixed;
       inset: 0;
-      z-index: 140;
+      z-index: 9990;
       background: rgba(0, 0, 0, 0.65);
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
@@ -560,6 +558,8 @@
     body.menu-open {
       overflow: hidden;
       touch-action: none;
+      position: fixed;
+      width: 100%;
     }
 
     /* ── Hero carousel ── */
@@ -1398,6 +1398,10 @@
 
       .site-header {
         z-index: 200;
+        overflow: visible;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(5, 5, 8, 0.98);
       }
       .site-header__inner {
         justify-content: space-between;
@@ -1414,13 +1418,16 @@
       }
       .menu-toggle { display: inline-flex !important; }
 
-      .nav {
+      .nav,
+      .nav.nav--drawer {
         position: fixed;
         top: 0;
         bottom: 0;
-        right: 0;
-        left: auto;
-        z-index: 180;
+        inset-inline-end: 0;
+        inset-inline-start: auto;
+        height: 100dvh;
+        max-height: 100dvh;
+        z-index: 9991;
         flex: none;
         flex-direction: column;
         align-items: stretch;
@@ -1429,17 +1436,26 @@
         width: min(88vw, 300px);
         max-width: 300px;
         padding: 0 0 1.5rem;
+        padding-top: env(safe-area-inset-top, 0);
         background: linear-gradient(180deg, #0e0e16 0%, #08080f 100%);
-        border-inline-end: 1px solid rgba(139, 92, 246, 0.25);
+        border-inline-start: 1px solid rgba(139, 92, 246, 0.25);
         box-shadow: -8px 0 40px rgba(0, 0, 0, 0.55);
+        overflow-x: hidden;
         overflow-y: auto;
+        overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
         transform: translate3d(100%, 0, 0);
         visibility: hidden;
         pointer-events: none;
         transition: transform 0.35s var(--ease), visibility 0.35s;
       }
-      .nav.is-open {
+      [dir="rtl"] .nav,
+      [dir="rtl"] .nav.nav--drawer {
+        transform: translate3d(-100%, 0, 0);
+        box-shadow: 8px 0 40px rgba(0, 0, 0, 0.55);
+      }
+      .nav.is-open,
+      .nav.nav--drawer.is-open {
         transform: translate3d(0, 0, 0);
         visibility: visible;
         pointer-events: auto;
@@ -2356,10 +2372,31 @@ window.MMI18n = (function () {
     return attempt();
   }
 
+  function applySiteBrand(brand) {
+    if (!brand) return;
+    var name = brand.site_name || brand.name || "";
+    var logo = brand.logo_url || "";
+    if (name) {
+      document.querySelectorAll(".brand__name, .site-footer__brand").forEach(function (el) {
+        el.textContent = name;
+      });
+      document.querySelectorAll(".header-logo, .logo-img").forEach(function (img) {
+        img.alt = name;
+      });
+      document.title = document.title.replace(/^MM IRAQ/, name);
+    }
+    if (logo) {
+      document.querySelectorAll(".header-logo, .logo-img, .footer-logo").forEach(function (img) {
+        img.src = logo;
+      });
+    }
+  }
+
   function loadFromCms(callback) {
     fetchPublicApi("/api/public/marketing-site/")
       .then(function (data) {
         if (data && data.is_published && data.translations) mergeTranslations(data.translations);
+        if (data && data.is_published && data.brand) applySiteBrand(data.brand);
       })
       .catch(function () {})
       .finally(function () { if (callback) callback(); });
@@ -2372,7 +2409,7 @@ window.MMI18n = (function () {
   return {
     t: t, applyLang: applyLang, getLang: getLang, cycleLang: cycleLang, init: init,
     mergeTranslations: mergeTranslations, loadFromCms: loadFromCms,
-    getMarketingApiBase: getMarketingApiBase, fetchPublicApi: fetchPublicApi,
+    getMarketingApiBase: getMarketingApiBase, fetchPublicApi: fetchPublicApi, applySiteBrand: applySiteBrand,
     LANGS: LANGS, T: T
   };
 })();
@@ -2410,6 +2447,47 @@ window.MMI18n = (function () {
     var menuClose = document.getElementById("menuClose");
     var sidebarOverlay = document.getElementById("sidebarOverlay");
     var nav = document.getElementById("mainNav");
+    var navPlaceholder = null;
+    var mobileNavMq = window.matchMedia("(max-width: 1024px)");
+
+    function mountMobileNav() {
+      if (!nav) return;
+      var headerInner = document.querySelector(".site-header__inner");
+      if (mobileNavMq.matches) {
+        if (sidebarOverlay && sidebarOverlay.parentNode !== document.body) {
+          document.body.appendChild(sidebarOverlay);
+        }
+        if (headerInner && nav.parentNode === headerInner) {
+          navPlaceholder = document.createElement("div");
+          navPlaceholder.id = "mainNavPlaceholder";
+          navPlaceholder.hidden = true;
+          headerInner.insertBefore(navPlaceholder, nav);
+          document.body.appendChild(nav);
+        }
+        nav.classList.add("nav--drawer");
+      } else if (navPlaceholder && headerInner && nav.parentNode === document.body) {
+        headerInner.insertBefore(nav, navPlaceholder);
+        navPlaceholder.remove();
+        navPlaceholder = null;
+        nav.classList.remove("nav--drawer", "is-open");
+        if (sidebarOverlay) sidebarOverlay.classList.remove("is-open");
+        document.body.classList.remove("menu-open");
+      }
+    }
+
+    function initMobileNav() {
+      mountMobileNav();
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initMobileNav);
+    } else {
+      initMobileNav();
+    }
+    if (mobileNavMq.addEventListener) {
+      mobileNavMq.addEventListener("change", mountMobileNav);
+    } else if (mobileNavMq.addListener) {
+      mobileNavMq.addListener(mountMobileNav);
+    }
 
     function openMenu() {
       if (!nav || !toggle) return;

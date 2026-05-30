@@ -443,10 +443,31 @@ window.MMI18n = (function () {
     return attempt();
   }
 
+  function applySiteBrand(brand) {
+    if (!brand) return;
+    var name = brand.site_name || brand.name || "";
+    var logo = brand.logo_url || "";
+    if (name) {
+      document.querySelectorAll(".brand__name, .site-footer__brand").forEach(function (el) {
+        el.textContent = name;
+      });
+      document.querySelectorAll(".header-logo, .logo-img").forEach(function (img) {
+        img.alt = name;
+      });
+      document.title = document.title.replace(/^MM IRAQ/, name);
+    }
+    if (logo) {
+      document.querySelectorAll(".header-logo, .logo-img, .footer-logo").forEach(function (img) {
+        img.src = logo;
+      });
+    }
+  }
+
   function loadFromCms(callback) {
     fetchPublicApi("/api/public/marketing-site/")
       .then(function (data) {
         if (data && data.is_published && data.translations) mergeTranslations(data.translations);
+        if (data && data.is_published && data.brand) applySiteBrand(data.brand);
       })
       .catch(function () {})
       .finally(function () { if (callback) callback(); });
@@ -459,7 +480,7 @@ window.MMI18n = (function () {
   return {
     t: t, applyLang: applyLang, getLang: getLang, cycleLang: cycleLang, init: init,
     mergeTranslations: mergeTranslations, loadFromCms: loadFromCms,
-    getMarketingApiBase: getMarketingApiBase, fetchPublicApi: fetchPublicApi,
+    getMarketingApiBase: getMarketingApiBase, fetchPublicApi: fetchPublicApi, applySiteBrand: applySiteBrand,
     LANGS: LANGS, T: T
   };
 })();

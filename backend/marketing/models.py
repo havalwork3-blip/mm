@@ -7,6 +7,9 @@ from django.utils import timezone
 
 from .defaults import default_sections, default_translations
 
+DEFAULT_BRAND_NAME = "MM IRAQ"
+DEFAULT_BRAND_LOGO_PATH = "/logo-optimized.webp"
+
 
 class MarketingEditor(models.Model):
     """Separate CMS login — not linked to POS / inventory accounts.User."""
@@ -64,6 +67,8 @@ class MarketingSiteContent(models.Model):
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
     translations = models.JSONField(default=dict, blank=True)
     sections = models.JSONField(default=dict, blank=True)
+    brand_name = models.CharField(max_length=120, blank=True, default=DEFAULT_BRAND_NAME)
+    brand_logo = models.ImageField(upload_to="marketing-brand/", blank=True, null=True)
     is_published = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
 

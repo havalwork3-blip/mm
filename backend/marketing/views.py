@@ -1,12 +1,19 @@
 from django.db.utils import OperationalError, ProgrammingError
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .brand_utils import serialize_brand
 from .authentication import MarketingTokenAuthentication
 from .defaults import default_sections, default_translations
-from .models import ContactMessage, MarketingAuthToken, MarketingEditor, MarketingSiteContent
+from .models import (
+    ContactMessage,
+    MarketingAuthToken,
+    MarketingEditor,
+    MarketingSiteContent,
+)
 from .permissions import IsMarketingEditor
 from .public_api import PublicMarketingApiView
 from .serializers import (
@@ -86,6 +93,7 @@ class PublicMarketingSiteView(PublicMarketingApiView):
             "is_published": True,
             "translations": content.translations or {},
             "sections": content.sections or {},
+            "brand": serialize_brand(content, request),
             "updated_at": content.updated_at.isoformat() if content.updated_at else None,
         }
         return Response(payload)
@@ -94,6 +102,7 @@ class PublicMarketingSiteView(PublicMarketingApiView):
 class MarketingSiteAdminView(APIView):
     authentication_classes = [MarketingTokenAuthentication]
     permission_classes = [IsMarketingEditor]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
     http_method_names = ["get", "patch", "post", "options", "head"]
 
     def get(self, request):
@@ -104,7 +113,7 @@ class MarketingSiteAdminView(APIView):
                 {"detail": "Database not ready. Run: python manage.py migrate"},
                 status=503,
             )
-        return Response(MarketingSiteContentSerializer(content).data)
+        return Response(MarketingSiteContentSerializer(content, context={"request": request}).data)
 
     def patch(self, request):
         try:
@@ -114,10 +123,28 @@ class MarketingSiteAdminView(APIView):
                 {"detail": "Database not ready. Run: python manage.py migrate"},
                 status=503,
             )
-        ser = MarketingSiteContentSerializer(content, data=request.data, partial=True)
+        content_type = (request.content_type or "").lower()
+        if "multipart" in content_type:
+            if "brand_name" in request.data:
+                content.brand_name = str(request.data.get("brand_name") or "").strip() or "MM IRAQ"
+            if request.FILES.get("brand_logo"):
+                content.brand_logo = request.FILES["brand_logo"]
+            if str(request.data.get("clear_brand_logo", "")).lower() in {"1", "true", "yes", "on"}:
+                if content.brand_logo:
+                    content.brand_logo.delete(save=False)
+                content.brand_logo = None
+            content.save()
+            return Response(MarketingSiteContentSerializer(content, context={"request": request}).data)
+
+        ser = MarketingSiteContentSerializer(
+            content,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
         ser.is_valid(raise_exception=True)
         ser.save()
-        return Response(MarketingSiteContentSerializer(content).data)
+        return Response(MarketingSiteContentSerializer(content, context={"request": request}).data)
 
     def post(self, request):
         """Reset translations/sections from bundled site defaults."""
@@ -133,8 +160,12 @@ class MarketingSiteAdminView(APIView):
             )
         content.translations = default_translations()
         content.sections = default_sections()
-        content.save(update_fields=["translations", "sections", "updated_at"])
-        return Response(MarketingSiteContentSerializer(content).data)
+        content.brand_name = "MM IRAQ"
+        if content.brand_logo:
+            content.brand_logo.delete(save=False)
+            content.brand_logo = None
+        content.save(update_fields=["translations", "sections", "brand_name", "brand_logo", "updated_at"])
+        return Response(MarketingSiteContentSerializer(content, context={"request": request}).data)
 
 
 class PublicContactSubmitView(PublicMarketingApiView):

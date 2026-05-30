@@ -46,10 +46,24 @@ class MarketingEditorSerializer(serializers.ModelSerializer):
 
 
 class MarketingSiteContentSerializer(serializers.ModelSerializer):
+    brand_logo_url = serializers.SerializerMethodField()
+
     class Meta:
         model = MarketingSiteContent
-        fields = ["translations", "sections", "is_published", "updated_at"]
-        read_only_fields = ["updated_at"]
+        fields = [
+            "translations",
+            "sections",
+            "brand_name",
+            "brand_logo_url",
+            "is_published",
+            "updated_at",
+        ]
+        read_only_fields = ["updated_at", "brand_logo_url"]
+
+    def get_brand_logo_url(self, obj: MarketingSiteContent) -> str:
+        from .brand_utils import brand_logo_url
+
+        return brand_logo_url(obj, self.context.get("request"))
 
     def validate_translations(self, value):
         if not isinstance(value, dict):

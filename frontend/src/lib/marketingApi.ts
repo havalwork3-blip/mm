@@ -12,8 +12,15 @@ export type MarketingEditorProfile = {
 export type MarketingSiteContent = {
   translations: Record<string, Record<string, unknown>>
   sections: Record<string, { published?: boolean }>
+  brand_name?: string
+  brand_logo_url?: string
   is_published: boolean
   updated_at: string | null
+}
+
+export type MarketingSiteBrand = {
+  site_name: string
+  logo_url: string
 }
 
 export type ContactMessageRow = {
@@ -140,6 +147,18 @@ export async function saveMarketingSite(content: Partial<MarketingSiteContent>) 
     method: 'PATCH',
     body: JSON.stringify(content),
   })
+}
+
+export async function saveMarketingBrand(
+  brandName: string,
+  logo?: File | null,
+  clearLogo = false,
+) {
+  const form = new FormData()
+  form.append('brand_name', brandName.trim())
+  if (logo) form.append('brand_logo', logo)
+  if (clearLogo) form.append('clear_brand_logo', '1')
+  return marketingApiForm<MarketingSiteContent>('/api/marketing/site/', form, 'PATCH')
 }
 
 export async function importMarketingDefaults() {
