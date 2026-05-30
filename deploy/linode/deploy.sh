@@ -47,6 +47,9 @@ if [[ -f "${CRON_SCRIPT}" ]]; then
   echo "==> Installed manager Telegram cron (every 5 min): ${CRON_SCRIPT}"
 fi
 
+echo "==> Django migrations"
+"${PYTHON}" "${BACKEND}/manage.py" migrate --noinput
+
 echo "==> Frontend build"
 if [[ -f "${FRONTEND}/package-lock.json" ]]; then
   (cd "${FRONTEND}" && npm ci && npm run build)

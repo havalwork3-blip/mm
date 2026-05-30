@@ -1,8 +1,8 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { isMarketingAuthError, marketingLogin } from '../lib/marketingApi'
-import { useMarketingSession } from '../context/MarketingSessionContext'
+import { isMarketingAuthError, marketingLogin } from '../../lib/marketingApi'
+import { useMarketingSession } from '../../context/MarketingSessionContext'
 
 export function MarketingLoginPage() {
   const { editor, loading, refresh } = useMarketingSession()
