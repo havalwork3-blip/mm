@@ -117,7 +117,8 @@ class PublicMarketingProductsView(APIView):
                 "page": page,
                 "categories": [_serialize_category(request, c) for c in categories],
                 "products": [_serialize_product(request, p) for p in products],
-            }
+            },
+            headers={"Cache-Control": "no-store, max-age=0"},
         )
 
 

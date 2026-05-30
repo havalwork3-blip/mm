@@ -197,8 +197,17 @@
     }
 
     function getMarketingApiBase() {
-      if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
-        return "http://127.0.0.1:8001";
+      if (window.MMI18n && typeof MMI18n.getMarketingApiBase === "function") {
+        return MMI18n.getMarketingApiBase();
+      }
+      if (typeof window !== "undefined" && window.location) {
+        var h = window.location.hostname;
+        if (h === "localhost" || h === "127.0.0.1") {
+          return "http://127.0.0.1:8001";
+        }
+        if (h === "mmiraq.com" || h === "www.mmiraq.com") {
+          return window.location.origin;
+        }
       }
       return "https://dashboard.mmiraq.com";
     }
@@ -273,7 +282,7 @@
       var pending = mounts.length;
       mounts.forEach(function (mount) {
         var page = mount.getAttribute("data-mm-products");
-        fetch(getMarketingApiBase() + "/api/public/marketing-products/?page=" + encodeURIComponent(page))
+        fetch(getMarketingApiBase() + "/api/public/marketing-products/?page=" + encodeURIComponent(page), { cache: "no-store" })
           .then(function (r) { return r.ok ? r.json() : null; })
           .then(function (data) {
             if (data && data.products && data.products.length) renderProductsMount(mount, data);
@@ -666,10 +675,7 @@
         var email = emailEl ? emailEl.value.trim() : "";
         var message = msgEl ? msgEl.value.trim() : "";
         if (!name || !email || !message) return;
-        var api = "https://dashboard.mmiraq.com/api/public/marketing-contact/";
-        if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
-          api = "http://127.0.0.1:8001/api/public/marketing-contact/";
-        }
+        var api = getMarketingApiBase() + "/api/public/marketing-contact/";
         var lang = window.MMI18n ? MMI18n.getLang() : "ckb";
         if (contactBtn) contactBtn.disabled = true;
         fetch(api, {

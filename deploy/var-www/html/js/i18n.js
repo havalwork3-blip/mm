@@ -408,12 +408,22 @@ window.MMI18n = (function () {
     });
   }
 
-  function loadFromCms(callback) {
-    var api = "https://dashboard.mmiraq.com/api/public/marketing-site/";
-    if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
-      api = "http://127.0.0.1:8001/api/public/marketing-site/";
+  function getMarketingApiBase() {
+    if (typeof window !== "undefined" && window.location) {
+      var h = window.location.hostname;
+      if (h === "localhost" || h === "127.0.0.1") {
+        return "http://127.0.0.1:8001";
+      }
+      if (h === "mmiraq.com" || h === "www.mmiraq.com") {
+        return window.location.origin;
+      }
     }
-    fetch(api)
+    return "https://dashboard.mmiraq.com";
+  }
+
+  function loadFromCms(callback) {
+    var api = getMarketingApiBase() + "/api/public/marketing-site/";
+    fetch(api, { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (data && data.is_published && data.translations) mergeTranslations(data.translations);
@@ -428,7 +438,7 @@ window.MMI18n = (function () {
 
   return {
     t: t, applyLang: applyLang, getLang: getLang, cycleLang: cycleLang, init: init,
-    mergeTranslations: mergeTranslations, loadFromCms: loadFromCms,
+    mergeTranslations: mergeTranslations, loadFromCms: loadFromCms, getMarketingApiBase: getMarketingApiBase,
     LANGS: LANGS, T: T
   };
 })();

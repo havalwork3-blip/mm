@@ -36,6 +36,13 @@ else
   echo "WARN: sync-mmiraq-landing.sh not found; skipping static landing sync" >&2
 fi
 
+MMIRAq_NGINX="${SCRIPT_DIR}/nginx-mmiraq.conf"
+if [[ -f "${MMIRAq_NGINX}" ]] && [[ -d /etc/nginx/sites-available ]]; then
+  echo "==> Update mmiraq.com nginx (API proxy for CMS)"
+  sudo cp "${MMIRAq_NGINX}" /etc/nginx/sites-available/mmiraq
+  sudo ln -sf /etc/nginx/sites-available/mmiraq /etc/nginx/sites-enabled/mmiraq
+fi
+
 echo "==> Python dependencies"
 "${PIP}" install -r "${BACKEND}/requirements.txt"
 

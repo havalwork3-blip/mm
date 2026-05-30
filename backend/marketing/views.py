@@ -84,14 +84,13 @@ class PublicMarketingSiteView(APIView):
             )
         if not content.is_published:
             return Response({"is_published": False, "translations": {}, "sections": {}})
-        return Response(
-            {
-                "is_published": True,
-                "translations": content.translations or {},
-                "sections": content.sections or {},
-                "updated_at": content.updated_at.isoformat() if content.updated_at else None,
-            }
-        )
+        payload = {
+            "is_published": True,
+            "translations": content.translations or {},
+            "sections": content.sections or {},
+            "updated_at": content.updated_at.isoformat() if content.updated_at else None,
+        }
+        return Response(payload, headers={"Cache-Control": "no-store, max-age=0"})
 
 
 class MarketingSiteAdminView(APIView):
