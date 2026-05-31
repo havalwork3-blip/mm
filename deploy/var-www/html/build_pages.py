@@ -1,4 +1,7 @@
-"""Split monolithic landing page into multi-page static site."""
+"""Split monolithic landing page into multi-page static site.
+
+DEPRECATED: Site is now one-page + contact. Use build_onepage.py instead.
+"""
 import re
 import subprocess
 import pathlib

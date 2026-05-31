@@ -214,9 +214,43 @@
         if (!target) return;
         e.preventDefault();
         scrollToSection(id);
-        if (nav.classList.contains("is-open")) closeMenu();
+        if (nav && nav.classList.contains("is-open")) closeMenu();
       });
     });
+
+    function scrollFromHash() {
+      var id = (window.location.hash || "").replace(/^#/, "");
+      if (id) scrollToSection(id);
+    }
+    window.addEventListener("load", scrollFromHash);
+    window.addEventListener("hashchange", scrollFromHash);
+
+    if (floatDock && window.setDockActive) {
+      var sectionToDock = {
+        home: "home",
+        "about-preview": "home",
+        explore: "grid",
+        luxury: "fav",
+        tech: "fav",
+        shop: "bookmark",
+        services: "bookmark",
+        terms: "home"
+      };
+      var spySections = ["home", "about-preview", "explore", "luxury", "tech", "shop", "services", "terms"]
+        .map(function (id) { return document.getElementById(id); })
+        .filter(Boolean);
+      if (spySections.length && "IntersectionObserver" in window) {
+        var spy = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              var dock = sectionToDock[entry.target.id];
+              if (dock) window.setDockActive(dock);
+            }
+          });
+        }, { rootMargin: "-40% 0px -45% 0px", threshold: 0 });
+        spySections.forEach(function (el) { spy.observe(el); });
+      }
+    }
 
     if (window.MMI18n) {
       if (langToggle && langCode) {
@@ -363,22 +397,22 @@
     var storeSections = document.querySelectorAll(".store-section");
     var SHOP_URL = "https://shopping.mmiraq.com/";
     var GLOBAL_CATALOG = [
-      { i18n: "products.p1", href: "/luxury/", tone: "violet", sectionKey: "sections.luxury" },
-      { i18n: "products.p2", href: "/luxury/", tone: "gold", sectionKey: "sections.luxury" },
-      { i18n: "products.p3", href: "/luxury/", tone: "cyan", sectionKey: "sections.luxury" },
-      { i18n: "products.p4", href: "/luxury/", tone: "indigo", sectionKey: "sections.luxury" },
-      { i18n: "products.p5", href: "/tech/", tone: "violet", sectionKey: "sections.tech" },
-      { i18n: "products.p6", href: "/tech/", tone: "cyan", sectionKey: "sections.tech" },
-      { i18n: "products.p7", href: "/tech/", tone: "gold", sectionKey: "sections.tech" },
-      { i18n: "products.p8", href: "/tech/", tone: "indigo", sectionKey: "sections.tech" },
-      { i18n: "products.p9", href: "/shop/", tone: "violet", sectionKey: "sections.shop" },
-      { i18n: "products.p10", href: "/shop/", tone: "cyan", sectionKey: "sections.shop" },
-      { i18n: "products.p11", href: "/shop/", tone: "gold", sectionKey: "sections.shop" },
-      { i18n: "products.p12", href: "/shop/", tone: "indigo", sectionKey: "sections.shop" },
-      { i18n: "products.p13", href: "/services/", tone: "violet", sectionKey: "sections.services" },
-      { i18n: "products.p14", href: "/services/", tone: "cyan", sectionKey: "sections.services" },
-      { i18n: "products.p15", href: "/services/", tone: "gold", sectionKey: "sections.services" },
-      { i18n: "products.p16", href: "/services/", tone: "indigo", sectionKey: "sections.services" }
+      { i18n: "products.p1", href: "#luxury", tone: "violet", sectionKey: "sections.luxury" },
+      { i18n: "products.p2", href: "#luxury", tone: "gold", sectionKey: "sections.luxury" },
+      { i18n: "products.p3", href: "#luxury", tone: "cyan", sectionKey: "sections.luxury" },
+      { i18n: "products.p4", href: "#luxury", tone: "indigo", sectionKey: "sections.luxury" },
+      { i18n: "products.p5", href: "#tech", tone: "violet", sectionKey: "sections.tech" },
+      { i18n: "products.p6", href: "#tech", tone: "cyan", sectionKey: "sections.tech" },
+      { i18n: "products.p7", href: "#tech", tone: "gold", sectionKey: "sections.tech" },
+      { i18n: "products.p8", href: "#tech", tone: "indigo", sectionKey: "sections.tech" },
+      { i18n: "products.p9", href: "#shop", tone: "violet", sectionKey: "sections.shop" },
+      { i18n: "products.p10", href: "#shop", tone: "cyan", sectionKey: "sections.shop" },
+      { i18n: "products.p11", href: "#shop", tone: "gold", sectionKey: "sections.shop" },
+      { i18n: "products.p12", href: "#shop", tone: "indigo", sectionKey: "sections.shop" },
+      { i18n: "products.p13", href: "#services", tone: "violet", sectionKey: "sections.services" },
+      { i18n: "products.p14", href: "#services", tone: "cyan", sectionKey: "sections.services" },
+      { i18n: "products.p15", href: "#services", tone: "gold", sectionKey: "sections.services" },
+      { i18n: "products.p16", href: "#services", tone: "indigo", sectionKey: "sections.services" }
     ];
 
     function catalogItemName(item) {
