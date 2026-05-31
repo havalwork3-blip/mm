@@ -54,17 +54,17 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def _active_shop_for_user(self, obj: User) -> Shop | None:
+        request = self.context.get("request")
+        if obj.is_superuser and request is not None:
+            from shops.scoping import get_shop_id_for_request
+
+            sid = get_shop_id_for_request(request)
+            if sid is None:
+                return None
+            return Shop.objects.filter(pk=sid).first()
         if obj.shop_id:
             return obj.shop
-        request = self.context.get("request")
-        if request is None or not obj.is_superuser:
-            return None
-        from shops.scoping import get_shop_id_for_request
-
-        sid = get_shop_id_for_request(request)
-        if sid is None:
-            return None
-        return Shop.objects.filter(pk=sid).first()
+        return None
 
     def get_shop_name(self, obj: User) -> str:
         shop = self._active_shop_for_user(obj)
