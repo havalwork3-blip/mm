@@ -3355,7 +3355,7 @@ const ku: Record<string, string> = {
     'وەک سوپەر یوسەر، یەک دووکان هەڵبژێرە بۆ ئامارەکانی ئەو دووکانە، یان بینینی گشتی بۆ هەموو دووکانەکان پێکەوە.',
   'dash.superuserScopeShopOption': 'یەک دووکان',
   'dash.superuserScopeGlobalOption': 'هەموو دووکانەکان',
-  'dash.superuserScopeGlobalHint': 'ئامار و ڕیزبەندی کۆکراوە بۆ هەموو دووکانەکانی سیستەم.',
+  'dash.superuserScopeGlobalHint': ' بینینی گشتی بەکاربهێنە بۆ هەموو دووکانەکانی سیستەم.',
   'dash.superuserScopeGlobalBtn': 'بینینی گشتی بەکاربهێنە',
   'dash.employeeHint': 'بۆ کارەکانی ڕۆژانە فرۆشتن و بەرهەمەکان بەکاربهێنە.',
   'dash.noPermissionsHint':
