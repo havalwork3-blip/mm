@@ -78,7 +78,7 @@ export function CategoriesBrowse({
   recentTitle,
 }: Props) {
   return (
-    <section className={`${SF_INSET_X} sf-view-panel mt-2 sm:mt-4 lg:mt-6`}>
+    <section className={`${SF_INSET_X} sf-view-panel mt-3 space-y-4 sm:mt-4 lg:mt-5`}>
       <StorefrontMobileCategories
         categories={categories}
         accent={accent}

@@ -19,6 +19,20 @@ const SECTION_PRESET_INDEX: Record<StorefrontSectionKey, number> = {
   available_now: 6,
 }
 
+/** Soft icon badge tints for modern section headers. */
+const SECTION_ICON_TINTS: Record<StorefrontSectionKey, { bg: string; fg: string }> = {
+  categories: { bg: '#ede9fe', fg: '#7c3aed' },
+  recently_viewed: { bg: '#fef3c7', fg: '#d97706' },
+  bestsellers: { bg: '#fee2e2', fg: '#dc2626' },
+  new_arrivals: { bg: '#dbeafe', fg: '#2563eb' },
+  on_sale: { bg: '#fce7f3', fg: '#db2777' },
+  available_now: { bg: '#d1fae5', fg: '#059669' },
+}
+
+export function sectionIconTint(sectionKey: StorefrontSectionKey): { bg: string; fg: string } {
+  return SECTION_ICON_TINTS[sectionKey]
+}
+
 function normalizeHex(hex: string): string {
   const h = hex.replace('#', '')
   if (h.length === 3) {
@@ -52,7 +66,7 @@ export function sectionPreset(sectionKey: StorefrontSectionKey) {
   ]
 }
 
-/** Dark at top → fades into storefront page background at bottom. */
+/** Legacy gradient — used only when appearance is classic or merchant overrides colors. */
 export function sectionPanelGradient(sectionKey: StorefrontSectionKey): string {
   const { from, to } = sectionPreset(sectionKey)
   const mid = mixHex(from, to, 0.4)

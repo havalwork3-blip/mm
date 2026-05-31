@@ -4,8 +4,8 @@ import type { CSSProperties } from 'react'
 
 export const DEFAULT_ACCENT = '#FF5A00'
 
-/** Page background — section gradients must fade into this color. */
-export const STOREFRONT_PAGE_BG = '#faf8f5'
+/** Page background — clean neutral canvas for modern storefront. */
+export const STOREFRONT_PAGE_BG = '#f4f6f9'
 
 export function resolveAccent(color?: string | null): string {
   const c = color?.trim()

@@ -147,7 +147,7 @@ export function StorefrontLayout() {
         ) : null}
 
         {!shopLoading && !shopError ? (
-          <header className="sf-mobile-header sf-glass-strong w-full border-b border-slate-200/50 shadow-[0_4px_20px_rgba(15,23,42,0.06)] pt-[env(safe-area-inset-top)] lg:hidden">
+          <header className="sf-mobile-header w-full border-b border-slate-200/80 bg-white pt-[env(safe-area-inset-top)] shadow-[0_1px_3px_rgba(15,23,42,0.04)] lg:hidden">
             <div className={`${SF_SHELL} flex items-center gap-2 py-2.5 sm:gap-2.5 sm:py-3`}>
               <button
                 type="button"

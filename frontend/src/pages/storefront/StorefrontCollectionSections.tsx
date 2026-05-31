@@ -101,7 +101,7 @@ export function StorefrontCollectionSections({
   if (sections.length === 0) return null
 
   return (
-    <div className="sf-collections mt-2 space-y-0 lg:space-y-0">
+    <div className="sf-collections mt-3 space-y-4 sm:mt-4">
       {sections.map(({ id, allCount, preview }) => {
         const meta = COLLECTION_META[id]
         const Icon = meta.icon
@@ -113,7 +113,8 @@ export function StorefrontCollectionSections({
           <button
             type="button"
             onClick={() => onSelectCollection(id)}
-            className="inline-flex items-center gap-1 rounded-xl bg-white/20 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur-sm transition hover:bg-white/30 sm:text-xs"
+            className="sf-view-all-link inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition hover:bg-slate-50 sm:text-sm"
+            style={{ color: accent }}
           >
             {labels.viewAll}
             <ArrowLeft className="h-3.5 w-3.5 rotate-180 rtl:rotate-0" aria-hidden />
@@ -124,12 +125,8 @@ export function StorefrontCollectionSections({
           <StorefrontSectionPanel
             key={id}
             sectionKey={sectionKey}
-            title={
-              <span className="inline-flex items-center gap-2">
-                <Icon className="h-4 w-4 shrink-0 opacity-90 sm:h-5 sm:w-5" aria-hidden />
-                {title}
-              </span>
-            }
+            icon={<Icon aria-hidden />}
+            title={title}
             subtitle={hint}
             headerAside={viewAllBtn}
           >
@@ -161,8 +158,8 @@ export function StorefrontCollectionSections({
               <button
                 type="button"
                 onClick={() => onSelectCollection(id)}
-                className="sf-section-more-btn mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200/90 bg-white/90 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-white active:scale-[0.99] md:hidden"
-                style={{ color: accent, borderColor: accentAlpha(accent, 0.25) }}
+                className="sf-section-more-btn mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-sm font-semibold transition hover:bg-white active:scale-[0.99] md:hidden"
+                style={{ color: accent, borderColor: accentAlpha(accent, 0.2) }}
               >
                 {labels.viewAll}
                 <ArrowLeft className="h-4 w-4 rotate-180 rtl:rotate-0" aria-hidden />

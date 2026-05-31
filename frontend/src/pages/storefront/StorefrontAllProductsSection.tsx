@@ -1,3 +1,5 @@
+import { LayoutGrid } from 'lucide-react'
+
 import type { PublicStorefrontProduct } from '../../api/storefrontApi'
 import type { CatalogProductRow } from './storefrontCollections'
 import { StorefrontProductCard } from './StorefrontProductCard'
@@ -41,13 +43,21 @@ export function StorefrontAllProductsSection({
 
   return (
     <section className="sf-all-products mt-6 sm:mt-8">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="sf-heading text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">
-          {title}
-        </h2>
+      <div className="mb-4 flex items-center gap-3">
         <span
-          className="rounded-full px-3 py-1 text-xs font-bold"
-          style={{ backgroundColor: accentAlpha(accent, 0.12), color: accent }}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-10 sm:w-10"
+          style={{ backgroundColor: accentAlpha(accent, 0.1), color: accent }}
+          aria-hidden
+        >
+          <LayoutGrid className="h-[18px] w-[18px] sm:h-5 sm:w-5" strokeWidth={2} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="sf-heading text-base font-bold tracking-tight text-slate-900 sm:text-lg">
+            {title}
+          </h2>
+        </div>
+        <span
+          className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
         >
           {productCountLabel}
         </span>

@@ -45,35 +45,27 @@ export function StorefrontProductCard({
 
   return (
     <li className="relative flex">
-      <StorefrontFavoriteButton
-        shopId={shopId}
-        productId={product.id}
-        accent={accent}
-        addLabel={labels.addToFavorites}
-        removeLabel={labels.removeFromFavorites}
-        className="absolute end-2 top-2 z-20"
-      />
       <div
         className={[
-          'sf-product-card sf-card-shine relative flex h-full w-full flex-col overflow-hidden rounded-2xl bg-white ring-1 transition duration-300',
+          'sf-product-card group relative flex h-full w-full flex-col overflow-hidden rounded-xl border bg-white transition duration-200',
           available
-            ? 'ring-slate-200/50 shadow-[0_2px_10px_rgba(15,23,42,0.05)] hover:-translate-y-0.5 hover:shadow-[0_6px_18px_rgba(15,23,42,0.08)]'
-            : 'sf-product-unavailable ring-slate-200/30 opacity-90 shadow-sm',
+            ? 'border-slate-200/80 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)]'
+            : 'sf-product-unavailable border-slate-200/50 opacity-90',
         ].join(' ')}
       >
         <button
           type="button"
           onClick={onOpen}
-          className="block w-full shrink-0 text-start active:scale-[0.99]"
+          className="relative block w-full shrink-0 text-start active:scale-[0.99]"
         >
-          <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-b from-slate-50 to-white p-2.5 sm:p-3">
+          <div className="relative aspect-square w-full overflow-hidden bg-slate-50/80 p-3 sm:p-3.5">
             {img ? (
               <img
                 src={img}
                 alt={product.name}
                 className={[
-                  'mx-auto h-full w-full rounded-lg object-contain transition duration-500',
-                  available ? 'group-hover:scale-[1.02]' : 'grayscale-[0.45]',
+                  'mx-auto h-full w-full object-contain transition duration-300',
+                  available ? 'group-hover:scale-[1.03]' : 'grayscale-[0.45]',
                 ].join(' ')}
                 loading="lazy"
               />
@@ -83,13 +75,21 @@ export function StorefrontProductCard({
               </div>
             )}
             {!available ? (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/15">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/10">
                 <UnavailableProductBadge product={product} labels={labels} size="sm" />
               </div>
             ) : null}
+            <StorefrontFavoriteButton
+              shopId={shopId}
+              productId={product.id}
+              accent={accent}
+              addLabel={labels.addToFavorites}
+              removeLabel={labels.removeFromFavorites}
+              className="absolute end-2 top-2 z-20 !h-8 !w-8 opacity-90"
+            />
             {inCart > 0 && available ? (
               <span
-                className="absolute start-2 top-2 z-10 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-extrabold text-white shadow"
+                className="absolute start-2 top-2 z-10 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white shadow-sm"
                 style={{ backgroundColor: accent }}
               >
                 {inCart}
@@ -98,28 +98,25 @@ export function StorefrontProductCard({
           </div>
         </button>
 
-        <div className="flex min-h-0 flex-1 flex-col px-2.5 pb-2.5 pt-2 sm:px-3 sm:pb-3">
+        <div className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-2.5">
           <button type="button" onClick={onOpen} className="w-full text-start active:scale-[0.99]">
             <h3
               className={[
-                'sf-product-card-title line-clamp-2 min-h-[2.4rem] text-[12px] font-bold leading-snug sm:min-h-[2.55rem] sm:text-[13px]',
+                'sf-product-card-title line-clamp-2 min-h-[2.35rem] text-[12px] font-semibold leading-snug sm:min-h-[2.5rem] sm:text-[13px]',
                 available ? 'text-slate-800' : 'text-slate-500',
               ].join(' ')}
             >
               {product.name}
             </h3>
             <p
-              className="mt-1 text-[11px] font-extrabold leading-none"
+              className="mt-1.5 text-sm font-bold leading-none tracking-tight"
               style={{ color: available ? accent : '#94a3b8' }}
             >
               {formatPrice(price)}
             </p>
-            <p className="mt-0.5 text-[10px] font-medium text-slate-400">
-              {available ? labels.viewProduct : unavailableLabel(product, labels)}
-            </p>
           </button>
 
-          <div className="sf-product-card-actions mt-auto pt-2">
+          <div className="sf-product-card-actions mt-auto pt-2.5">
             {available ? (
               <StorefrontAddToCartButton
                 accent={accent}
@@ -129,7 +126,9 @@ export function StorefrontProductCard({
                 imageUrl={img}
               />
             ) : (
-              <div className="h-8 sm:h-9" aria-hidden />
+              <p className="text-center text-[10px] font-medium text-slate-400">
+                {unavailableLabel(product, labels)}
+              </p>
             )}
           </div>
         </div>

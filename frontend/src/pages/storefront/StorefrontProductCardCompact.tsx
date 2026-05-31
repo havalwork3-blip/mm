@@ -55,10 +55,10 @@ export function StorefrontProductCardCompact({
     <li className={['relative min-w-0', className].join(' ')}>
       <article
         className={[
-          'sf-product-card-compact flex h-full flex-col overflow-hidden rounded-2xl bg-white transition duration-300',
+          'sf-product-card-compact group flex h-full flex-col overflow-hidden rounded-xl border bg-white transition duration-200',
           available
-            ? 'shadow-[0_2px_12px_rgba(15,23,42,0.06)] ring-1 ring-slate-200/50 hover:shadow-[0_8px_24px_rgba(15,23,42,0.1)] hover:-translate-y-0.5'
-            : 'opacity-80 ring-1 ring-slate-200/40',
+            ? 'border-slate-200/80 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_6px_20px_rgba(15,23,42,0.08)]'
+            : 'opacity-80 border-slate-200/50',
         ].join(' ')}
       >
         <button
@@ -66,24 +66,24 @@ export function StorefrontProductCardCompact({
           onClick={onOpen}
           className="relative block w-full text-start active:scale-[0.99]"
         >
-          <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-b from-slate-50 to-white p-2.5">
+          <div className="relative aspect-square w-full overflow-hidden bg-slate-50/80 p-2.5">
             {img ? (
               <img
                 src={img}
                 alt={product.name}
                 className={[
-                  'mx-auto h-full w-full rounded-xl object-contain transition duration-500',
+                  'mx-auto h-full w-full object-contain transition duration-300',
                   available ? 'group-hover:scale-[1.03]' : 'grayscale-[0.45]',
                 ].join(' ')}
                 loading="lazy"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center rounded-xl bg-slate-100 text-slate-300">
+              <div className="flex h-full w-full items-center justify-center text-slate-300">
                 <PackageOpen className="h-9 w-9" strokeWidth={1} aria-hidden />
               </div>
             )}
             {onSale && available ? (
-              <span className="absolute start-2 top-2 z-10 rounded-lg bg-rose-500 px-1.5 py-0.5 text-[9px] font-extrabold text-white shadow-sm">
+              <span className="absolute start-2 top-2 z-10 rounded-md bg-rose-500 px-1.5 py-0.5 text-[9px] font-bold text-white">
                 -{Math.round(discount)}%
               </span>
             ) : null}
@@ -93,18 +93,18 @@ export function StorefrontProductCardCompact({
               accent={accent}
               addLabel={addToFavorites}
               removeLabel={removeFromFavorites}
-              className="absolute end-2 top-2 z-20 !h-8 !w-8"
+              className="absolute end-1.5 top-1.5 z-20 !h-7 !w-7 opacity-90"
             />
           </div>
         </button>
 
         <div className="flex flex-1 flex-col gap-2 px-2.5 pb-2.5 pt-1">
           <button type="button" onClick={onOpen} className="min-h-0 flex-1 text-start">
-            <p className="line-clamp-2 text-[11px] font-bold leading-snug text-slate-800">
+            <p className="line-clamp-2 text-[11px] font-semibold leading-snug text-slate-800">
               {product.name}
             </p>
             <p
-              className="mt-1 text-[13px] font-extrabold tracking-tight"
+              className="mt-1 text-[13px] font-bold tracking-tight"
               style={{ color: available ? accent : '#64748b' }}
             >
               {formatPrice(price)}
@@ -116,10 +116,11 @@ export function StorefrontProductCardCompact({
               ref={addRef}
               type="button"
               onClick={handleAdd}
-              className="sf-add-cart-btn flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[10px] font-extrabold text-white shadow-sm transition active:scale-95"
+              className="sf-add-cart-btn flex w-full items-center justify-center gap-1 rounded-lg border py-2 text-[10px] font-bold transition active:scale-95"
               style={{
-                background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
-                boxShadow: `0 4px 12px ${accentAlpha(accent, 0.3)}`,
+                color: accent,
+                borderColor: accentAlpha(accent, 0.35),
+                backgroundColor: accentAlpha(accent, 0.06),
               }}
               aria-label={addToCart}
             >

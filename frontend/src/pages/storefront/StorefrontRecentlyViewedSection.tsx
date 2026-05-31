@@ -1,3 +1,5 @@
+import { Clock } from 'lucide-react'
+
 import type { PublicStorefrontProduct } from '../../api/storefrontApi'
 import type { CatalogProductRow } from './storefrontCollections'
 import { StorefrontProductCardCompact } from './StorefrontProductCardCompact'
@@ -32,7 +34,11 @@ export function StorefrontRecentlyViewedSection({
   if (rows.length === 0) return null
 
   return (
-    <StorefrontSectionPanel sectionKey="recently_viewed" title={title}>
+    <StorefrontSectionPanel
+      sectionKey="recently_viewed"
+      icon={<Clock aria-hidden />}
+      title={title}
+    >
       <ul className={SF_SECTION_SCROLL_ROW}>
         {rows.map(({ product, categoryName }) => (
           <StorefrontProductCardCompact

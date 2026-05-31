@@ -68,8 +68,8 @@ export function StorefrontDesktopHeader({
 
   return (
     <header className="sf-desktop-header hidden lg:block">
-      <div className="sf-desktop-header-top border-b border-slate-200/90 bg-white/95 shadow-[0_4px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl">
-        <div className={`${SF_DESKTOP_SHELL} flex items-center gap-5 py-3.5 xl:gap-6 xl:py-4`}>
+      <div className="sf-desktop-header-top border-b border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+        <div className={`${SF_DESKTOP_SHELL} flex items-center gap-5 py-3 xl:gap-6 xl:py-3.5`}>
           <button
             type="button"
             onClick={backToCategories}
@@ -124,8 +124,8 @@ export function StorefrontDesktopHeader({
                   if (!e.target.value.trim()) setSearch('')
                 }}
                 placeholder={s.searchPlaceholder}
-                className="sf-desktop-search w-full rounded-2xl border border-slate-200/90 bg-slate-50/90 py-3.5 ps-12 pe-4 text-sm font-medium text-slate-800 shadow-inner outline-none transition focus:border-transparent focus:bg-white focus:ring-2 focus:ring-[color:var(--sf-accent-ring)]"
-                style={{ ['--sf-accent-ring' as string]: accentAlpha(accent, 0.35) }}
+                className="sf-desktop-search w-full rounded-xl border border-slate-200 bg-slate-50 py-3 ps-12 pe-4 text-sm font-medium text-slate-800 outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-[color:var(--sf-accent-ring)]"
+                style={{ ['--sf-accent-ring' as string]: accentAlpha(accent, 0.2) }}
                 dir="auto"
               />
             </div>

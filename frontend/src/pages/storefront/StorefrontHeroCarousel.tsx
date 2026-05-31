@@ -169,16 +169,19 @@ export function StorefrontHeroCarousel({
   if (count === 0) {
     return (
       <div
-        className={`sf-hero-frame ${SF_INSET_X} mt-4 overflow-hidden rounded-3xl p-6 text-white sm:mt-5 sm:p-8 lg:mt-6 lg:rounded-2xl lg:p-10`}
+        className={`sf-hero-frame sf-hero-fallback ${SF_INSET_X} mt-4 overflow-hidden rounded-2xl sm:mt-5 lg:mt-6`}
         style={{
-          background: `linear-gradient(135deg, ${accent} 0%, ${accent}cc 40%, #1a1a2e 100%)`,
-          boxShadow: `0 16px 48px ${accentAlpha(accent, 0.3)}`,
+          background: `linear-gradient(135deg, ${accentAlpha(accent, 0.12)} 0%, ${accentAlpha(accent, 0.04)} 50%, #ffffff 100%)`,
+          boxShadow: `0 4px 24px ${accentAlpha(accent, 0.1)}`,
+          border: `1px solid ${accentAlpha(accent, 0.15)}`,
         }}
       >
-        <p className="text-lg font-extrabold leading-snug sm:text-xl">{fallbackTitle}</p>
-        {fallbackSubtitle ? (
-          <p className="mt-2 text-sm text-white/85">{fallbackSubtitle}</p>
-        ) : null}
+        <div className="flex min-h-[9rem] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[10rem] sm:px-10 sm:py-10">
+          <p className="text-lg font-bold leading-snug text-slate-900 sm:text-xl">{fallbackTitle}</p>
+          {fallbackSubtitle ? (
+            <p className="mt-2 max-w-md text-sm text-slate-600">{fallbackSubtitle}</p>
+          ) : null}
+        </div>
       </div>
     )
   }

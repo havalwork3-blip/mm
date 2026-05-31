@@ -43,8 +43,8 @@ export function StorefrontAddToCartButton({
           className,
         ].join(' ')}
         style={{
-          background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
-          boxShadow: `0 4px 14px ${accentAlpha(accent, 0.4)}`,
+          backgroundColor: accent,
+          boxShadow: `0 4px 12px ${accentAlpha(accent, 0.35)}`,
         }}
         aria-label={label}
         title={label}
@@ -60,12 +60,12 @@ export function StorefrontAddToCartButton({
       type="button"
       onClick={handleClick}
       className={[
-        'sf-add-cart-btn flex h-8 w-full items-center justify-center gap-1.5 rounded-xl px-2 text-[10px] font-bold text-white shadow-sm transition active:scale-[0.98] sm:h-9 sm:text-[11px]',
+        'sf-add-cart-btn flex h-9 w-full items-center justify-center gap-1.5 rounded-lg px-2 text-[11px] font-bold text-white transition active:scale-[0.98] sm:text-xs',
         className,
       ].join(' ')}
       style={{
-        background: `linear-gradient(135deg, ${accent}, ${accent}dd)`,
-        boxShadow: `0 3px 10px ${accentAlpha(accent, 0.28)}`,
+        backgroundColor: accent,
+        boxShadow: `0 2px 8px ${accentAlpha(accent, 0.25)}`,
       }}
       aria-label={label}
     >

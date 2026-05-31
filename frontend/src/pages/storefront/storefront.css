@@ -28,11 +28,10 @@ html.sf-mode select {
   min-height: 100dvh;
   min-height: -webkit-fill-available;
   width: 100%;
-  background-color: #faf8f5;
+  background-color: #f4f6f9;
   background-image:
-    radial-gradient(ellipse 120% 80% at 100% -20%, rgba(var(--sf-accent-rgb, 255, 90, 0), 0.09), transparent 50%),
-    radial-gradient(ellipse 90% 60% at -10% 30%, rgba(var(--sf-accent-rgb, 255, 90, 0), 0.06), transparent 45%),
-    linear-gradient(180deg, #faf8f5 0%, #f5f3ef 50%, #f0eeea 100%);
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(var(--sf-accent-rgb, 255, 90, 0), 0.05), transparent 55%),
+    linear-gradient(180deg, #f8fafc 0%, #f4f6f9 100%);
 }
 
 .sf-root::before {
@@ -41,8 +40,8 @@ html.sf-mode select {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.4;
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.25;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
 .sf-scrollbar-none {
@@ -174,8 +173,12 @@ html.sf-mode select {
 /* Hero */
 .sf-hero-frame {
   box-shadow:
-    0 4px 6px rgba(15, 23, 42, 0.04),
-    0 20px 50px rgba(15, 23, 42, 0.12);
+    0 1px 3px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.sf-hero-fallback {
+  box-shadow: none;
 }
 
 .sf-hero-swipe-active {
@@ -592,28 +595,41 @@ html.sf-mode select {
   color: #0f172a;
 }
 
-.sf-section-panel .sf-heading {
+.sf-section-panel--legacy .sf-heading {
   color: #ffffff;
 }
 
 .sf-section-panel-wrap {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .sf-view-panel > .sf-section-panel-wrap:last-child,
 .sf-collections > .sf-section-panel-wrap:last-child {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
 }
 
 .sf-section-panel {
   border-bottom: none;
 }
 
+.sf-section-panel--modern {
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.sf-section-panel--modern:hover {
+  border-color: rgba(203, 213, 225, 0.9);
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
 .sf-section-panel--classic {
   box-shadow: var(--sf-section-panel-shadow, 0 10px 36px rgba(91, 33, 182, 0.16));
 }
 
-.sf-section-panel:not(.sf-section-panel--classic) {
+.sf-section-panel--legacy:not(.sf-section-panel--classic) {
   box-shadow: none;
 }
 
@@ -676,9 +692,26 @@ html.sf-mode select {
   background: transparent;
 }
 
-/* Main shop categories — compact bento (like screenshot 2) */
+/* Main shop categories */
 .sf-shop-categories {
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.sf-category-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+
+.sf-category-scroll > li {
+  scroll-snap-align: start;
+}
+
+.sf-category-chip {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sf-category-card {
+  -webkit-tap-highlight-color: transparent;
 }
 
 .sf-category-bento-grid {
@@ -817,8 +850,14 @@ html.sf-mode select {
   pointer-events: none;
 }
 
+.sf-collections {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .sf-collection-section {
-  padding-bottom: 0.25rem;
+  padding-bottom: 0;
 }
 
 .sf-product-card-compact {
@@ -1096,6 +1135,29 @@ html.sf-mode select {
 
 .sf-view-all-link:hover {
   filter: brightness(0.97);
+}
+
+.sf-root.sf-dark .sf-section-panel--modern {
+  background: #1e293b;
+  border-color: rgba(51, 65, 85, 0.7);
+}
+
+.sf-root.sf-dark .sf-section-panel--modern .sf-heading {
+  color: #f1f5f9;
+}
+
+.sf-root.sf-dark .sf-section-panel--modern p {
+  color: #94a3b8;
+}
+
+.sf-root.sf-dark .sf-category-card,
+.sf-root.sf-dark .sf-category-chip span:first-child {
+  background: #1e293b;
+  border-color: rgba(51, 65, 85, 0.7);
+}
+
+.sf-root.sf-dark .sf-category-chip span:last-child {
+  color: #cbd5e1;
 }
 
 .sf-root.sf-dark .sf-shop-categories .sf-heading {

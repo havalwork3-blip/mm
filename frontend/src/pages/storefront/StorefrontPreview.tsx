@@ -73,28 +73,28 @@ export function StorefrontPreview({
           </div>
 
           <div
-            className="mx-3 mb-3 rounded-2xl p-3 text-white"
+            className="mx-3 mb-3 rounded-xl border p-3"
             style={{
-              background: `linear-gradient(135deg, ${accent}, ${accent}bb)`,
+              background: `linear-gradient(135deg, ${accentAlpha(accent, 0.12)}, #ffffff)`,
+              borderColor: accentAlpha(accent, 0.15),
             }}
           >
-            <p className="text-[11px] font-bold leading-tight">{title}</p>
-            <p className="mt-0.5 line-clamp-2 text-[9px] text-white/90">{promo}</p>
+            <p className="text-[11px] font-bold leading-tight text-slate-900">{title}</p>
+            <p className="mt-0.5 line-clamp-2 text-[9px] text-slate-600">{promo}</p>
           </div>
 
           <div className="px-3 pb-2">
-            <div className="mb-2 flex gap-2">
+            <div className="mb-2 flex gap-2 overflow-hidden">
               {[0, 1, 2].map((i) => (
                 <div
                   key={i}
-                  className="h-10 w-10 shrink-0 rounded-xl"
-                  style={{ background: i === 0 ? accentAlpha(accent, 0.2) : '#e2e8f0' }}
+                  className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 bg-white"
                 />
               ))}
             </div>
             <div className="grid grid-cols-2 gap-2">
               {[1, 2].map((i) => (
-                <div key={i} className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-100">
+                <div key={i} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
                   <div className="flex aspect-square items-center justify-center bg-slate-100">
                     <PackageOpen className="h-5 w-5 text-slate-300" aria-hidden />
                   </div>
