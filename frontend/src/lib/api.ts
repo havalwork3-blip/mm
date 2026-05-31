@@ -260,9 +260,7 @@ export function buildApiUrl(
 ): string {
   let p = path.startsWith('/') ? path : `/${path}`
   const sid = scopedShopIdForRequest(shopScoped)
-  const isMeEndpoint = p.startsWith('/api/users/me')
   const attachShopId =
-    !isMeEndpoint &&
     Boolean(sid) &&
     !omitShopScope &&
     (shopScoped || !getGlobalView())
@@ -390,7 +388,7 @@ export async function apiJson<T>(path: string, init: ApiFetchOptions = {}): Prom
         e instanceof TypeError
           ? isLocalApiBase(base)
             ? ` (cannot reach ${base}; start the Django backend: npm run dev — default port ${LOCAL_DJANGO_PORT})`
-            : ` (cannot reach ${base}; same Wi-Fi as this device, Django on 0.0.0.0:${LOCAL_DJANGO_PORT}, DJANGO_ALLOWED_HOSTS / DJANGO_DEV_FRONTEND_ORIGINS; open the app via http://YOUR_PC_IP:5173 with VITE_DEV_LAN=1)`
+            : ` (cannot reach ${base}; same Wi-Fi as this device, Django on 0.0.0.0:${LOCAL_DJANGO_PORT}, DJANGO_ALLOWED_HOSTS / DJANGO_DEV_FRONTEND_ORIGINS; open the app via http://YOUR_PC_IP:5180 with VITE_DEV_LAN=1)`
           : ''
       throw new ApiError(
         `${e instanceof Error ? e.message : String(e)}${hint}`,

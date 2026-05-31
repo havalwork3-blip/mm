@@ -40,7 +40,7 @@ export default defineConfig({
     // Default: localhost — stable HMR and avoids Node/Vite calling `os.networkInterfaces()` (can fail on some setups).
     // For phone/LAN testing run: `npm run dev:lan` (same as `vite --host`).
     host: process.env.VITE_DEV_LAN === '1' ? true : 'localhost',
-    port: 5173,
+    port: 5180,
     strictPort: true,
     // Some macOS setups (iCloud/Desktop, special paths, or aggressive indexing) miss native FS events;
     // polling makes HMR reliably pick up saves.
@@ -57,8 +57,8 @@ export default defineConfig({
     // Explicit HMR endpoint avoids broken websocket / stale UI after saves (especially on Safari-like stacks).
     hmr:
       process.env.VITE_DEV_LAN === '1'
-        ? { protocol: 'ws' as const, clientPort: 5173 }
-        : { protocol: 'ws' as const, host: 'localhost', port: 5173 },
+        ? { protocol: 'ws' as const, clientPort: 5180 }
+        : { protocol: 'ws' as const, host: 'localhost', port: 5180 },
     headers: {
       'Cache-Control': 'no-store',
     },

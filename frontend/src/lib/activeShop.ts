@@ -15,8 +15,8 @@ export function readPosShopIdFromStorage(): string | null {
 }
 
 /**
- * Ensure `pos_shop_id` points at an existing shop (clears stale ids after DB reset).
- * Returns the active shop id string, or null when no shops exist.
+ * Validate `pos_shop_id` against the shop list (clears stale ids after DB reset).
+ * Does not auto-select a shop — superusers may keep "no shop" until they choose one.
  */
 export function reconcilePosShopId(shops: ShopRow[]): string | null {
   const ids = new Set(shops.map((s) => String(s.id)))
@@ -26,20 +26,12 @@ export function reconcilePosShopId(shops: ShopRow[]): string | null {
       setSuperuserShopId(stored)
       return stored
     }
-    const fallback = shops[0] ? String(shops[0].id) : null
-    if (fallback) {
-      localStorage.setItem('pos_shop_id', fallback)
-      setSuperuserShopId(fallback)
-    } else {
-      localStorage.removeItem('pos_shop_id')
-      setSuperuserShopId(null)
-    }
-    return fallback
+    localStorage.removeItem('pos_shop_id')
+    setSuperuserShopId(null)
+    return null
   } catch {
-    const fallback = shops[0] ? String(shops[0].id) : null
-    if (fallback) setSuperuserShopId(fallback)
-    else setSuperuserShopId(null)
-    return fallback
+    setSuperuserShopId(null)
+    return null
   }
 }
 
