@@ -110,7 +110,8 @@
     }
     .icon-btn svg { width: 1.05rem; height: 1.05rem; }
 
-    .lang-pill {
+    .lang-dropdown { position: relative; }
+    .lang-dropdown__trigger {
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
@@ -127,17 +128,68 @@
       cursor: pointer;
       transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
     }
-    .lang-pill:hover {
+    .lang-dropdown__trigger:hover,
+    .lang-dropdown.is-open .lang-dropdown__trigger {
       color: #fff;
       border-color: rgba(255, 255, 255, 0.18);
+      box-shadow: 0 0 16px rgba(99, 102, 241, 0.15);
     }
-    .lang-pill__flag {
-      width: 1.15rem;
-      height: 0.85rem;
-      border-radius: 2px;
-      object-fit: cover;
-      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+    .lang-dropdown__chevron {
+      width: 0.75rem;
+      height: 0.75rem;
+      opacity: 0.65;
+      transition: transform 0.2s var(--ease);
     }
+    .lang-dropdown.is-open .lang-dropdown__chevron { transform: rotate(180deg); }
+    .lang-dropdown__menu {
+      position: absolute;
+      top: calc(100% + 0.35rem);
+      inset-inline-end: 0;
+      min-width: 9.75rem;
+      margin: 0;
+      padding: 0.35rem;
+      list-style: none;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(12, 12, 18, 0.98);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+      z-index: 120;
+    }
+    .lang-dropdown__menu[hidden] { display: none !important; }
+    .lang-dropdown__option {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      width: 100%;
+      padding: 0.55rem 0.65rem;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.8rem;
+      text-align: start;
+      cursor: pointer;
+      transition: background 0.18s, color 0.18s;
+    }
+    .lang-dropdown__option:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+    }
+    .lang-dropdown__option.is-active {
+      background: rgba(99, 102, 241, 0.18);
+      color: #fff;
+    }
+    .lang-dropdown__option-code {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: var(--gold);
+      min-width: 1.5rem;
+    }
+    .lang-dropdown__option.is-active .lang-dropdown__option-code { color: var(--cyan); }
 
     /* ── Floating dock (Ari-style side nav) ── */
     .float-dock {
@@ -1388,7 +1440,7 @@
     @media (max-width: 900px) {
       .header-actions .icon-btn { display: none; }
       .menu-toggle { display: inline-flex !important; }
-      .lang-pill { display: inline-flex !important; }
+      .lang-dropdown { display: block !important; }
     }
     @media (max-width: 1280px) {
       .product-grid { grid-template-columns: repeat(3, 1fr); }
@@ -1805,9 +1857,17 @@
         <button class="icon-btn" type="button" id="searchOpen" data-i18n-aria="ui.search" aria-expanded="false" aria-controls="searchPanel">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
-        <button class="lang-pill" type="button" id="langToggle" data-i18n-aria="ui.langSwitch">
-          <span class="lang-pill__code" id="langCode">KU</span>
-        </button>
+        <div class="lang-dropdown" id="langDropdown">
+          <button class="lang-dropdown__trigger" type="button" id="langToggle" aria-haspopup="listbox" aria-expanded="false" aria-controls="langMenu" data-i18n-aria="ui.langSwitch">
+            <span class="lang-dropdown__code" id="langCode">KU</span>
+            <svg class="lang-dropdown__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <ul class="lang-dropdown__menu" id="langMenu" role="listbox" hidden>
+            <li><button type="button" class="lang-dropdown__option is-active" role="option" data-lang="ckb" aria-selected="true"><span class="lang-dropdown__option-code">KU</span><span class="lang-dropdown__option-label">کوردی</span></button></li>
+            <li><button type="button" class="lang-dropdown__option" role="option" data-lang="ar" aria-selected="false"><span class="lang-dropdown__option-code">AR</span><span class="lang-dropdown__option-label">عەرەبی</span></button></li>
+            <li><button type="button" class="lang-dropdown__option" role="option" data-lang="en" aria-selected="false"><span class="lang-dropdown__option-code">EN</span><span class="lang-dropdown__option-label">English</span></button></li>
+          </ul>
+        </div>
         <button class="menu-toggle" type="button" id="menuToggle" data-i18n-aria="ui.menu" aria-expanded="false" aria-controls="mainNav">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
         </button>
@@ -2202,10 +2262,10 @@
 /* MM IRAQ — Kurdish (ckb), Arabic (ar), English (en) */
 window.MMI18n = (function () {
   var LANGS = ["ckb", "ar", "en"];
-  var META = {
-    ckb: { dir: "rtl", code: "KU", htmlLang: "ckb" },
-    ar: { dir: "rtl", code: "AR", htmlLang: "ar" },
-    en: { dir: "ltr", code: "EN", htmlLang: "en" }
+var META = {
+    ckb: { dir: "rtl", code: "KU", htmlLang: "ckb", label: "کوردی" },
+    ar: { dir: "rtl", code: "AR", htmlLang: "ar", label: "عەرەبی" },
+    en: { dir: "ltr", code: "EN", htmlLang: "en", label: "English" }
   };
 
   var T = {
@@ -2573,6 +2633,12 @@ window.MMI18n = (function () {
       metaDesc.content = t(descKey, lang);
     }
 
+    document.querySelectorAll(".lang-dropdown__option").forEach(function (btn) {
+      var active = btn.getAttribute("data-lang") === lang;
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-selected", active ? "true" : "false");
+    });
+
     document.dispatchEvent(new CustomEvent("mm:langchange", { detail: { lang: lang } }));
   }
 
@@ -2904,6 +2970,45 @@ window.MMI18n = (function () {
       });
     }
 
+function initLangDropdown() {
+      var dropdown = document.getElementById("langDropdown");
+      var toggle = document.getElementById("langToggle");
+      var menu = document.getElementById("langMenu");
+      if (!dropdown || !toggle || !menu) return;
+
+      function closeMenu() {
+        dropdown.classList.remove("is-open");
+        toggle.setAttribute("aria-expanded", "false");
+        menu.hidden = true;
+      }
+      function openMenu() {
+        dropdown.classList.add("is-open");
+        toggle.setAttribute("aria-expanded", "true");
+        menu.hidden = false;
+      }
+
+      toggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (dropdown.classList.contains("is-open")) closeMenu();
+        else openMenu();
+      });
+
+      menu.querySelectorAll(".lang-dropdown__option").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var lang = btn.getAttribute("data-lang");
+          if (window.MMI18n && lang) MMI18n.applyLang(lang);
+          closeMenu();
+        });
+      });
+
+      document.addEventListener("click", function (e) {
+        if (!dropdown.contains(e.target)) closeMenu();
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeMenu();
+      });
+    }
+
     function scrollToSection(id) {
       var el = document.getElementById(id);
       if (!el) return;
@@ -2961,31 +3066,15 @@ window.MMI18n = (function () {
     }
 
     if (window.MMI18n) {
-      if (langToggle && langCode) {
-        langToggle.addEventListener("click", function () {
-          MMI18n.cycleLang();
-        });
-      }
+      initLangDropdown();
       MMI18n.loadFromCms(function () {
         MMI18n.init();
         loadMarketingProducts(function () {
           if (window.mmRebuildSearchCatalog) window.mmRebuildSearchCatalog();
         });
       });
-    } else if (langToggle && langCode) {
-      langToggle.addEventListener("click", function () {
-        var html = document.documentElement;
-        var isKu = html.getAttribute("lang") === "ckb";
-        if (isKu) {
-          html.setAttribute("lang", "en");
-          html.setAttribute("dir", "ltr");
-          langCode.textContent = "EN";
-        } else {
-          html.setAttribute("lang", "ckb");
-          html.setAttribute("dir", "rtl");
-          langCode.textContent = "KU";
-        }
-      });
+    } else {
+      initLangDropdown();
     }
 
     function fetchMarketingApi(path, options) {
