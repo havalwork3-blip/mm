@@ -229,7 +229,7 @@ export function HomePage() {
     setTopSellingProducts([])
   }, [dFrom, dTo])
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (signal?: AbortSignal) => {
     if (!shouldFetchStats || statsForbidden) return
     if (me?.is_superuser && !getGlobalView() && !getPersistedSuperuserShopId()) {
       setStats(null)
@@ -240,6 +240,7 @@ export function HomePage() {
     setLoadingStats(true)
     setError(null)
     try {
+      if (signal?.aborted) return
       const q = `?from=${encodeURIComponent(dFrom)}&to=${encodeURIComponent(dTo)}`
       if (me?.is_superuser && getGlobalView()) {
         const g = await apiJson<AdminGlobalStats>(`/api/admin/stats/${q}`)
@@ -278,9 +279,9 @@ export function HomePage() {
       }
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
-      setLoadingStats(false)
+      if (!signal?.aborted) setLoadingStats(false)
     }
-  }, [shouldFetchStats, statsForbidden, me?.is_superuser, dFrom, dTo])
+  }, [shouldFetchStats, statsForbidden, me?.is_superuser, dFrom, dTo, t])
 
   const fetchTopSellingProducts = useCallback(async () => {
     if (!me || getGlobalView()) return
@@ -343,14 +344,17 @@ export function HomePage() {
   }, [me?.online_storefront_enabled, dFrom, dTo])
 
   useEffect(() => {
-    if (me && shouldFetchStats && !statsForbidden) void fetchStats()
+    if (!me || !shouldFetchStats || statsForbidden) return
+    const ac = new AbortController()
+    void fetchStats(ac.signal)
+    return () => ac.abort()
   }, [me, shouldFetchStats, statsForbidden, fetchStats])
 
   useEffect(() => {
     if (!me?.online_storefront_enabled || !shouldFetchStats || statsForbidden) return
     const deferId = window.setTimeout(() => {
       void fetchOnlineStats()
-    }, 150)
+    }, 450)
     return () => window.clearTimeout(deferId)
   }, [me?.online_storefront_enabled, shouldFetchStats, statsForbidden, fetchOnlineStats])
 
@@ -365,7 +369,7 @@ export function HomePage() {
     const deferId = window.setTimeout(() => {
       void fetchStockProducts()
       void fetchShopSettings()
-    }, 80)
+    }, 300)
     return () => window.clearTimeout(deferId)
   }, [me, canFetchShopDashboardExtras, fetchStockProducts, fetchShopSettings])
 
@@ -382,7 +386,7 @@ export function HomePage() {
         window.setTimeout(() => {
           void fetchStockProducts()
           void fetchShopSettings()
-        }, 80)
+        }, 300)
       }
     }
     window.addEventListener('mm-dashboard-refresh', onRefresh)

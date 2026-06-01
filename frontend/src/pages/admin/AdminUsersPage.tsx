@@ -18,7 +18,9 @@ export function AdminUsersPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await apiJson<ShopUserRow[] | { results: ShopUserRow[] }>('/api/users/')
+      const data = await apiJson<ShopUserRow[] | { results: ShopUserRow[] }>('/api/users/', {
+        omitShopScope: true,
+      })
       setRows(Array.isArray(data) ? data : data.results)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))

@@ -52,10 +52,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       return
     }
     try {
-      let profile = await apiJson<Me>('/api/users/me/')
+      const profile = await apiJson<Me>('/api/users/me/')
       if (profile.is_superuser) {
         await syncSuperuserShopScope()
-        profile = await apiJson<Me>('/api/users/me/')
       }
       applyProfile(profile)
     } catch (e) {
@@ -124,10 +123,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setBasicAuth(normalizedEmail, password)
       persistSessionAuth(normalizedEmail, password)
       try {
-        let profile = await apiJson<Me>('/api/users/me/')
+        const profile = await apiJson<Me>('/api/users/me/')
         if (profile.is_superuser) {
           await syncSuperuserShopScope()
-          profile = await apiJson<Me>('/api/users/me/')
         }
         applyProfile(profile)
       } catch (e) {

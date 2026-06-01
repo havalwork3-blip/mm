@@ -175,7 +175,10 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
                     },
                 )
 
-        if not is_super and shop is None:
+        if is_super:
+            attrs["shop"] = None
+            attrs.setdefault("is_staff", True)
+        elif shop is None:
             raise serializers.ValidationError(
                 {"shop": "Shop is required for non-superuser accounts."},
             )
@@ -296,8 +299,11 @@ class UserAdminCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs: dict) -> dict:
         is_super = attrs.get("is_superuser", False)
-        shop = attrs.get("shop")
-        if not is_super and shop is None:
+        if is_super:
+            attrs["shop"] = None
+            attrs.setdefault("is_staff", True)
+            return attrs
+        if attrs.get("shop") is None:
             raise serializers.ValidationError(
                 {"shop": "Shop is required for non-superuser accounts."},
             )

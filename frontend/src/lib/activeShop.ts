@@ -62,11 +62,9 @@ export function resolveActiveShopId(
   if (!me) return null
   if (me.is_superuser) {
     const raw = (shopImpersonation ?? readPosShopIdFromStorage() ?? '').trim()
-    if (raw) {
-      const n = Number(raw)
-      return Number.isFinite(n) ? n : null
-    }
-    return me.shop
+    if (!raw) return null
+    const n = Number(raw)
+    return Number.isFinite(n) ? n : null
   }
   return me.shop
 }

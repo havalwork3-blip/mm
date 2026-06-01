@@ -8,7 +8,7 @@ from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from django.db import transaction
-from django.db.models import DecimalField, F, Sum
+from django.db.models import Case, DecimalField, F, Sum, Value, When
 from django.utils import timezone
 
 from .models import (
@@ -65,12 +65,32 @@ def total_inventory_loss_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
 
 
 def total_expenses_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
-    expense_qs = Expense.objects.filter(
-        shop_id=shop_id,
-        occurred_on__gte=d_from,
-        occurred_on__lte=d_to,
+    from .models import ExpenseCurrency
+
+    dec = DecimalField(max_digits=18, decimal_places=4)
+    total = (
+        Expense.objects.filter(
+            shop_id=shop_id,
+            occurred_on__gte=d_from,
+            occurred_on__lte=d_to,
+        )
+        .aggregate(
+            total=Sum(
+                Case(
+                    When(currency=ExpenseCurrency.USD, then=F("amount")),
+                    When(
+                        currency=ExpenseCurrency.IQD,
+                        exchange_rate_usd_to_iqd__gt=0,
+                        then=F("amount") / F("exchange_rate_usd_to_iqd"),
+                    ),
+                    default=Value(0),
+                    output_field=dec,
+                ),
+                output_field=dec,
+            ),
+        )["total"]
     )
-    return sum((e.amount_usd() for e in expense_qs), Decimal("0"))
+    return (total or Decimal("0")).quantize(Decimal("0.0001"))
 
 
 def sale_unpaid_balance_usd(sale: Sale) -> Decimal:

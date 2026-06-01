@@ -25,12 +25,10 @@ export function useOnlineOrdersPendingCount(enabled: boolean) {
     const onRefresh = () => void refresh()
     window.addEventListener('mm-online-orders-changed', onRefresh)
     window.addEventListener('mm-dashboard-refresh', onRefresh)
-    window.addEventListener('mm-session-refresh', onRefresh)
     return () => {
       window.clearInterval(intervalId)
       window.removeEventListener('mm-online-orders-changed', onRefresh)
       window.removeEventListener('mm-dashboard-refresh', onRefresh)
-      window.removeEventListener('mm-session-refresh', onRefresh)
     }
   }, [refresh])
 

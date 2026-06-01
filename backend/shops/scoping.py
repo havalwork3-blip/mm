@@ -40,10 +40,8 @@ def get_shop_id_for_request(request: HttpRequest) -> int | None:
             if Shop.objects.filter(pk=parsed).exists():
                 return parsed
             return None
-        if getattr(user, "shop_id", None):
-            uid = int(user.shop_id)
-            if Shop.objects.filter(pk=uid).exists():
-                return uid
+        # Superusers must pick scope explicitly (?shop_id= / X-Shop-ID). Do not fall back to
+        # user.shop_id — a stray shop FK made admins look like shop owners and scoped /me wrong.
         return None
     if getattr(user, "shop_id", None):
         uid = int(user.shop_id)

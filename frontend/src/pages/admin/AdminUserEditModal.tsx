@@ -100,7 +100,7 @@ export function AdminUserEditModal({ userId, open, onClose, onSaved }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const d = await apiJson<UserDetail>(`/api/users/${userId}/`)
+      const d = await apiJson<UserDetail>(`/api/users/${userId}/`, { omitShopScope: true })
       setDetail(d)
       setDraft(detailToDraft(d))
       setPermissionIds(Array.isArray(d.user_permission_ids) ? [...d.user_permission_ids] : [])
@@ -166,17 +166,24 @@ export function AdminUserEditModal({ userId, open, onClose, onSaved }: Props) {
     setSaving(true)
     setError(null)
     try {
+      const isSuper = draft.is_superuser
       const body: Record<string, unknown> = {
         email: draft.email.trim(),
-        shop: draft.shop,
+        shop: isSuper ? null : draft.shop,
         role: draft.role,
         is_active: draft.is_active,
-        is_staff: draft.is_staff,
-        is_superuser: draft.is_superuser,
+        is_staff: isSuper ? true : draft.is_staff,
+        is_superuser: isSuper,
+      }
+      if (!isSuper && body.shop == null) {
+        setError(t('admin.shopRequired'))
+        setSaving(false)
+        return
       }
       if (canManageObjectPermissions && Array.isArray(detail?.all_permissions)) {
         body.user_permission_ids = permissionIds
       }
+      const userApiOpts = { omitShopScope: true as const }
       if (isCreateMode) {
         if (pw1.length < 8) {
           setError(t('admin.passwordTooShort'))
@@ -192,14 +199,18 @@ export function AdminUserEditModal({ userId, open, onClose, onSaved }: Props) {
         await apiJson('/api/users/', {
           method: 'POST',
           body: JSON.stringify(body),
+          ...userApiOpts,
         })
       } else {
         await apiJson<UserDetail>(`/api/users/${userId}/`, {
           method: 'PATCH',
           body: JSON.stringify(body),
+          ...userApiOpts,
         })
       }
-      window.dispatchEvent(new Event('mm-session-refresh'))
+      if (editingSelf) {
+        window.dispatchEvent(new Event('mm-session-refresh'))
+      }
       onSaved()
       onClose()
     } catch (e) {
@@ -255,6 +266,7 @@ export function AdminUserEditModal({ userId, open, onClose, onSaved }: Props) {
       await apiJson(`/api/users/${userId}/reset-password/`, {
         method: 'POST',
         body: JSON.stringify({ password: pw1 }),
+        omitShopScope: true,
       })
       setPw1('')
       setPw2('')
@@ -434,9 +446,19 @@ export function AdminUserEditModal({ userId, open, onClose, onSaved }: Props) {
                       type="checkbox"
                       checked={draft.is_superuser}
                       disabled={Boolean(editingSelf)}
-                      onChange={(e) =>
-                        setDraft((d) => (d ? { ...d, is_superuser: e.target.checked } : d))
-                      }
+                      onChange={(e) => {
+                        const checked = e.target.checked
+                        setDraft((d) =>
+                          d
+                            ? {
+                                ...d,
+                                is_superuser: checked,
+                                shop: checked ? null : d.shop,
+                                is_staff: checked ? true : d.is_staff,
+                              }
+                            : d,
+                        )
+                      }}
                       className="mt-1 h-4 w-4 rounded border-slate-300 disabled:opacity-50"
                     />
                     <label htmlFor="u-super" className="leading-snug">

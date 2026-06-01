@@ -11,8 +11,8 @@ import {
 import { useLocale } from './LocaleContext'
 import { useSession } from './SessionContext'
 
-const MIN_OVERLAY_MS = 480
-const SETTLE_MS = 220
+const MIN_OVERLAY_MS = 200
+const SETTLE_MS = 80
 
 type ShopSwitchCtx = {
   switching: boolean
