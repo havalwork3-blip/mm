@@ -1300,9 +1300,7 @@ export function HomePage() {
                   totalUnits={soldProductsShare.totalUnits}
                   emptyLabel={t('dash.topSellingEmpty')}
                   totalUnitsLabel={t('dash.totalUnitsSold')}
-                  formatSoldUnits={(qty) =>
-                    t('dash.soldUnitsLine').replace('{qty}', formatCompactNumber(qty))
-                  }
+                  soldUnitsSuffix={t('dash.soldUnitsSuffix')}
                 />
               </section>
               <section className="relative overflow-hidden rounded-2xl border border-cyan-200/70 bg-gradient-to-br from-white via-cyan-50/50 to-teal-50/30 p-5 shadow-sm ring-1 ring-cyan-100/80 dark:border-cyan-500/25 dark:from-slate-800 dark:via-cyan-950/30 dark:to-slate-800 dark:ring-cyan-500/15">
@@ -1627,20 +1625,25 @@ function StatCard({
   )
 }
 
+function formatSoldQtyNumber(value: number): string {
+  const n = Math.round(value)
+  return Number.isFinite(n) ? String(n) : '0'
+}
+
 function SoldProductsSharePanel({
   products,
   donutData,
   totalUnits,
   emptyLabel,
   totalUnitsLabel,
-  formatSoldUnits,
+  soldUnitsSuffix,
 }: {
   products: TopSellingProductRow[]
   donutData: Array<{ name: string; value: number; color: string }>
   totalUnits: number
   emptyLabel: string
   totalUnitsLabel: string
-  formatSoldUnits: (qty: number) => string
+  soldUnitsSuffix: string
 }) {
   if (products.length === 0 || totalUnits <= 0) {
     return (
@@ -1650,9 +1653,9 @@ function SoldProductsSharePanel({
     )
   }
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-      <div className="mx-auto w-full shrink-0 sm:mx-0 sm:w-[min(100%,220px)] sm:max-w-[220px]">
-        <div className="relative h-56 w-full" dir="ltr">
+    <div className="flex flex-col gap-5 sm:flex-row-reverse sm:items-start sm:gap-6">
+      <div className="mx-auto w-full shrink-0 sm:mx-0 sm:w-[min(100%,200px)] sm:max-w-[200px]">
+        <div className="relative h-52 w-full sm:h-56" dir="ltr">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Tooltip
@@ -1682,33 +1685,46 @@ function SoldProductsSharePanel({
             </PieChart>
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
-            <span className="text-[10px] leading-tight text-slate-500 dark:text-slate-400">
+            <span className="max-w-[7rem] text-[10px] leading-snug text-slate-500 dark:text-slate-400">
               {totalUnitsLabel}
             </span>
-            <span className="text-lg font-bold tabular-nums text-slate-900 dark:text-slate-100">
-              {formatCompactNumber(totalUnits)}
+            <span className="mt-0.5 text-xl font-bold tabular-nums tracking-tight text-slate-900 dark:text-slate-100">
+              {formatSoldQtyNumber(totalUnits)}
             </span>
           </div>
         </div>
       </div>
-      <div className="min-h-0 max-h-56 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
-        <ul className="space-y-2 pe-1">
-          {products.map((item) => (
-            <li
-              key={item.product_name}
-              className="flex items-start justify-between gap-3 rounded-lg px-2 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-700/30"
-            >
-              <span
-                className="min-w-0 flex-1 text-start font-medium text-slate-800 dark:text-slate-100"
-                title={item.product_name}
+      <div className="min-h-0 min-w-0 max-h-64 flex-1 basis-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] sm:max-h-56">
+        <ul className="space-y-1.5 pe-0.5" dir="rtl">
+          {products.map((item) => {
+            const qty = Number(item.total_qty) || 0
+            return (
+              <li
+                key={item.product_name}
+                className="grid grid-cols-[minmax(5.5rem,6.25rem)_minmax(0,1fr)] items-center gap-x-3 rounded-xl border border-slate-100/90 bg-slate-50/50 px-2.5 py-2 transition hover:border-violet-200/80 hover:bg-violet-50/40 dark:border-slate-700/60 dark:bg-slate-900/30 dark:hover:border-violet-500/30 dark:hover:bg-violet-950/25"
               >
-                {item.product_name}
-              </span>
-              <span className="shrink-0 text-end tabular-nums text-slate-600 dark:text-slate-300">
-                {formatSoldUnits(Number(item.total_qty) || 0)}
-              </span>
-            </li>
-          ))}
+                <div
+                  className="flex flex-col items-center justify-center rounded-lg border border-violet-100/90 bg-white px-1.5 py-1.5 text-center shadow-sm dark:border-violet-500/25 dark:bg-violet-950/40"
+                  dir="rtl"
+                >
+                  <span className="text-base font-bold leading-none tabular-nums text-violet-700 dark:text-violet-200">
+                    {formatSoldQtyNumber(qty)}
+                  </span>
+                  <span className="mt-1 max-w-[5.5rem] text-[10px] font-medium leading-tight text-violet-600/90 dark:text-violet-300/85">
+                    {soldUnitsSuffix}
+                  </span>
+                </div>
+                <p
+                  dir="ltr"
+                  lang="en"
+                  className="min-w-0 truncate text-sm font-medium leading-snug text-slate-800 [unicode-bidi:isolate] dark:text-slate-100"
+                  title={item.product_name}
+                >
+                  {item.product_name}
+                </p>
+              </li>
+            )
+          })}
         </ul>
       </div>
     </div>
