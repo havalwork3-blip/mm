@@ -1063,7 +1063,7 @@ export function InventoryPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
+    <div className="min-h-dvh overflow-x-hidden bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
       {needsShop && (
         <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6">
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-start text-sm text-amber-900">
