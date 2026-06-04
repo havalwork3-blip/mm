@@ -43,6 +43,27 @@ type PurchaseHistoryDetail = {
 }
 const USD_RATE_DISPLAY_UNIT = 100
 
+/** Negative stock first, then at/below low-stock threshold, then the rest (by qty asc, then name). */
+function compareProductsByStockUrgency(
+  a: ProductRow,
+  b: ProductRow,
+  defaultLowStockThreshold: number,
+): number {
+  const stockRank = (p: ProductRow): number => {
+    const qty = Number(p.current_stock_quantity ?? 0)
+    const threshold = p.low_stock_threshold ?? defaultLowStockThreshold
+    if (qty < 0) return 0
+    if (qty <= threshold) return 1
+    return 2
+  }
+  const rankDiff = stockRank(a) - stockRank(b)
+  if (rankDiff !== 0) return rankDiff
+  const qtyDiff =
+    Number(a.current_stock_quantity ?? 0) - Number(b.current_stock_quantity ?? 0)
+  if (qtyDiff !== 0) return qtyDiff
+  return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+}
+
 function parseRateInputValue(value: string): number | null {
   const normalized = value
     .replace(/[,\u066C،\s]/g, '')
@@ -957,13 +978,15 @@ export function InventoryPage() {
   const filteredProducts = useMemo(() => {
     const lowStockMax = Number.parseInt(lowStockMaxInput.trim(), 10)
     const hasLowStockFilter = Number.isFinite(lowStockMax)
-    return products.filter((p) => {
-      if (!showDiscontinued && p.is_discontinued) return false
-      if (categoryFilterId && p.category !== Number(categoryFilterId)) return false
-      if (hasLowStockFilter && p.current_stock_quantity > lowStockMax) return false
-      return true
-    })
-  }, [products, categoryFilterId, lowStockMaxInput, showDiscontinued])
+    return products
+      .filter((p) => {
+        if (!showDiscontinued && p.is_discontinued) return false
+        if (categoryFilterId && p.category !== Number(categoryFilterId)) return false
+        if (hasLowStockFilter && p.current_stock_quantity > lowStockMax) return false
+        return true
+      })
+      .sort((a, b) => compareProductsByStockUrgency(a, b, lowStockThreshold))
+  }, [products, categoryFilterId, lowStockMaxInput, showDiscontinued, lowStockThreshold])
 
   const productCount = filteredProducts.length
 
