@@ -93,20 +93,30 @@ def total_expenses_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
     return (total or Decimal("0")).quantize(Decimal("0.0001"))
 
 
-def sale_unpaid_balance_usd(sale: Sale) -> Decimal:
-    """Positive unpaid amount for one sale (0 if none)."""
+def _sale_lines_subtotal_usd(sale: Sale) -> Decimal:
+    """Line subtotal before invoice-level discount (after sale returns on lines)."""
     line_sum = Decimal("0")
     for ln in sale.lines.all():
         returned_qty = sum(int(row.quantity) for row in ln.return_lines.all())
         net_qty = max(0, int(ln.quantity) - returned_qty)
         line_sum += Decimal(net_qty) * Decimal(ln.unit_price_usd)
-    final_usd = line_sum - Decimal(sale.invoice_discount_usd)
-    if final_usd < 0:
-        final_usd = Decimal("0")
+    return line_sum.quantize(Decimal("0.0001"))
+
+
+def _sale_final_usd(sale: Sale) -> Decimal:
+    final = _sale_lines_subtotal_usd(sale) - Decimal(sale.invoice_discount_usd)
+    if final < 0:
+        final = Decimal("0")
+    return final.quantize(Decimal("0.0001"))
+
+
+def sale_unpaid_balance_usd(sale: Sale) -> Decimal:
+    """Positive unpaid amount for one sale (0 if none)."""
+    final_usd = _sale_final_usd(sale)
+    paid = Decimal(sale.amount_paid_usd)
     rate = Decimal(sale.exchange_rate_usd_to_iqd)
-    if rate <= 0:
-        return Decimal("0")
-    paid = Decimal(sale.amount_paid_usd) + (Decimal(sale.amount_paid_iqd) / rate)
+    if rate > 0:
+        paid += Decimal(sale.amount_paid_iqd) / rate
     bal = final_usd - paid
     if bal <= 0:
         return Decimal("0")
@@ -117,7 +127,7 @@ def customer_outstanding_balance_usd(shop_id: int, customer_id: int) -> Decimal:
     """Unpaid balance for one customer: sum of positive (final − paid) per sale, all time."""
     total = Decimal("0")
     qs = Sale.objects.filter(shop_id=shop_id, customer_id=customer_id).prefetch_related(
-        "lines",
+        "lines__return_lines",
     )
     for sale in qs:
         total += sale_unpaid_balance_usd(sale)
@@ -152,7 +162,7 @@ def apply_customer_debt_payment_fifo(
             qs = (
                 Sale.objects.filter(shop_id=shop_id, customer_id=customer_id)
                 .order_by("occurred_at", "id")
-                .prefetch_related("lines")
+                .prefetch_related("lines__return_lines")
             )
             for s in qs:
                 if sale_unpaid_balance_usd(s) > Decimal("0.00005"):
@@ -327,6 +337,15 @@ def total_stock_value_usd(shop_id: int) -> Decimal:
     return Decimal(str(v)).quantize(Decimal("0.0001"))
 
 
+def _sale_paid_usd_equiv(sale: Sale) -> Decimal:
+    """USD equivalent of amount paid on a sale (IQD ignored when rate missing)."""
+    paid = Decimal(sale.amount_paid_usd)
+    rate = Decimal(sale.exchange_rate_usd_to_iqd)
+    if rate > 0:
+        paid += Decimal(sale.amount_paid_iqd) / rate
+    return paid.quantize(Decimal("0.0001"))
+
+
 def sales_cash_in_usd_range(shop_id: int, d_from, d_to) -> Decimal:
     """
     Net cash effect from sales in the date range: payments collected on sales
@@ -341,31 +360,27 @@ def sales_cash_in_usd_range(shop_id: int, d_from, d_to) -> Decimal:
         occurred_at__gte=start,
         occurred_at__lte=end,
     ):
-        rate = Decimal(sale.exchange_rate_usd_to_iqd)
-        if rate <= 0:
-            continue
-        paid = Decimal(sale.amount_paid_usd) + (
-            Decimal(sale.amount_paid_iqd) / rate
-        )
-        total += paid.quantize(Decimal("0.0001"))
+        total += _sale_paid_usd_equiv(sale)
     refunds = total_returned_products_usd_in_range(shop_id, d_from, d_to)
     return (total - refunds).quantize(Decimal("0.0001"))
 
 
-def _sale_final_usd(sale: Sale) -> Decimal:
-    line_sum = Decimal("0")
-    for ln in sale.lines.all():
-        returned_qty = sum(int(row.quantity) for row in ln.return_lines.all())
-        net_qty = max(0, int(ln.quantity) - returned_qty)
-        line_sum += Decimal(net_qty) * Decimal(ln.unit_price_usd)
-    final = line_sum - Decimal(sale.invoice_discount_usd)
-    if final < 0:
-        final = Decimal("0")
-    return final.quantize(Decimal("0.0001"))
+def sales_gross_usd_range(shop_id: int, d_from, d_to) -> Decimal:
+    """Line subtotals before invoice discount (USD) in date range."""
+    start, end = _bounds(d_from, d_to)
+    total = Decimal("0")
+    qs = Sale.objects.filter(
+        shop_id=shop_id,
+        occurred_at__gte=start,
+        occurred_at__lte=end,
+    ).prefetch_related("lines__return_lines")
+    for sale in qs:
+        total += _sale_lines_subtotal_usd(sale)
+    return total.quantize(Decimal("0.0001"))
 
 
 def sales_invoiced_usd_range(shop_id: int, d_from, d_to) -> Decimal:
-    """Total invoiced sales (line totals minus invoice discount) in date range, USD."""
+    """Net invoiced sales (line totals minus invoice discount) in date range, USD."""
     start, end = _bounds(d_from, d_to)
     total = Decimal("0")
     qs = Sale.objects.filter(
@@ -378,8 +393,13 @@ def sales_invoiced_usd_range(shop_id: int, d_from, d_to) -> Decimal:
     return total.quantize(Decimal("0.0001"))
 
 
+def total_sales_gross_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
+    """Gross merchandise sold before invoice discounts (dashboard «total sold»)."""
+    return sales_gross_usd_range(shop_id, d_from, d_to)
+
+
 def total_sales_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
-    """Total invoiced sales in range (alias for dashboard employee cards)."""
+    """Net sales after invoice discounts (matches cash collected when fully paid)."""
     return sales_invoiced_usd_range(shop_id, d_from, d_to)
 
 
@@ -600,13 +620,7 @@ def cashier_ledger_entries(shop_id: int, d_from, d_to) -> list[dict]:
         .order_by("-occurred_at", "-id")
     )
     for sale in sales_qs:
-        rate = Decimal(sale.exchange_rate_usd_to_iqd)
-        if rate <= 0:
-            continue
-        paid = Decimal(sale.amount_paid_usd) + (
-            Decimal(sale.amount_paid_iqd) / rate
-        )
-        paid = paid.quantize(Decimal("0.0001"))
+        paid = _sale_paid_usd_equiv(sale)
         if paid <= 0:
             continue
         cust_label = sale.customer.name if sale.customer_id else ""

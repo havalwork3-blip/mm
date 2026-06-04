@@ -434,6 +434,9 @@ export type DashboardStats = {
   total_expenses_usd: string
   /** Stock write-offs (manual decrease + stop-carrying), subset of expenses. */
   total_inventory_loss_usd?: string
+  /** Line totals before invoice-level discounts. */
+  total_sales_gross_usd: string
+  /** Net sales after invoice discounts (≈ cash when fully paid). */
   total_sales_usd: string
   total_discounts_usd: string
   debtor_customers_count: number
