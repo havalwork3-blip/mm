@@ -1593,14 +1593,8 @@ class SaleSerializer(serializers.ModelSerializer):
             )
 
     def _write_sale_lines(self, sale: Sale, shop_id: int, lines_data: list) -> None:
-        fallback_category = (
-            Category.objects.filter(shop_id=shop_id).order_by("id").first()
-        )
-        if fallback_category is None:
-            fallback_category = Category.objects.create(
-                shop_id=shop_id,
-                name="General",
-            )
+        from inventory.manual_product import get_or_create_product_for_manual_name
+
         for line in lines_data:
             qty = line["quantity"]
             product = line.get("product")
@@ -1626,23 +1620,12 @@ class SaleSerializer(serializers.ModelSerializer):
                     {"lines": "Each line must include a product or manual_name."},
                 )
             else:
-                existing_manual_product = (
-                    Product.objects.select_for_update()
-                    .filter(shop_id=shop_id, name__iexact=manual_name)
-                    .first()
+                product = get_or_create_product_for_manual_name(
+                    shop_id=shop_id,
+                    manual_name=manual_name,
+                    unit_price_usd=Decimal(str(line["unit_price_usd"])),
+                    unit_cost_usd=Decimal("0"),
                 )
-                if existing_manual_product is None:
-                    existing_manual_product = Product.objects.create(
-                        shop_id=shop_id,
-                        name=manual_name,
-                        is_unregistered_placeholder=True,
-                        category=fallback_category,
-                        buy_price=Decimal("0"),
-                        sale_price_retail=Decimal(str(line["unit_price_usd"])),
-                        sale_price_wholesale=Decimal(str(line["unit_price_usd"])),
-                        current_stock_quantity=0,
-                    )
-                product = existing_manual_product
                 manual_name = ""
                 buy_snap = product.buy_price
             SaleLine.objects.create(

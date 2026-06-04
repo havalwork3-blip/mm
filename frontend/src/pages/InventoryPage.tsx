@@ -112,8 +112,7 @@ export function InventoryPage() {
   } = useSyncedSession()
   const [error, setError] = useState<string | null>(null)
 
-  const [search] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [debouncedProductNameFilter, setDebouncedProductNameFilter] = useState('')
   const setInventoryProducts = useInventoryProductsStore((s) => s.setItems)
   const products = useInventoryProductsStore((s) => s.items)
   const resetInventoryProducts = useInventoryProductsStore((s) => s.reset)
@@ -188,9 +187,12 @@ export function InventoryPage() {
   })
 
   useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 300)
+    const t = window.setTimeout(
+      () => setDebouncedProductNameFilter(productNameFilter.trim()),
+      300,
+    )
     return () => window.clearTimeout(t)
-  }, [search])
+  }, [productNameFilter])
 
   const loadCurrencies = useCallback(async () => {
     const rows = await apiJson<CurrencyRow[]>('/api/currencies/')
@@ -214,21 +216,30 @@ export function InventoryPage() {
   const loadProducts = useCallback(async () => {
     setLoadingProducts(true)
     try {
-      const q = debouncedSearch
-        ? `?search=${encodeURIComponent(debouncedSearch)}`
-        : ''
-      const data = await apiJson<Paginated<ProductRow> | ProductRow[]>(
-        `/api/products/${q}`,
-      )
-      const list = Array.isArray(data) ? data : data.results
-      setInventoryProducts(list)
+      const params = new URLSearchParams({ page_size: '200' })
+      if (debouncedProductNameFilter) {
+        params.set('search', debouncedProductNameFilter)
+      }
+      const all: ProductRow[] = []
+      let nextPath: string | null = `/api/products/?${params.toString()}`
+      while (nextPath) {
+        const data = await apiJson<Paginated<ProductRow> | ProductRow[]>(nextPath)
+        if (Array.isArray(data)) {
+          all.push(...data)
+          nextPath = null
+          continue
+        }
+        all.push(...data.results)
+        nextPath = data.next ? toApiPath(data.next) : null
+      }
+      setInventoryProducts(all)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('inv.loadProductsFailed'))
       setInventoryProducts([])
     } finally {
       setLoadingProducts(false)
     }
-  }, [debouncedSearch, t])
+  }, [debouncedProductNameFilter, t])
 
   const fetchAllProducts = useCallback(async (): Promise<ProductRow[]> => {
     const all: ProductRow[] = []
