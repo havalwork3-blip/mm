@@ -13,13 +13,12 @@ from accounts.models import User
 from shops.models import Shop
 
 from .dashboard_tools import (
-    cashier_snapshot,
     net_profit_in_range,
     total_customer_discounts_usd_in_range,
     total_expenses_usd_in_range,
     total_returned_products_usd_in_range,
     total_receivables_usd_in_range,
-    total_sales_gross_usd_in_range,
+    period_dashboard_petty_cash_usd_in_range,
     total_sales_usd_in_range,
     total_stock_value_usd,
 )
@@ -64,7 +63,6 @@ class GlobalAdminStatsView(APIView):
         global_expenses = Decimal("0")
         shop_rows: list[dict] = []
         for shop in Shop.objects.all().only("id", "name", "is_active"):
-            sales_gross_usd = total_sales_gross_usd_in_range(shop.pk, d_from, d_to)
             sales_usd = total_sales_usd_in_range(shop.pk, d_from, d_to)
             net_profit = net_profit_in_range(shop.pk, d_from, d_to)
             expenses_usd = total_expenses_usd_in_range(shop.pk, d_from, d_to)
@@ -72,17 +70,12 @@ class GlobalAdminStatsView(APIView):
             returned_usd = total_returned_products_usd_in_range(shop.pk, d_from, d_to)
             receivables_usd = total_receivables_usd_in_range(shop.pk, d_from, d_to)
             stock_usd = total_stock_value_usd(shop.pk)
-            cash_snapshot = cashier_snapshot(shop.pk, d_from, d_to)
-            drawer_usd = (
-                Decimal(cash_snapshot["sales_cash_in_usd"])
-                - Decimal(cash_snapshot["expenses_usd"])
-                - Decimal(cash_snapshot["employee_debt_cash_effect_usd"])
-            ).quantize(Decimal("0.0001"))
+            drawer_usd = period_dashboard_petty_cash_usd_in_range(shop.pk, d_from, d_to)
 
             global_profit += net_profit
             global_discounts += discounts_usd
             global_stock += stock_usd
-            global_sales += sales_gross_usd
+            global_sales += sales_usd
             global_expenses += expenses_usd
 
             shop_rows.append(
@@ -90,9 +83,8 @@ class GlobalAdminStatsView(APIView):
                     "shop_id": shop.pk,
                     "shop_name": shop.name,
                     "is_active": shop.is_active,
-                    "sales_usd": _money(sales_gross_usd),
-                    "total_sold_usd": _money(sales_gross_usd),
-                    "sales_net_usd": _money(sales_usd),
+                    "sales_usd": _money(sales_usd),
+                    "total_sold_usd": _money(sales_usd),
                     "profit_usd": _money(net_profit),
                     "expenses_usd": _money(expenses_usd),
                     "discounts_usd": _money(discounts_usd),

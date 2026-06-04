@@ -20,6 +20,7 @@ from .dashboard_tools import (
     total_payables_usd,
     total_returned_products_qty_in_range,
     total_returned_products_usd_in_range,
+    period_dashboard_petty_cash_usd_in_range,
     total_sales_gross_usd_in_range,
     total_sales_usd_in_range,
     total_receivables_usd,
@@ -60,19 +61,13 @@ class DashboardStatsView(APIView):
         returned_products_usd = total_returned_products_usd_in_range(shop_id, d_from, d_to)
         period_recv = total_receivables_usd_in_range(shop_id, d_from, d_to)
         cash_snapshot = cashier_snapshot(shop_id, d_from, d_to)
-        period_cash_drawer_usd = (
-            Decimal(cash_snapshot["sales_cash_in_usd"])
-            - Decimal(cash_snapshot["expenses_usd"])
-            - Decimal(cash_snapshot["employee_debt_cash_effect_usd"])
-        ).quantize(Decimal("0.0001"))
-        period_cash_in_usd = (
-            Decimal(cash_snapshot["sales_cash_in_usd"])
-            + max(Decimal("0"), -Decimal(cash_snapshot["employee_debt_cash_effect_usd"]))
-        ).quantize(Decimal("0.0001"))
-        period_cash_out_usd = (
-            Decimal(cash_snapshot["expenses_usd"])
-            + max(Decimal("0"), Decimal(cash_snapshot["employee_debt_cash_effect_usd"]))
-        ).quantize(Decimal("0.0001"))
+        period_cash_drawer_usd = period_dashboard_petty_cash_usd_in_range(
+            shop_id,
+            d_from,
+            d_to,
+        )
+        period_cash_in_usd = sales_net.quantize(Decimal("0.0001"))
+        period_cash_out_usd = (sales_net - period_cash_drawer_usd).quantize(Decimal("0.0001"))
         recv = total_receivables_usd(shop_id)
         pay = total_payables_usd(shop_id)
         stock = total_stock_value_usd(shop_id)

@@ -576,13 +576,12 @@ export function HomePage() {
   }, [chartTopSellingProducts])
   const financialBarData = useMemo(() => {
     if (!stats) return [] as Array<{ name: string; value: number; color: string }>
-    const salesGross =
-      parseFloat(stats.total_sales_gross_usd ?? stats.total_sales_usd) || 0
+    const sales = parseFloat(stats.total_sales_usd) || 0
     const expenses = parseFloat(stats.total_expenses_usd) || 0
     const pettyCash = parseFloat(stats.period_cash_drawer_usd ?? '0') || 0
     const discounts = parseFloat(stats.total_discounts_usd ?? '0') || 0
     return [
-      { name: t('dash.totalSold'), value: Math.max(salesGross, 0), color: '#10b981' },
+      { name: t('dash.totalSold'), value: Math.max(sales, 0), color: '#10b981' },
       { name: t('dash.cashVsExpenses'), value: pettyCash, color: '#6366f1' },
       { name: t('dash.totalExpenses'), value: Math.max(expenses, 0), color: '#f59e0b' },
       { name: t('dash.totalDiscounts'), value: Math.max(discounts, 0), color: '#f43f5e' },
@@ -614,12 +613,10 @@ export function HomePage() {
   }, [globalAdminStats])
   const returnsRatio = useMemo(() => {
     if (!stats) return { pct: 0, returned: 0, sales: 0 }
-    const salesGross =
-      parseFloat(stats.total_sales_gross_usd ?? stats.total_sales_usd) || 0
+    const sales = parseFloat(stats.total_sales_usd) || 0
     const returned = parseFloat(stats.total_returned_products_usd ?? '0') || 0
-    const pct =
-      salesGross > 0 ? Math.min(100, Math.round((returned / salesGross) * 100)) : 0
-    return { pct, returned, sales: salesGross }
+    const pct = sales > 0 ? Math.min(100, Math.round((returned / sales) * 100)) : 0
+    return { pct, returned, sales }
   }, [stats])
   /** Stock remaining + returns ratio, side by side (used above shops / compact rank). */
   const dashStockReturnsTwoColRow = useMemo(
@@ -1185,7 +1182,7 @@ export function HomePage() {
                   <StatCard
                     icon={<TrendingUp className="h-5 w-5" />}
                     label={t('dash.totalSold')}
-                    value={stats.total_sales_gross_usd ?? stats.total_sales_usd}
+                    value={stats.total_sales_usd}
                     tone="emerald"
                     currencyLabel={t('common.currencyUsd')}
                   />

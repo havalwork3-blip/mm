@@ -399,8 +399,24 @@ def total_sales_gross_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
 
 
 def total_sales_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
-    """Net sales after invoice discounts (matches cash collected when fully paid)."""
+    """Net invoiced sales (line totals minus invoice discount) — dashboard «total sold»."""
     return sales_invoiced_usd_range(shop_id, d_from, d_to)
+
+
+def period_dashboard_petty_cash_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
+    """
+    Dashboard «petty cash» (قاسەی بچووک):
+
+    total sold − expenses − customer credit in period − returns − discounts.
+    """
+    petty = (
+        sales_invoiced_usd_range(shop_id, d_from, d_to)
+        - total_expenses_usd_in_range(shop_id, d_from, d_to)
+        - total_receivables_usd_in_range(shop_id, d_from, d_to)
+        - total_returned_products_usd_in_range(shop_id, d_from, d_to)
+        - total_customer_discounts_usd_in_range(shop_id, d_from, d_to)
+    )
+    return petty.quantize(Decimal("0.0001"))
 
 
 def total_customer_discounts_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
