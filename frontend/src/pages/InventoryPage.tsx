@@ -218,12 +218,14 @@ export function InventoryPage() {
     try {
       const params = new URLSearchParams({ page_size: '200' })
       if (debouncedProductNameFilter) {
-        params.set('search', debouncedProductNameFilter)
+        params.set('name_q', debouncedProductNameFilter)
       }
       const all: ProductRow[] = []
       let nextPath: string | null = `/api/products/?${params.toString()}`
       while (nextPath) {
-        const data = await apiJson<Paginated<ProductRow> | ProductRow[]>(nextPath)
+        const data = await apiJson<Paginated<ProductRow> | ProductRow[]>(nextPath, {
+          shopScoped: true,
+        })
         if (Array.isArray(data)) {
           all.push(...data)
           nextPath = null
@@ -373,6 +375,15 @@ export function InventoryPage() {
   useEffect(() => {
     if (!me || !canAccessShopData) return
     void loadProducts()
+  }, [me, canAccessShopData, loadProducts])
+
+  useEffect(() => {
+    if (!me || !canAccessShopData) return
+    const onRefresh = () => {
+      void loadProducts()
+    }
+    window.addEventListener('mm-inventory-refresh', onRefresh)
+    return () => window.removeEventListener('mm-inventory-refresh', onRefresh)
   }, [me, canAccessShopData, loadProducts])
 
   async function handleLogin(e: React.FormEvent) {
@@ -943,17 +954,15 @@ export function InventoryPage() {
   }, [productNameFilter, products])
 
   const filteredProducts = useMemo(() => {
-    const q = productNameFilter.trim().toLowerCase()
     const lowStockMax = Number.parseInt(lowStockMaxInput.trim(), 10)
     const hasLowStockFilter = Number.isFinite(lowStockMax)
     return products.filter((p) => {
       if (!showDiscontinued && p.is_discontinued) return false
-      if (q && !p.name.toLowerCase().includes(q)) return false
       if (categoryFilterId && p.category !== Number(categoryFilterId)) return false
       if (hasLowStockFilter && p.current_stock_quantity > lowStockMax) return false
       return true
     })
-  }, [products, productNameFilter, categoryFilterId, lowStockMaxInput, showDiscontinued])
+  }, [products, categoryFilterId, lowStockMaxInput, showDiscontinued])
 
   const productCount = filteredProducts.length
 

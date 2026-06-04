@@ -145,6 +145,26 @@ class IsShopOwnerOrDjangoModelPermissionOrReceiptEditorCurrency(
         return IsShopOwnerOrDjangoModelPermission.has_permission(self, request, view)
 
 
+class IsShopOwnerOrCanEnsureProductByName(permissions.BasePermission):
+    """
+    POST /api/products/ensure-by-name/ — anyone who can sell at POS may register
+    a catalog row for a manual line name before checkout.
+    """
+
+    def has_permission(self, request, view) -> bool:
+        u = request.user
+        if not u.is_authenticated:
+            return False
+        if getattr(u, "is_superuser", False) or getattr(u, "role", None) == UserRole.OWNER:
+            return True
+        if getattr(u, "role", None) == UserRole.RECEIPT_EDITOR:
+            return True
+        return _has_any_perm(
+            u,
+            ("add_product", "add_sale", "change_sale", "view_sale"),
+        )
+
+
 class IsShopOwnerOrDjangoModelPermissionOrPosProductRead(IsShopOwnerOrDjangoModelPermission):
     """
     Product list/detail for POS: receipt editors and anyone who can work sales

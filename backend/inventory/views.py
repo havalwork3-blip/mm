@@ -63,6 +63,7 @@ from .models import (
     StorefrontProductGalleryImage,
 )
 from .permissions import (
+    IsShopOwnerOrCanEnsureProductByName,
     IsShopOwnerOrCanPaySupplierDebt,
     IsShopOwnerOrCanRecordSalePayment,
     IsShopOwnerOrDjangoModelPermission,
@@ -166,8 +167,41 @@ class ProductViewSet(ShopScopedViewSet):
         for key in ("exclude_discontinued", "for_sale"):
             v = p.get(key)
             if v in ("1", "true", "True", "yes", "on"):
-                return qs.filter(is_discontinued=False)
+                qs = qs.filter(is_discontinued=False)
+                break
+        name_q = (p.get("name_q") or "").strip()
+        if name_q:
+            qs = qs.filter(name__icontains=name_q)
         return qs
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="ensure-by-name",
+        permission_classes=[IsAuthenticated, IsShopOwnerOrCanEnsureProductByName],
+    )
+    def ensure_by_name(self, request):
+        """Create or return a catalog product for a POS manual line name."""
+        from inventory.manual_product import get_or_create_product_for_manual_name
+
+        name = str(request.data.get("name") or "").strip()
+        if not name:
+            raise ValidationError({"name": "Name is required."})
+        shop_id = require_shop_id(request)
+        raw_price = request.data.get("sale_price_retail")
+        unit_price = (
+            Decimal(str(raw_price))
+            if raw_price is not None and str(raw_price).strip() != ""
+            else Decimal("0")
+        )
+        product = get_or_create_product_for_manual_name(
+            shop_id=shop_id,
+            manual_name=name,
+            unit_price_usd=unit_price,
+            unit_cost_usd=Decimal("0"),
+        )
+        serializer = ProductSerializer(product, context=self.get_serializer_context())
+        return Response(serializer.data)
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()

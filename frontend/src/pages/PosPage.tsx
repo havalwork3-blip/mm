@@ -513,6 +513,7 @@ export function PosPage() {
         const endpoint = `/api/products/?${q}`
         const data = await apiJson<Paginated<ProductRow> | ProductRow[]>(
           endpoint,
+          { shopScoped: true },
         )
         const list = Array.isArray(data) ? data : data.results
         if (!cancelled) {
@@ -633,27 +634,50 @@ export function PosPage() {
     }, 0)
   }
 
-  function addManualLine(name: string) {
+  async function addManualLine(name: string) {
     const trimmed = name.trim()
     if (!trimmed) return
-    const manualId = manualLineSeedRef.current
-    manualLineSeedRef.current -= 1
     const lineId = allocLineId()
-    setCart((prev) => [
-      ...prev,
-      {
-        lineId,
-        product: {
-          id: manualId,
-          name: trimmed,
-          image_url: null,
-          current_stock_quantity: 0,
-          manual_entry: true,
+    try {
+      const p = await apiJson<ProductRow>('/api/products/ensure-by-name/', {
+        method: 'POST',
+        body: JSON.stringify({ name: trimmed }),
+        shopScoped: true,
+      })
+      setCart((prev) => [
+        ...prev,
+        {
+          lineId,
+          product: {
+            id: p.id,
+            name: p.name,
+            image_url: p.image_url,
+            current_stock_quantity: p.current_stock_quantity,
+          },
+          quantity: 1,
+          unitPriceUsd: '',
         },
-        quantity: 1,
-        unitPriceUsd: '',
-      },
-    ])
+      ])
+      window.dispatchEvent(new Event('mm-inventory-refresh'))
+    } catch {
+      const manualId = manualLineSeedRef.current
+      manualLineSeedRef.current -= 1
+      setCart((prev) => [
+        ...prev,
+        {
+          lineId,
+          product: {
+            id: manualId,
+            name: trimmed,
+            image_url: null,
+            current_stock_quantity: 0,
+            manual_entry: true,
+          },
+          quantity: 1,
+          unitPriceUsd: '',
+        },
+      ])
+    }
     setSearchOpen(false)
     setProductQuery('')
     window.setTimeout(() => {
@@ -1161,6 +1185,7 @@ export function PosPage() {
         loadedEditKeyRef.current = ''
       }
       setSaleSuccessOpen(true)
+      window.dispatchEvent(new Event('mm-inventory-refresh'))
       if (activeDraftId) {
         removeDraftById(activeDraftId)
       }
@@ -1731,7 +1756,7 @@ export function PosPage() {
                   if (exactHit) {
                     addProduct(exactHit)
                   } else {
-                    addManualLine(query)
+                    void addManualLine(query)
                   }
                   return
                 }
@@ -1762,7 +1787,7 @@ export function PosPage() {
                     <button
                       type="button"
                       ref={setProductSearchHitRef(MANUAL_SEARCH_OPTION_ID)}
-                      onClick={() => addManualLine(productQuery)}
+                      onClick={() => void addManualLine(productQuery)}
                       onKeyDown={(e) => {
                         if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
                           e.preventDefault()
