@@ -1650,9 +1650,10 @@ function SoldProductsSharePanel({
     )
   }
   return (
-    <div className="flex flex-col gap-5 sm:flex-row-reverse sm:items-start sm:gap-6">
-      <div className="mx-auto w-full shrink-0 sm:mx-0 sm:w-[min(100%,200px)] sm:max-w-[200px]">
-        <div className="relative h-52 w-full sm:h-56" dir="ltr">
+    <div className="flex min-h-0 flex-col gap-3 sm:flex-row-reverse sm:items-start sm:gap-6">
+      {/* Chart: top on mobile (fixed); beside list on sm+ */}
+      <div className="mx-auto w-full max-w-[11rem] shrink-0 sm:mx-0 sm:w-[min(100%,200px)] sm:max-w-[200px]">
+        <div className="relative h-36 w-full sm:h-56" dir="ltr">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Tooltip
@@ -1682,32 +1683,33 @@ function SoldProductsSharePanel({
             </PieChart>
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
-            <span className="max-w-[7rem] text-[10px] leading-snug text-slate-500 dark:text-slate-400">
+            <span className="max-w-[6.5rem] text-[9px] leading-snug text-slate-500 sm:max-w-[7rem] sm:text-[10px] dark:text-slate-400">
               {totalUnitsLabel}
             </span>
-            <span className="mt-0.5 text-xl font-bold tabular-nums tracking-tight text-slate-900 dark:text-slate-100">
+            <span className="mt-0.5 text-base font-bold tabular-nums tracking-tight text-slate-900 sm:text-xl dark:text-slate-100">
               {formatSoldQtyNumber(totalUnits)}
             </span>
           </div>
         </div>
       </div>
-      <div className="min-h-0 min-w-0 max-h-64 flex-1 basis-0 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] sm:max-h-56">
-        <ul className="space-y-2.5 pe-0.5" dir="rtl">
+      {/* List: scrolls alone; chart stays visible above on mobile */}
+      <div className="min-h-0 min-w-0 w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] max-h-[min(50vh,16.5rem)] sm:max-h-56 sm:basis-0">
+        <ul className="space-y-1.5 pe-0.5 sm:space-y-2.5" dir="rtl">
           {products.map((item) => {
             const qty = Number(item.total_qty) || 0
             return (
               <li
                 key={item.product_name}
-                className="rounded-xl border border-slate-100/90 bg-slate-50/50 px-3 py-3 transition hover:border-violet-200/80 hover:bg-violet-50/40 dark:border-slate-700/60 dark:bg-slate-900/30 dark:hover:border-violet-500/30 dark:hover:bg-violet-950/25"
+                className="rounded-lg border border-slate-100/90 bg-slate-50/50 px-2.5 py-2 transition hover:border-violet-200/80 hover:bg-violet-50/40 sm:rounded-xl sm:px-3 sm:py-3 dark:border-slate-700/60 dark:bg-slate-900/30 dark:hover:border-violet-500/30 dark:hover:bg-violet-950/25"
               >
-                <div className="flex flex-col items-center gap-3 text-center">
-                  <span className="text-xl font-bold leading-none tabular-nums text-violet-700 dark:text-violet-200">
+                <div className="flex items-start gap-2.5 sm:flex-col sm:items-center sm:gap-3 sm:text-center">
+                  <span className="w-9 shrink-0 text-end text-sm font-bold leading-none tabular-nums text-violet-700 sm:w-auto sm:text-xl dark:text-violet-200">
                     {formatSoldQtyNumber(qty)}
                   </span>
                   <p
                     dir="ltr"
                     lang="en"
-                    className="w-full break-words text-center text-xs font-medium leading-relaxed text-slate-700 line-clamp-3 [unicode-bidi:isolate] dark:text-slate-200 sm:text-sm"
+                    className="min-w-0 flex-1 break-words text-[11px] font-medium leading-snug text-slate-700 line-clamp-2 [unicode-bidi:isolate] sm:w-full sm:text-center sm:text-xs sm:leading-relaxed sm:line-clamp-3 dark:text-slate-200"
                     title={item.product_name}
                   >
                     {item.product_name}
