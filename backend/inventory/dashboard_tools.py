@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 from django.db import transaction
 from django.db.models import Case, DecimalField, F, Sum, Value, When
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from .models import (
@@ -480,30 +481,39 @@ def total_returned_products_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
     return Decimal(str(amount)).quantize(Decimal("0.0001"))
 
 
-def top_selling_products_in_range(shop_id: int, d_from, d_to, limit: int = 7) -> list[dict]:
+def top_selling_products_in_range(
+    shop_id: int,
+    d_from,
+    d_to,
+    limit: int | None = None,
+) -> list[dict]:
     """
-    Top selling products by total sold quantity in the selected range.
+    Sold products by total quantity in the selected range (newest / highest qty first).
 
-    Includes manual lines by falling back to their manual_name when product is null.
+    Rows are grouped by display name (catalog name or manual POS name). When limit is
+    None, every distinct sold product in the range is returned.
     """
     start, end = _bounds(d_from, d_to)
     dec = DecimalField(max_digits=24, decimal_places=4)
-    rows = (
+    qs = (
         SaleLine.objects.filter(
             sale__shop_id=shop_id,
             sale__occurred_at__gte=start,
             sale__occurred_at__lte=end,
         )
-        .values("product_id", "product__name", "manual_name")
+        .annotate(display_name=Coalesce("product__name", "manual_name"))
+        .values("display_name")
         .annotate(
             total_qty=Sum("quantity"),
             total_sales_usd=Sum(F("quantity") * F("unit_price_usd"), output_field=dec),
         )
-        .order_by("-total_qty", "-total_sales_usd")[: max(1, int(limit))]
+        .order_by("-total_qty", "-total_sales_usd")
     )
+    if limit is not None:
+        qs = qs[: max(1, int(limit))]
     out: list[dict] = []
-    for row in rows:
-        name = (row.get("product__name") or row.get("manual_name") or "").strip()
+    for row in qs:
+        name = (row.get("display_name") or "").strip()
         if not name:
             continue
         total_qty = int(row.get("total_qty") or 0)
@@ -512,7 +522,6 @@ def top_selling_products_in_range(shop_id: int, d_from, d_to, limit: int = 7) ->
         )
         out.append(
             {
-                "product_id": row.get("product_id"),
                 "product_name": name,
                 "total_qty": total_qty,
                 "total_sales_usd": format(total_sales_usd, "f"),

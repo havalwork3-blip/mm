@@ -76,6 +76,9 @@ const PRODUCT_DONUT_COLORS = [
   '#ec4899',
 ]
 
+/** Max slices on the donut; remaining products roll into "Other". */
+const SOLD_PRODUCTS_DONUT_SLICE_MAX = 8
+
 function formatCompactNumber(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '0'
   const n = Number(String(value).replace(/,/g, '').trim())
@@ -558,22 +561,32 @@ export function HomePage() {
       sales: parseFloat(item.total_sales_usd),
     }))
   }, [filteredTopSellingProducts])
-  const productDonutData = useMemo(() => {
-    const source = chartTopSellingProducts.slice(0, 6)
-    const rows = source
-      .map((item, idx) => {
-        const sales = parseFloat(item.total_sales_usd)
-        const value = Number.isFinite(sales) && sales > 0 ? sales : Number(item.total_qty) || 0
-        return {
-          name: item.product_name,
-          value,
-          color: PRODUCT_DONUT_COLORS[idx % PRODUCT_DONUT_COLORS.length],
-        }
+  const soldProductsShare = useMemo(() => {
+    const products = chartTopSellingProducts.filter((p) => Number(p.total_qty) > 0)
+    const totalUnits = products.reduce((sum, p) => sum + Number(p.total_qty), 0)
+    if (totalUnits <= 0) {
+      return { products: [] as TopSellingProductRow[], donutRows: [], totalUnits: 0 }
+    }
+    const top = products.slice(0, SOLD_PRODUCTS_DONUT_SLICE_MAX)
+    const rest = products.slice(SOLD_PRODUCTS_DONUT_SLICE_MAX)
+    const restQty = rest.reduce((sum, p) => sum + Number(p.total_qty), 0)
+    const donutRows = top.map((item, idx) => ({
+      name: item.product_name,
+      value: Number(item.total_qty) || 0,
+      color: PRODUCT_DONUT_COLORS[idx % PRODUCT_DONUT_COLORS.length],
+    }))
+    if (restQty > 0) {
+      donutRows.push({
+        name: t('dash.otherProducts'),
+        value: restQty,
+        color:
+          PRODUCT_DONUT_COLORS[
+            SOLD_PRODUCTS_DONUT_SLICE_MAX % PRODUCT_DONUT_COLORS.length
+          ],
       })
-      .filter((r) => r.value > 0)
-    const total = rows.reduce((acc, r) => acc + r.value, 0)
-    return { rows, total }
-  }, [chartTopSellingProducts])
+    }
+    return { products, donutRows, totalUnits }
+  }, [chartTopSellingProducts, t])
   const financialBarData = useMemo(() => {
     if (!stats) return [] as Array<{ name: string; value: number; color: string }>
     const sales = parseFloat(stats.total_sales_usd) || 0
@@ -1281,11 +1294,15 @@ export function HomePage() {
                     {t('dash.topProductsSalesShare')}
                   </h2>
                 </div>
-                <DonutPanel
-                  data={productDonutData.rows}
-                  total={productDonutData.total}
-                  currencyLabel={t('common.currencyUsd')}
+                <SoldProductsSharePanel
+                  products={soldProductsShare.products}
+                  donutData={soldProductsShare.donutRows}
+                  totalUnits={soldProductsShare.totalUnits}
                   emptyLabel={t('dash.topSellingEmpty')}
+                  totalUnitsLabel={t('dash.totalUnitsSold')}
+                  formatSoldUnits={(qty) =>
+                    t('dash.soldUnitsLine').replace('{qty}', formatCompactNumber(qty))
+                  }
                 />
               </section>
               <section className="relative overflow-hidden rounded-2xl border border-cyan-200/70 bg-gradient-to-br from-white via-cyan-50/50 to-teal-50/30 p-5 shadow-sm ring-1 ring-cyan-100/80 dark:border-cyan-500/25 dark:from-slate-800 dark:via-cyan-950/30 dark:to-slate-800 dark:ring-cyan-500/15">
@@ -1356,13 +1373,13 @@ export function HomePage() {
                     </h2>
                   </div>
                   <CompactTopSellersPanel
-                    rows={productDonutData.rows.slice(0, 6).map((r) => ({
-                      name: r.name,
-                      value: r.value,
-                      color: r.color,
+                    rows={soldProductsShare.products.slice(0, 6).map((item, idx) => ({
+                      name: item.product_name,
+                      value: Number(item.total_qty) || 0,
+                      color: PRODUCT_DONUT_COLORS[idx % PRODUCT_DONUT_COLORS.length],
                     }))}
                     emptyLabel={t('dash.topSellingEmpty')}
-                    currencyLabel={t('common.currencyUsd')}
+                    currencyLabel={t('dash.unitsSold')}
                   />
                 </section>
               )}
@@ -1606,6 +1623,94 @@ function StatCard({
       ) : (
         <span className="text-xs text-slate-600 dark:text-slate-400">&nbsp;</span>
       )}
+    </div>
+  )
+}
+
+function SoldProductsSharePanel({
+  products,
+  donutData,
+  totalUnits,
+  emptyLabel,
+  totalUnitsLabel,
+  formatSoldUnits,
+}: {
+  products: TopSellingProductRow[]
+  donutData: Array<{ name: string; value: number; color: string }>
+  totalUnits: number
+  emptyLabel: string
+  totalUnitsLabel: string
+  formatSoldUnits: (qty: number) => string
+}) {
+  if (products.length === 0 || totalUnits <= 0) {
+    return (
+      <div className="flex h-56 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
+        {emptyLabel}
+      </div>
+    )
+  }
+  return (
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+      <div className="mx-auto w-full shrink-0 sm:mx-0 sm:w-[min(100%,220px)] sm:max-w-[220px]">
+        <div className="relative h-56 w-full" dir="ltr">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Tooltip
+                contentStyle={{
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.12)',
+                  fontSize: '12px',
+                }}
+                formatter={(v) =>
+                  typeof v === 'number' ? formatCompactNumber(v) : String(v ?? '')
+                }
+              />
+              <Pie
+                data={donutData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius="62%"
+                outerRadius="92%"
+                paddingAngle={2}
+                stroke="none"
+              >
+                {donutData.map((entry, idx) => (
+                  <Cell key={`sold-donut-${idx}`} fill={entry.color} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
+            <span className="text-[10px] leading-tight text-slate-500 dark:text-slate-400">
+              {totalUnitsLabel}
+            </span>
+            <span className="text-lg font-bold tabular-nums text-slate-900 dark:text-slate-100">
+              {formatCompactNumber(totalUnits)}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="min-h-0 max-h-56 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+        <ul className="space-y-2 pe-1">
+          {products.map((item) => (
+            <li
+              key={item.product_name}
+              className="flex items-start justify-between gap-3 rounded-lg px-2 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-700/30"
+            >
+              <span
+                className="min-w-0 flex-1 text-start font-medium text-slate-800 dark:text-slate-100"
+                title={item.product_name}
+              >
+                {item.product_name}
+              </span>
+              <span className="shrink-0 text-end tabular-nums text-slate-600 dark:text-slate-300">
+                {formatSoldUnits(Number(item.total_qty) || 0)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   )
 }
