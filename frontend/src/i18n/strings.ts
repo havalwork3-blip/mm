@@ -3412,7 +3412,7 @@ const ku: Record<string, string> = {
   'dash.topProductsSalesShare': 'ڕێژەی فرۆشتن بەپێی بەرهەم',
   'dash.topSellingRankBrief': 'ریزبەندی پرفرۆشترین (پوختە)',
   'dash.unitsSold': 'یەکەی فرۆشتراو',
-  'dash.soldUnitsLine': '{qty} دانە فرۆشراو',
+  'dash.soldUnitsLine': '{qty}',
   'dash.totalUnitsSold': 'کۆی دانە فرۆشراوەکان',
   'dash.otherProducts': 'ئەوانی تر',
   'dash.topSellingEmpty': 'لەو ماوەیەدا هیچ بەرهەمێک نەفرۆشراوە.',
