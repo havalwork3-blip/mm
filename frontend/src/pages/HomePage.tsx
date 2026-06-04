@@ -1300,7 +1300,6 @@ export function HomePage() {
                   totalUnits={soldProductsShare.totalUnits}
                   emptyLabel={t('dash.topSellingEmpty')}
                   totalUnitsLabel={t('dash.totalUnitsSold')}
-                  soldUnitsSuffix={t('dash.soldUnitsSuffix')}
                 />
               </section>
               <section className="relative overflow-hidden rounded-2xl border border-cyan-200/70 bg-gradient-to-br from-white via-cyan-50/50 to-teal-50/30 p-5 shadow-sm ring-1 ring-cyan-100/80 dark:border-cyan-500/25 dark:from-slate-800 dark:via-cyan-950/30 dark:to-slate-800 dark:ring-cyan-500/15">
@@ -1636,14 +1635,12 @@ function SoldProductsSharePanel({
   totalUnits,
   emptyLabel,
   totalUnitsLabel,
-  soldUnitsSuffix,
 }: {
   products: TopSellingProductRow[]
   donutData: Array<{ name: string; value: number; color: string }>
   totalUnits: number
   emptyLabel: string
   totalUnitsLabel: string
-  soldUnitsSuffix: string
 }) {
   if (products.length === 0 || totalUnits <= 0) {
     return (
@@ -1694,34 +1691,28 @@ function SoldProductsSharePanel({
           </div>
         </div>
       </div>
-      <div className="min-h-0 min-w-0 max-h-64 flex-1 basis-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] sm:max-h-56">
-        <ul className="space-y-1.5 pe-0.5" dir="rtl">
+      <div className="min-h-0 min-w-0 max-h-64 flex-1 basis-0 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] sm:max-h-56">
+        <ul className="space-y-2.5 pe-0.5" dir="rtl">
           {products.map((item) => {
             const qty = Number(item.total_qty) || 0
             return (
               <li
                 key={item.product_name}
-                className="grid grid-cols-[minmax(5.5rem,6.25rem)_minmax(0,1fr)] items-center gap-x-3 rounded-xl border border-slate-100/90 bg-slate-50/50 px-2.5 py-2 transition hover:border-violet-200/80 hover:bg-violet-50/40 dark:border-slate-700/60 dark:bg-slate-900/30 dark:hover:border-violet-500/30 dark:hover:bg-violet-950/25"
+                className="rounded-xl border border-slate-100/90 bg-slate-50/50 px-3 py-3 transition hover:border-violet-200/80 hover:bg-violet-50/40 dark:border-slate-700/60 dark:bg-slate-900/30 dark:hover:border-violet-500/30 dark:hover:bg-violet-950/25"
               >
-                <div
-                  className="flex flex-col items-center justify-center rounded-lg border border-violet-100/90 bg-white px-1.5 py-1.5 text-center shadow-sm dark:border-violet-500/25 dark:bg-violet-950/40"
-                  dir="rtl"
-                >
-                  <span className="text-base font-bold leading-none tabular-nums text-violet-700 dark:text-violet-200">
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <span className="text-xl font-bold leading-none tabular-nums text-violet-700 dark:text-violet-200">
                     {formatSoldQtyNumber(qty)}
                   </span>
-                  <span className="mt-1 max-w-[5.5rem] text-[10px] font-medium leading-tight text-violet-600/90 dark:text-violet-300/85">
-                    {soldUnitsSuffix}
-                  </span>
+                  <p
+                    dir="ltr"
+                    lang="en"
+                    className="w-full break-words text-center text-xs font-medium leading-relaxed text-slate-700 line-clamp-3 [unicode-bidi:isolate] dark:text-slate-200 sm:text-sm"
+                    title={item.product_name}
+                  >
+                    {item.product_name}
+                  </p>
                 </div>
-                <p
-                  dir="ltr"
-                  lang="en"
-                  className="min-w-0 truncate text-sm font-medium leading-snug text-slate-800 [unicode-bidi:isolate] dark:text-slate-100"
-                  title={item.product_name}
-                >
-                  {item.product_name}
-                </p>
               </li>
             )
           })}
