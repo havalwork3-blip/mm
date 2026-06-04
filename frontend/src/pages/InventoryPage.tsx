@@ -223,9 +223,10 @@ export function InventoryPage() {
       const all: ProductRow[] = []
       let nextPath: string | null = `/api/products/?${params.toString()}`
       while (nextPath) {
-        const data = await apiJson<Paginated<ProductRow> | ProductRow[]>(nextPath, {
-          shopScoped: true,
-        })
+        const data: Paginated<ProductRow> | ProductRow[] =
+          await apiJson<Paginated<ProductRow> | ProductRow[]>(nextPath, {
+            shopScoped: true,
+          })
         if (Array.isArray(data)) {
           all.push(...data)
           nextPath = null
