@@ -19,6 +19,7 @@ from .models import (
     Category,
     Company,
     Customer,
+    CustomerDebtPayment,
     EmployeeDebt,
     Expense,
     ExpenseCurrency,
@@ -1518,6 +1519,8 @@ class SaleSerializer(serializers.ModelSerializer):
         return c.address or ""
 
     def get_previous_debt_usd(self, obj: Sale) -> str:
+        from .dashboard_tools import sale_unpaid_balance_usd
+
         c = obj.customer
         if not c:
             return format(Decimal("0"), "f")
@@ -1528,21 +1531,9 @@ class SaleSerializer(serializers.ModelSerializer):
             .prefetch_related("lines__return_lines")
         )
         for sale in qs:
-            line_sum = Decimal("0")
-            for ln in sale.lines.all():
-                returned_qty = sum(int(row.quantity) for row in ln.return_lines.all())
-                net_qty = max(0, int(ln.quantity) - returned_qty)
-                line_sum += Decimal(net_qty) * Decimal(ln.unit_price_usd)
-            final_usd = line_sum - Decimal(sale.invoice_discount_usd)
-            if final_usd < 0:
-                final_usd = Decimal("0")
-            rate = Decimal(sale.exchange_rate_usd_to_iqd)
-            if rate <= 0:
-                continue
-            paid = Decimal(sale.amount_paid_usd) + (Decimal(sale.amount_paid_iqd) / rate)
-            bal = final_usd - paid
+            bal = sale_unpaid_balance_usd(sale)
             if bal > 0:
-                total += bal.quantize(Decimal("0.0001"))
+                total += bal
         return format(total.quantize(Decimal("0.0001")), "f")
 
     def get_has_returns(self, obj: Sale) -> bool:
@@ -1771,6 +1762,61 @@ class ShareholderSerializer(serializers.ModelSerializer):
         model = Shareholder
         fields = ["id", "shop", "name", "share_percentage", "capital_contribution_usd"]
         read_only_fields = ["id", "shop"]
+
+
+class CustomerDebtPaymentSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+    amount_usd_eq = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = CustomerDebtPayment
+        fields = [
+            "id",
+            "shop",
+            "customer",
+            "customer_name",
+            "amount_paid_usd",
+            "amount_paid_iqd",
+            "exchange_rate_usd_to_iqd",
+            "amount_usd_eq",
+            "occurred_at",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "shop",
+            "customer",
+            "customer_name",
+            "exchange_rate_usd_to_iqd",
+            "amount_usd_eq",
+            "created_at",
+        ]
+
+    def get_amount_usd_eq(self, obj: CustomerDebtPayment) -> str:
+        from .dashboard_tools import customer_debt_payment_usd_eq
+
+        return format(customer_debt_payment_usd_eq(obj), "f")
+
+    def validate(self, attrs):
+        for key in ("amount_paid_usd", "amount_paid_iqd"):
+            if key in attrs and attrs[key] < 0:
+                raise serializers.ValidationError({key: "Payment amount cannot be negative."})
+        return attrs
+
+    def update(self, instance, validated_data):
+        from .dashboard_tools import update_customer_debt_payment
+
+        shop_id = int(instance.shop_id)
+        try:
+            return update_customer_debt_payment(
+                shop_id,
+                instance.pk,
+                occurred_at=validated_data.get("occurred_at"),
+                amount_paid_usd=validated_data.get("amount_paid_usd"),
+                amount_paid_iqd=validated_data.get("amount_paid_iqd"),
+            )
+        except ValueError:
+            raise serializers.ValidationError({"detail": "Payment not found."})
 
 
 class ShareholderPaymentSerializer(serializers.ModelSerializer):

@@ -517,6 +517,8 @@ export function CashierPage() {
         return { to: '/debts', label: t('cashier.ledgerColAction') }
       case 'sale_payment':
         return { to: '/sales', label: t('cashier.ledgerColAction') }
+      case 'customer_debt_payment':
+        return { to: '/customer-debts', label: t('cashier.ledgerColAction') }
       case 'sale_return':
         return { to: '/sales-returns', label: t('cashier.ledgerColAction') }
       case 'purchase_payment':

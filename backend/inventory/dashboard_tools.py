@@ -16,6 +16,8 @@ from .models import (
     Company,
     CustomerDebtDiscountWriteoff,
     CustomerDebtDiscountWriteoffSale,
+    CustomerDebtPayment,
+    CustomerDebtPaymentSale,
     EmployeeDebt,
     EmployeeDebtType,
     Expense,
@@ -113,6 +115,18 @@ def _sale_final_usd(sale: Sale) -> Decimal:
     return final.quantize(Decimal("0.0001"))
 
 
+def _sale_debt_payments_allocated_usd(sale: Sale) -> Decimal:
+    """USD equivalent applied toward this sale via customer-debts repayments."""
+    dec = DecimalField(max_digits=24, decimal_places=4)
+    total = (
+        CustomerDebtPaymentSale.objects.filter(sale_id=sale.pk).aggregate(
+            s=Sum("amount_usd", output_field=dec),
+        )["s"]
+        or Decimal("0")
+    )
+    return Decimal(str(total)).quantize(Decimal("0.0001"))
+
+
 def sale_unpaid_balance_usd(sale: Sale) -> Decimal:
     """Positive unpaid amount for one sale (0 if none)."""
     final_usd = _sale_final_usd(sale)
@@ -120,6 +134,7 @@ def sale_unpaid_balance_usd(sale: Sale) -> Decimal:
     rate = Decimal(sale.exchange_rate_usd_to_iqd)
     if rate > 0:
         paid += Decimal(sale.amount_paid_iqd) / rate
+    paid += _sale_debt_payments_allocated_usd(sale)
     bal = final_usd - paid
     if bal <= 0:
         return Decimal("0")
@@ -143,52 +158,154 @@ def customer_outstanding_balance_usd(shop_id: int, customer_id: int) -> Decimal:
     return total.quantize(Decimal("0.0001"))
 
 
-def apply_customer_debt_payment_fifo(
+def customer_debt_payment_usd_eq(payment: CustomerDebtPayment) -> Decimal:
+    paid = Decimal(payment.amount_paid_usd)
+    rate = Decimal(payment.exchange_rate_usd_to_iqd)
+    if rate > 0:
+        paid += Decimal(payment.amount_paid_iqd) / rate
+    return paid.quantize(Decimal("0.0001"))
+
+
+def _allocate_customer_debt_payment_fifo(
     shop_id: int,
     customer_id: int,
     payment_usd_eq: Decimal,
-) -> tuple[Decimal, Decimal]:
+) -> tuple[Decimal, list[tuple[int, Decimal]]]:
     """
-    Apply USD-equivalent payment to oldest unpaid sales first (increments amount_paid_usd).
+    Plan FIFO allocation of a debt payment across unpaid sales.
 
-    Returns (applied_usd_eq, overpaid_usd_eq) where overpaid is the portion with no debt left.
+    Returns (applied_usd_eq, list of (sale_id, chunk_usd)).
     """
     payment_usd_eq = payment_usd_eq.quantize(Decimal("0.0001"))
     if payment_usd_eq <= 0:
-        return Decimal("0"), Decimal("0")
+        return Decimal("0"), []
 
     outstanding = customer_outstanding_balance_usd(shop_id, customer_id)
     to_apply = min(payment_usd_eq, outstanding)
     if to_apply <= 0:
-        return Decimal("0"), payment_usd_eq
+        return Decimal("0"), []
 
     remaining = to_apply
     applied = Decimal("0")
+    allocations: list[tuple[int, Decimal]] = []
+    ordered_unpaid: list[tuple[int, Decimal]] = []
+    qs = (
+        Sale.objects.filter(shop_id=shop_id, customer_id=customer_id)
+        .order_by("occurred_at", "id")
+        .prefetch_related("lines__return_lines")
+    )
+    for sale in qs:
+        unpaid = sale_unpaid_balance_usd(sale)
+        if unpaid > Decimal("0.00005"):
+            ordered_unpaid.append((sale.pk, unpaid))
+    for sale_id, unpaid in ordered_unpaid:
+        if remaining <= Decimal("0.00005"):
+            break
+        chunk = min(remaining, unpaid)
+        allocations.append((sale_id, chunk))
+        applied += chunk
+        remaining -= chunk
 
+    return applied.quantize(Decimal("0.0001")), allocations
+
+
+def apply_customer_debt_payment_fifo(
+    shop_id: int,
+    customer_id: int,
+    amount_paid_usd: Decimal,
+    amount_paid_iqd: Decimal,
+    exchange_rate: Decimal,
+) -> tuple[Decimal, Decimal, int | None]:
+    """
+    Record a customer debt repayment on today's date and apply FIFO to unpaid sales.
+
+    Does not modify the original sale checkout payments — keeps credit history intact.
+
+    Returns (applied_usd_eq, overpaid_usd_eq, payment_id).
+    """
+    amount_paid_usd = amount_paid_usd.quantize(Decimal("0.0001"))
+    amount_paid_iqd = amount_paid_iqd.quantize(Decimal("0.0001"))
+    exchange_rate = exchange_rate.quantize(Decimal("0.0001"))
+    payment_usd_eq = customer_debt_payment_usd_eq(
+        CustomerDebtPayment(
+            amount_paid_usd=amount_paid_usd,
+            amount_paid_iqd=amount_paid_iqd,
+            exchange_rate_usd_to_iqd=exchange_rate,
+        ),
+    )
+    if payment_usd_eq <= 0:
+        return Decimal("0"), Decimal("0"), None
+
+    applied, allocations = _allocate_customer_debt_payment_fifo(
+        shop_id,
+        customer_id,
+        payment_usd_eq,
+    )
+    if applied <= 0:
+        return Decimal("0"), payment_usd_eq, None
+
+    now = timezone.now()
     with transaction.atomic():
-        while remaining > Decimal("0.00005"):
-            sale = None
-            qs = (
-                Sale.objects.filter(shop_id=shop_id, customer_id=customer_id)
-                .order_by("occurred_at", "id")
-                .prefetch_related("lines__return_lines")
+        payment = CustomerDebtPayment.objects.create(
+            shop_id=shop_id,
+            customer_id=customer_id,
+            amount_paid_usd=amount_paid_usd,
+            amount_paid_iqd=amount_paid_iqd,
+            exchange_rate_usd_to_iqd=exchange_rate,
+            occurred_at=now,
+        )
+        for sale_id, chunk in allocations:
+            CustomerDebtPaymentSale.objects.create(
+                payment=payment,
+                sale_id=sale_id,
+                amount_usd=chunk,
             )
-            for s in qs:
-                if sale_unpaid_balance_usd(s) > Decimal("0.00005"):
-                    sale = s
-                    break
-            if sale is None:
-                break
-            unpaid = sale_unpaid_balance_usd(sale)
-            chunk = min(remaining, unpaid)
-            Sale.objects.filter(pk=sale.pk).update(
-                amount_paid_usd=F("amount_paid_usd") + chunk,
-            )
-            applied += chunk
-            remaining -= chunk
 
     overpaid = payment_usd_eq - applied
-    return applied.quantize(Decimal("0.0001")), overpaid.quantize(Decimal("0.0001"))
+    return applied, overpaid.quantize(Decimal("0.0001")), payment.id
+
+
+def update_customer_debt_payment(
+    shop_id: int,
+    payment_id: int,
+    *,
+    occurred_at: datetime | None = None,
+    amount_paid_usd: Decimal | None = None,
+    amount_paid_iqd: Decimal | None = None,
+) -> CustomerDebtPayment:
+    """Update a debt payment and re-allocate FIFO from scratch."""
+    with transaction.atomic():
+        payment = (
+            CustomerDebtPayment.objects.select_for_update()
+            .filter(pk=payment_id, shop_id=shop_id)
+            .first()
+        )
+        if payment is None:
+            raise ValueError("payment_not_found")
+
+        CustomerDebtPaymentSale.objects.filter(payment=payment).delete()
+
+        if occurred_at is not None:
+            payment.occurred_at = occurred_at
+        if amount_paid_usd is not None:
+            payment.amount_paid_usd = amount_paid_usd.quantize(Decimal("0.0001"))
+        if amount_paid_iqd is not None:
+            payment.amount_paid_iqd = amount_paid_iqd.quantize(Decimal("0.0001"))
+        payment.save()
+
+        paid_eq = customer_debt_payment_usd_eq(payment)
+        _, allocations = _allocate_customer_debt_payment_fifo(
+            shop_id,
+            int(payment.customer_id),
+            paid_eq,
+        )
+        for sale_id, chunk in allocations:
+            CustomerDebtPaymentSale.objects.create(
+                payment=payment,
+                sale_id=sale_id,
+                amount_usd=chunk,
+            )
+    return payment
 
 
 def apply_customer_debt_remainder_as_discount(
@@ -433,10 +550,23 @@ def _sale_paid_usd_equiv(sale: Sale) -> Decimal:
     return paid.quantize(Decimal("0.0001"))
 
 
+def customer_debt_payments_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
+    """Cash collected from customer debt repayments in the date range (USD equivalent)."""
+    start, end = _bounds(d_from, d_to)
+    total = Decimal("0")
+    for payment in CustomerDebtPayment.objects.filter(
+        shop_id=shop_id,
+        occurred_at__gte=start,
+        occurred_at__lte=end,
+    ):
+        total += customer_debt_payment_usd_eq(payment)
+    return total.quantize(Decimal("0.0001"))
+
+
 def sales_cash_in_usd_range(shop_id: int, d_from, d_to) -> Decimal:
     """
-    Net cash effect from sales in the date range: payments collected on sales
-    (USD equivalent) minus cash refunded for sale returns recorded in the same range.
+    Net cash effect from sales in the date range: checkout payments on sales
+    plus debt repayments collected in the range, minus sale-return refunds.
 
     Returns reduce drawer cash and must lower period drawer movement vs expenses.
     """
@@ -448,6 +578,7 @@ def sales_cash_in_usd_range(shop_id: int, d_from, d_to) -> Decimal:
         occurred_at__lte=end,
     ):
         total += _sale_paid_usd_equiv(sale)
+    total += customer_debt_payments_usd_in_range(shop_id, d_from, d_to)
     refunds = total_returned_products_usd_in_range(shop_id, d_from, d_to)
     return (total - refunds).quantize(Decimal("0.0001"))
 
@@ -754,6 +885,30 @@ def cashier_ledger_entries(shop_id: int, d_from, d_to) -> list[dict]:
                 "amount_usd": format(paid, "f"),
                 "direction": "in",
                 "label": cust_label or "Sale",
+            },
+        )
+
+    for payment in (
+        CustomerDebtPayment.objects.filter(
+            shop_id=shop_id,
+            occurred_at__gte=start,
+            occurred_at__lte=end,
+        )
+        .select_related("customer")
+        .order_by("-occurred_at", "-id")
+    ):
+        paid = customer_debt_payment_usd_eq(payment)
+        if paid <= 0:
+            continue
+        rows.append(
+            {
+                "kind": "customer_debt_payment",
+                "id": payment.id,
+                "occurred_on": payment.occurred_at.date().isoformat(),
+                "occurred_at": payment.occurred_at.isoformat(),
+                "amount_usd": format(paid, "f"),
+                "direction": "in",
+                "label": payment.customer.name if payment.customer_id else "Customer",
             },
         )
 

@@ -11,6 +11,7 @@ from shops.scoping import require_shop_id
 from .dashboard_tools import (
     cashier_ledger_entries,
     cashier_snapshot,
+    customer_debt_payments_usd_in_range,
     net_profit_in_range,
     total_customer_discounts_usd_in_range,
     total_debtor_customers_count,
@@ -66,6 +67,11 @@ class DashboardStatsView(APIView):
             d_from,
             d_to,
         )
+        period_debt_collected_usd = customer_debt_payments_usd_in_range(
+            shop_id,
+            d_from,
+            d_to,
+        )
         period_cash_in_usd = sales_net.quantize(Decimal("0.0001"))
         period_cash_out_usd = (sales_net - period_cash_drawer_usd).quantize(Decimal("0.0001"))
         recv = total_receivables_usd(shop_id)
@@ -88,6 +94,7 @@ class DashboardStatsView(APIView):
                 "total_returned_products_usd": format(returned_products_usd, "f"),
                 "period_receivables_usd": format(period_recv, "f"),
                 "period_cash_drawer_usd": format(period_cash_drawer_usd, "f"),
+                "period_customer_debt_collected_usd": format(period_debt_collected_usd, "f"),
                 "period_cash_in_usd": format(period_cash_in_usd, "f"),
                 "period_cash_out_usd": format(period_cash_out_usd, "f"),
                 "current_cash_usd": cash_snapshot["current_cash_usd"],

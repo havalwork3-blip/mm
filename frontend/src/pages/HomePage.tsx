@@ -5,6 +5,7 @@
   ChevronLeft,
   Coins,
   DollarSign,
+  Vault,
   Globe,
   LayoutDashboard,
   Package,
@@ -490,6 +491,8 @@ export function HomePage() {
           returned: parseFloat(shop.returned_products_usd ?? '0') || 0,
           discounts: parseFloat(shop.discounts_usd) || 0,
           pettyCash: parseFloat(shop.period_cash_drawer_usd ?? '0') || 0,
+          debtCollected:
+            parseFloat(shop.period_customer_debt_collected_usd ?? '0') || 0,
           color: PRODUCT_DONUT_COLORS[idx % PRODUCT_DONUT_COLORS.length],
         }
       })
@@ -1182,6 +1185,7 @@ export function HomePage() {
                 returnedLabel={t('dash.totalReturnedProducts')}
                 discountsLabel={t('dash.totalDiscounts')}
                 pettyCashLabel={t('dash.cashVsExpenses')}
+                debtCollectedLabel={t('dash.customerDebtCollected')}
               />
             </section>
           </>
@@ -1189,7 +1193,7 @@ export function HomePage() {
 
         {stats && !globalAdminStats && (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {isEmployeeDashboard || isSuperuserDashboard ? (
                 <>
                   <StatCard
@@ -1208,8 +1212,8 @@ export function HomePage() {
                   />
                   <StatCard
                     icon={<Users className="h-5 w-5" />}
-                    label={t('dash.totalDebtorCustomers')}
-                    value={stats.period_receivables_usd ?? '0'}
+                    label={t('dash.customerDebtCollected')}
+                    value={stats.period_customer_debt_collected_usd ?? '0'}
                     tone="violet"
                     currencyLabel={t('common.currencyUsd')}
                   />
@@ -1225,13 +1229,6 @@ export function HomePage() {
                     label={t('dash.totalDiscounts')}
                     value={stats.total_discounts_usd ?? '0'}
                     tone="rose"
-                    currencyLabel={t('common.currencyUsd')}
-                  />
-                  <StatCard
-                    icon={<Banknote className="h-5 w-5" />}
-                    label={t('dash.cashVsExpenses')}
-                    value={cashVsExpensesDelta.value}
-                    tone={cashVsExpensesDelta.positive ? 'emerald' : 'rose'}
                     currencyLabel={t('common.currencyUsd')}
                   />
                 </>
@@ -1268,6 +1265,14 @@ export function HomePage() {
                 </>
               )}
             </div>
+            {(isEmployeeDashboard || isSuperuserDashboard) && stats ? (
+              <PettyCashHighlight
+                value={cashVsExpensesDelta.value}
+                positive={cashVsExpensesDelta.positive}
+                label={t('dash.cashVsExpenses')}
+                currencyLabel={t('common.currencyUsd')}
+              />
+            ) : null}
             {onlineStorefrontDashboardSection}
             <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
@@ -1357,6 +1362,7 @@ export function HomePage() {
                     returnedLabel={t('dash.totalReturnedProducts')}
                     discountsLabel={t('dash.totalDiscounts')}
                     pettyCashLabel={t('dash.cashVsExpenses')}
+                    debtCollectedLabel={t('dash.customerDebtCollected')}
                   />
                 </section>
               ) : (
@@ -1575,6 +1581,74 @@ export function HomePage() {
           onEnableGlobalView={enableSuperuserScopeGlobalView}
         />
       ) : null}
+    </div>
+  )
+}
+
+function PettyCashHighlight({
+  value,
+  positive,
+  label,
+  currencyLabel,
+}: {
+  value: string
+  positive: boolean
+  label: string
+  currencyLabel: string
+}) {
+  const amount = parseFloat(value) || 0
+  return (
+    <div
+      className={`relative mt-4 overflow-hidden rounded-2xl border p-5 shadow-sm sm:p-6 ${
+        positive
+          ? 'border-indigo-200/90 bg-gradient-to-r from-indigo-50 via-white to-violet-50/80 ring-1 ring-indigo-100/80 dark:border-indigo-700/50 dark:from-indigo-950/35 dark:via-slate-900/70 dark:to-violet-950/25 dark:ring-indigo-500/15'
+          : 'border-rose-200/90 bg-gradient-to-r from-rose-50 via-white to-red-50/70 ring-1 ring-rose-100/80 dark:border-rose-700/50 dark:from-rose-950/35 dark:via-slate-900/70 dark:to-red-950/25 dark:ring-rose-500/15'
+      }`}
+    >
+      <div
+        className={`pointer-events-none absolute -end-8 -top-8 h-32 w-32 rounded-full blur-3xl ${
+          positive ? 'bg-indigo-300/30 dark:bg-indigo-500/15' : 'bg-rose-300/30 dark:bg-rose-500/15'
+        }`}
+        aria-hidden
+      />
+      <div className="relative flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg ${
+              positive
+                ? 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/30'
+                : 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/30'
+            }`}
+          >
+            <Vault className="h-6 w-6" aria-hidden />
+          </span>
+          <p
+            className={`text-start text-sm font-semibold sm:text-base ${
+              positive
+                ? 'text-indigo-950 dark:text-indigo-100'
+                : 'text-rose-950 dark:text-rose-100'
+            }`}
+          >
+            {label}
+          </p>
+        </div>
+        <p
+          className={`text-start text-2xl font-bold tabular-nums sm:text-3xl ${
+            positive ? 'text-indigo-950 dark:text-indigo-50' : 'text-rose-950 dark:text-rose-50'
+          }`}
+        >
+          {formatCompactNumber(amount)}
+          <span
+            className={`ms-2 text-sm font-medium ${
+              positive
+                ? 'text-indigo-600/80 dark:text-indigo-300/80'
+                : 'text-rose-600/80 dark:text-rose-300/80'
+            }`}
+          >
+            {currencyLabel}
+          </span>
+        </p>
+      </div>
     </div>
   )
 }
@@ -2248,6 +2322,7 @@ type TopShopRow = {
   returned: number
   discounts: number
   pettyCash: number
+  debtCollected: number
   color: string
 }
 
@@ -2334,6 +2409,7 @@ function TopShopsListPanel({
   returnedLabel,
   discountsLabel,
   pettyCashLabel,
+  debtCollectedLabel,
 }: {
   rows: TopShopRow[]
   currencyLabel: string
@@ -2350,6 +2426,7 @@ function TopShopsListPanel({
   returnedLabel: string
   discountsLabel: string
   pettyCashLabel: string
+  debtCollectedLabel: string
 }) {
   if (rows.length === 0) {
     return (
@@ -2521,6 +2598,13 @@ function TopShopsListPanel({
                     value={row.discounts}
                     currencyLabel={currencyLabel}
                     tone="slate"
+                  />
+                  <ShopMetricPill
+                    icon={<Wallet className="h-3 w-3 text-amber-600" aria-hidden />}
+                    label={debtCollectedLabel}
+                    value={row.debtCollected}
+                    currencyLabel={currencyLabel}
+                    tone="amber"
                   />
                   <ShopMetricPill
                     icon={<Coins className="h-3 w-3 text-sky-600" aria-hidden />}

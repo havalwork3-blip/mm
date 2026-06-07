@@ -17,6 +17,11 @@ router.register(r"categories", views.CategoryViewSet, basename="category")
 router.register(r"products", views.ProductViewSet, basename="product")
 router.register(r"companies", views.CompanyViewSet, basename="company")
 router.register(r"customers", views.CustomerViewSet, basename="customer")
+router.register(
+    r"customer-debt-payments",
+    views.CustomerDebtPaymentViewSet,
+    basename="customer-debt-payment",
+)
 router.register(r"expenses", views.ExpenseViewSet, basename="expense")
 router.register(r"purchases", views.PurchaseViewSet, basename="purchase")
 router.register(r"sales", views.SaleViewSet, basename="sale")

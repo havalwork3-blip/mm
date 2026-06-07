@@ -47,6 +47,7 @@ from .models import (
     Category,
     Company,
     Customer,
+    CustomerDebtPayment,
     EmployeeDebt,
     Expense,
     Product,
@@ -77,6 +78,7 @@ from .permissions import (
 from .serializers import (
     CategorySerializer,
     CompanySerializer,
+    CustomerDebtPaymentSerializer,
     CustomerSerializer,
     EmployeeDebtSerializer,
     ExpenseSerializer,
@@ -367,10 +369,12 @@ class CustomerViewSet(ShopScopedViewSet):
         if paid_eq <= 0:
             return Response({"detail": "Enter a payment amount."}, status=400)
 
-        applied, overpaid = apply_customer_debt_payment_fifo(
+        applied, overpaid, payment_id = apply_customer_debt_payment_fifo(
             shop_id,
             customer.id,
-            paid_eq,
+            usd,
+            iqd,
+            rate,
         )
         new_bal = customer_outstanding_balance_usd(shop_id, customer.id)
         return Response(
@@ -378,6 +382,7 @@ class CustomerViewSet(ShopScopedViewSet):
                 "applied_usd_eq": format(applied, "f"),
                 "overpaid_usd_eq": format(overpaid, "f"),
                 "outstanding_balance_usd_after": format(new_bal, "f"),
+                "payment_id": payment_id,
             },
         )
 
@@ -882,6 +887,18 @@ class ShareholderViewSet(OwnerScopedViewSet):
         "PATCH": ("change_shareholder",),
         "DELETE": ("delete_shareholder",),
     }
+
+
+class CustomerDebtPaymentViewSet(OwnerScopedViewSet):
+    """Debt repayments recorded from customer-debts (date = payment day, not sale day)."""
+
+    queryset = CustomerDebtPayment.objects.select_related("customer", "shop").all()
+    serializer_class = CustomerDebtPaymentSerializer
+    permission_classes = [IsAuthenticated, IsShopOwnerOrCanRecordSalePayment]
+    http_method_names = ["get", "patch", "head", "options"]
+
+    def get_queryset(self):
+        return super().get_queryset()
 
 
 class ShareholderPaymentViewSet(OwnerScopedViewSet):

@@ -141,6 +141,7 @@ export type CashierLedgerEntryKind =
   | 'expense'
   | 'employee_debt'
   | 'sale_payment'
+  | 'customer_debt_payment'
   | 'sale_return'
   | 'purchase_payment'
 
@@ -377,6 +378,20 @@ export type CustomerCollectPaymentResponse = {
   applied_usd_eq: string
   overpaid_usd_eq: string
   outstanding_balance_usd_after: string
+  payment_id: number | null
+}
+
+/** GET/PATCH /api/customer-debt-payments/:id/ */
+export type CustomerDebtPaymentRow = {
+  id: number
+  customer: number
+  customer_name: string
+  amount_paid_usd: string
+  amount_paid_iqd: string
+  exchange_rate_usd_to_iqd: string
+  amount_usd_eq: string
+  occurred_at: string
+  created_at: string
 }
 
 /** POST /api/customers/:id/write-off-remainder-as-discount/ */
@@ -451,6 +466,8 @@ export type DashboardStats = {
   total_returned_products_usd: string
   period_receivables_usd: string
   period_cash_drawer_usd: string
+  /** Cash collected from customer debt repayments in the selected period. */
+  period_customer_debt_collected_usd?: string
   period_cash_in_usd?: string
   period_cash_out_usd?: string
   current_cash_usd: string
@@ -490,6 +507,7 @@ export type AdminGlobalStats = {
     returned_products_usd?: string
     period_receivables_usd?: string
     period_cash_drawer_usd?: string
+    period_customer_debt_collected_usd?: string
     stock_value_usd: string
   }>
 }

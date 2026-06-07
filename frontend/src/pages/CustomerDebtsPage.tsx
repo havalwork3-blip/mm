@@ -10,6 +10,7 @@ import { apiJson } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
 import type {
   CustomerCollectPaymentResponse,
+  CustomerDebtPaymentRow,
   CustomerDebtWriteoffResponse,
   CustomerDebtRow,
   CustomerDebtSummaryResponse,
@@ -22,7 +23,7 @@ function normalizeMoneyInput(s: string) {
 }
 
 type CustomerPaymentHistoryRow = {
-  kind: 'sale_payment'
+  kind: 'sale_payment' | 'customer_debt_payment'
   id: number
   occurred_on: string
   occurred_at: string | null
@@ -183,6 +184,9 @@ export function CustomerDebtsPage() {
   const [historyEditError, setHistoryEditError] = useState<string | null>(null)
   const [historyEditBlocked, setHistoryEditBlocked] = useState(false)
   const [historyEditSaleId, setHistoryEditSaleId] = useState<number | null>(null)
+  const [historyEditKind, setHistoryEditKind] = useState<
+    'sale_payment' | 'customer_debt_payment' | null
+  >(null)
   const [historyEditLabel, setHistoryEditLabel] = useState('')
   const [historyEditOccurredAt, setHistoryEditOccurredAt] = useState('')
   const [historyEditAmountUsd, setHistoryEditAmountUsd] = useState('')
@@ -387,11 +391,11 @@ export function CustomerDebtsPage() {
       }
       setSuccessMsg(msg)
       const applied = parseFloat(data.applied_usd_eq)
-      if (applied > 0.000001) {
+      if (applied > 0.000001 && data.payment_id != null) {
         setLocalHistoryRows((prev) => [
           {
-            kind: 'sale_payment',
-            id: -Date.now(),
+            kind: 'customer_debt_payment',
+            id: data.payment_id,
             occurred_on: new Date().toISOString().slice(0, 10),
             occurred_at: new Date().toISOString(),
             amount_usd: data.applied_usd_eq,
@@ -437,7 +441,7 @@ export function CustomerDebtsPage() {
         `/api/cashier/ledger/?${q.toString()}`,
       )
       const onlyCustomerPayments = (led.entries ?? []).filter(
-        (e) => e.kind === 'sale_payment',
+        (e) => e.kind === 'sale_payment' || e.kind === 'customer_debt_payment',
       )
       const merged = [...localHistoryRows, ...onlyCustomerPayments]
       const seen = new Set<string>()
@@ -472,6 +476,7 @@ export function CustomerDebtsPage() {
     setHistoryEditError(null)
     setHistoryEditBlocked(false)
     setHistoryEditSaleId(null)
+    setHistoryEditKind(null)
     setHistoryEditLabel('')
     setHistoryEditOccurredAt('')
     setHistoryEditAmountUsd('')
@@ -481,13 +486,32 @@ export function CustomerDebtsPage() {
   }
 
   async function openHistoryEdit(r: CustomerPaymentHistoryRow) {
-    if (!canRecordPayment || r.kind !== 'sale_payment' || r.id <= 0) return
+    if (!canRecordPayment || r.id <= 0) return
+    if (r.kind !== 'sale_payment' && r.kind !== 'customer_debt_payment') return
     setHistoryEditError(null)
     setHistoryEditBlocked(false)
     setHistoryEditLoading(true)
     setHistoryEditSaleId(r.id)
+    setHistoryEditKind(r.kind)
     setHistoryEditLabel(r.label)
     try {
+      if (r.kind === 'customer_debt_payment') {
+        const payment = await apiJson<CustomerDebtPaymentRow>(
+          `/api/customer-debt-payments/${r.id}/`,
+        )
+        const rate = parseFloat(payment.exchange_rate_usd_to_iqd)
+        const usd = parseFloat(payment.amount_paid_usd)
+        const iqd = parseFloat(payment.amount_paid_iqd)
+        const eq = parseFloat(payment.amount_usd_eq)
+        const d = new Date(payment.occurred_at)
+        setHistoryEditOccurredAt(Number.isNaN(d.getTime()) ? '' : toDatetimeLocalValue(d))
+        setHistoryEditAmountUsd(formatMoneyCompact(eq))
+        setHistoryEditPaidUsd(Number.isFinite(usd) ? usd : 0)
+        setHistoryEditPaidIqd(Number.isFinite(iqd) ? iqd : 0)
+        setHistoryEditRate(Number.isFinite(rate) && rate > 0 ? rate : 0)
+        setHistoryEditOpen(true)
+        return
+      }
       const sale = await apiJson<SaleListRow>(`/api/sales/${r.id}/`)
       if (sale.has_returns) {
         setHistoryEditBlocked(true)
@@ -521,7 +545,7 @@ export function CustomerDebtsPage() {
   }
 
   async function saveHistoryEdit() {
-    if (historyEditSaleId == null || historyEditBlocked) return
+    if (historyEditSaleId == null || historyEditBlocked || historyEditKind == null) return
     let occurred = historyEditOccurredAt.trim()
     if (occurred.length === 16) occurred = `${occurred}:00`
     const dt = new Date(occurred)
@@ -543,14 +567,25 @@ export function CustomerDebtsPage() {
     setHistoryEditSaving(true)
     setHistoryEditError(null)
     try {
-      await apiJson(`/api/sales/${historyEditSaleId}/`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          occurred_at: dt.toISOString(),
-          amount_paid_usd: usd.toFixed(4),
-          amount_paid_iqd: iqd.toFixed(4),
-        }),
-      })
+      if (historyEditKind === 'customer_debt_payment') {
+        await apiJson(`/api/customer-debt-payments/${historyEditSaleId}/`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            occurred_at: dt.toISOString(),
+            amount_paid_usd: usd.toFixed(4),
+            amount_paid_iqd: iqd.toFixed(4),
+          }),
+        })
+      } else {
+        await apiJson(`/api/sales/${historyEditSaleId}/`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            occurred_at: dt.toISOString(),
+            amount_paid_usd: usd.toFixed(4),
+            amount_paid_iqd: iqd.toFixed(4),
+          }),
+        })
+      }
       closeHistoryEdit()
       await fetchPaymentHistory(historyDateFrom, historyDateTo)
       await fetchSummary()

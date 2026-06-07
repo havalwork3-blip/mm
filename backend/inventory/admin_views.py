@@ -13,6 +13,7 @@ from accounts.models import User
 from shops.models import Shop
 
 from .dashboard_tools import (
+    customer_debt_payments_usd_in_range,
     net_profit_in_range,
     total_customer_discounts_usd_in_range,
     total_expenses_usd_in_range,
@@ -61,7 +62,7 @@ class GlobalAdminStatsView(APIView):
         global_discounts = Decimal("0")
         global_sales = Decimal("0")
         global_expenses = Decimal("0")
-        shop_rows: list[dict] = []
+        shop_rows: list[dict] = [] 
         for shop in Shop.objects.all().only("id", "name", "is_active"):
             sales_usd = total_sales_usd_in_range(shop.pk, d_from, d_to)
             net_profit = net_profit_in_range(shop.pk, d_from, d_to)
@@ -71,6 +72,7 @@ class GlobalAdminStatsView(APIView):
             receivables_usd = total_receivables_usd_in_range(shop.pk, d_from, d_to)
             stock_usd = total_stock_value_usd(shop.pk)
             drawer_usd = period_dashboard_petty_cash_usd_in_range(shop.pk, d_from, d_to)
+            debt_collected_usd = customer_debt_payments_usd_in_range(shop.pk, d_from, d_to)
 
             global_profit += net_profit
             global_discounts += discounts_usd
@@ -91,6 +93,7 @@ class GlobalAdminStatsView(APIView):
                     "returned_products_usd": _money(returned_usd),
                     "period_receivables_usd": _money(receivables_usd),
                     "period_cash_drawer_usd": _money(drawer_usd),
+                    "period_customer_debt_collected_usd": _money(debt_collected_usd),
                     "stock_value_usd": _money(stock_usd),
                 }
             )

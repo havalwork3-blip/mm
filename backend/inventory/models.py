@@ -398,6 +398,46 @@ class CustomerDebtDiscountWriteoffSale(models.Model):
         ]
 
 
+class CustomerDebtPayment(ShopScopedModel):
+    """Customer debt repayment recorded on the payment date (not the original sale date)."""
+
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name="debt_payments",
+    )
+    amount_paid_usd = models.DecimalField(max_digits=18, decimal_places=4, default=Decimal("0"))
+    amount_paid_iqd = models.DecimalField(max_digits=18, decimal_places=4, default=Decimal("0"))
+    exchange_rate_usd_to_iqd = models.DecimalField(max_digits=18, decimal_places=4)
+    occurred_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-occurred_at", "-id"]
+
+
+class CustomerDebtPaymentSale(models.Model):
+    payment = models.ForeignKey(
+        CustomerDebtPayment,
+        on_delete=models.CASCADE,
+        related_name="sale_lines",
+    )
+    sale = models.ForeignKey(
+        Sale,
+        on_delete=models.CASCADE,
+        related_name="debt_payment_lines",
+    )
+    amount_usd = models.DecimalField(max_digits=18, decimal_places=4)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["payment", "sale"],
+                name="uniq_debt_payment_sale_line",
+            ),
+        ]
+
+
 class ExpenseCurrency(models.TextChoices):
     USD = "USD", "USD"
     IQD = "IQD", "IQD"
