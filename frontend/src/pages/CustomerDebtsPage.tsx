@@ -391,11 +391,12 @@ export function CustomerDebtsPage() {
       }
       setSuccessMsg(msg)
       const applied = parseFloat(data.applied_usd_eq)
-      if (applied > 0.000001 && data.payment_id != null) {
+      const paymentId = data.payment_id
+      if (applied > 0.000001 && paymentId != null) {
         setLocalHistoryRows((prev) => [
           {
             kind: 'customer_debt_payment',
-            id: data.payment_id,
+            id: paymentId,
             occurred_on: new Date().toISOString().slice(0, 10),
             occurred_at: new Date().toISOString(),
             amount_usd: data.applied_usd_eq,
