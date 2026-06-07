@@ -28,6 +28,7 @@ from shops.scoping import get_shop_id_for_request, require_shop_id
 from .customer_sync import SYNC_FIELDS, sync_customer_profile_to_sibling_shops
 from .dashboard_tools import (
     apply_customer_debt_payment_fifo,
+    apply_customer_debt_remainder_as_discount,
     CUSTOMER_DEBT_LIST_MIN_USD,
     apply_supplier_debt_payment_fifo,
     company_outstanding_usd,
@@ -376,6 +377,46 @@ class CustomerViewSet(ShopScopedViewSet):
             {
                 "applied_usd_eq": format(applied, "f"),
                 "overpaid_usd_eq": format(overpaid, "f"),
+                "outstanding_balance_usd_after": format(new_bal, "f"),
+            },
+        )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="write-off-remainder-as-discount",
+        permission_classes=[IsAuthenticated, IsShopOwnerOrCanRecordSalePayment],
+    )
+    def write_off_remainder_as_discount(self, request, pk=None):
+        """Forgive small remaining debt as customer discount (counts on dashboard writeoff date)."""
+        customer = self.get_object()
+        shop_id = require_shop_id(request)
+        try:
+            written_off, writeoff_id = apply_customer_debt_remainder_as_discount(
+                shop_id,
+                customer.id,
+            )
+        except ValueError as exc:
+            code = str(exc)
+            if code == "no_outstanding":
+                return Response({"detail": "No outstanding balance to forgive."}, status=400)
+            if code == "too_large":
+                return Response(
+                    {"detail": "Outstanding balance is too large to forgive as discount."},
+                    status=400,
+                )
+            if code == "discount_exceeds_subtotal":
+                return Response(
+                    {"detail": "Discount would exceed sale subtotal."},
+                    status=400,
+                )
+            return Response({"detail": "Could not forgive debt."}, status=400)
+
+        new_bal = customer_outstanding_balance_usd(shop_id, customer.id)
+        return Response(
+            {
+                "written_off_usd": format(written_off, "f"),
+                "writeoff_id": writeoff_id,
                 "outstanding_balance_usd_after": format(new_bal, "f"),
             },
         )

@@ -1,6 +1,6 @@
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
-import { ArrowLeft, Banknote, Download, Pencil, Printer, Wallet } from 'lucide-react'
+import { ArrowLeft, Banknote, Download, Pencil, Printer, Tag, Wallet } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { PageAuthLoading } from '../components/PageAuthLoading'
@@ -10,6 +10,7 @@ import { apiJson } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
 import type {
   CustomerCollectPaymentResponse,
+  CustomerDebtWriteoffResponse,
   CustomerDebtRow,
   CustomerDebtSummaryResponse,
   CustomerRow,
@@ -118,6 +119,14 @@ function debtRowPhonesDisplay(r: CustomerDebtRow) {
   return parts.length ? parts.join(' · ') : '—'
 }
 
+/** Max outstanding (USD) that may be forgiven as discount from the debts table. */
+const DEBT_WRITEOFF_MAX_USD = 10
+
+function debtRowCanWriteOffAsDiscount(r: CustomerDebtRow) {
+  const usd = parseDec(r.outstanding_balance_usd)
+  return usd > 0.00005 && usd <= DEBT_WRITEOFF_MAX_USD
+}
+
 /** Rows where both USD and IQD columns display as zero (paid off or negligible dust). */
 function debtRowShowsZeroBalance(r: CustomerDebtRow) {
   const usdDisplay = formatMoneyCompact(r.outstanding_balance_usd)
@@ -153,6 +162,8 @@ export function CustomerDebtsPage() {
   const [payUsd, setPayUsd] = useState('')
   const [payIqd, setPayIqd] = useState('')
   const [submittingPay, setSubmittingPay] = useState(false)
+  const [writeoffFor, setWriteoffFor] = useState<CustomerDebtRow | null>(null)
+  const [submittingWriteoff, setSubmittingWriteoff] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -295,9 +306,57 @@ export function CustomerDebtsPage() {
 
   function openCollect(row: { id: number; name: string }) {
     setError(null)
+    setWriteoffFor(null)
     setCollectFor(row)
     setPayUsd('')
     setPayIqd('')
+  }
+
+  function openWriteoffConfirm(row: CustomerDebtRow) {
+    setError(null)
+    setCollectFor(null)
+    setWriteoffFor(row)
+  }
+
+  function writeoffConfirmMessage(row: CustomerDebtRow) {
+    const usd = formatMoneyCompact(row.outstanding_balance_usd)
+    const iqdPart =
+      row.outstanding_balance_iqd != null &&
+      row.outstanding_balance_iqd !== '' &&
+      Number(row.outstanding_balance_iqd) > 0
+        ? t('customerDebts.writeoffRemainderIqdPart').replace(
+            '{iqd}',
+            Number(row.outstanding_balance_iqd).toLocaleString(),
+          )
+        : ''
+    return t('customerDebts.writeoffRemainderMessage')
+      .replace('{name}', row.name)
+      .replace('{usd}', usd)
+      .replace('{eqIqd}', iqdPart)
+  }
+
+  async function submitWriteoff() {
+    if (!writeoffFor) return
+    setSubmittingWriteoff(true)
+    setError(null)
+    try {
+      const data = await apiJson<CustomerDebtWriteoffResponse>(
+        `/api/customers/${writeoffFor.id}/write-off-remainder-as-discount/`,
+        { method: 'POST', body: JSON.stringify({}) },
+      )
+      setSuccessMsg(
+        t('customerDebts.writeoffRemainderSuccess').replace(
+          '{usd}',
+          formatMoneyCompact(data.written_off_usd),
+        ),
+      )
+      setWriteoffFor(null)
+      await fetchSummary()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('customerDebts.loadFailed'))
+    } finally {
+      setSubmittingWriteoff(false)
+    }
   }
 
   async function submitCollect() {
@@ -1000,7 +1059,7 @@ export function CustomerDebtsPage() {
                           <th className="px-3 py-3 text-end font-medium text-slate-700 dark:text-slate-200">
                             {stripAnyParens(t('customerDebts.colIqd'))} IQD
                           </th>
-                          <th className="w-14 px-2 py-3 text-center font-medium text-slate-700 dark:text-slate-200">
+                          <th className="w-28 px-2 py-3 text-center font-medium text-slate-700 dark:text-slate-200">
                             <span className="sr-only">{t('customerDebts.collectPayment')}</span>
                           </th>
                         </tr>
@@ -1030,17 +1089,30 @@ export function CustomerDebtsPage() {
                             </td>
                             <td className="px-2 py-2 text-center">
                               {canRecordPayment ? (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    openCollect({ id: row.id, name: row.name })
-                                  }
-                                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 text-amber-800 transition hover:bg-amber-100 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-900/50"
-                                  title={t('customerDebts.collectPayment')}
-                                  aria-label={t('customerDebts.collectPayment')}
-                                >
-                                  <Wallet className="h-4 w-4" aria-hidden />
-                                </button>
+                                <div className="inline-flex items-center justify-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openCollect({ id: row.id, name: row.name })
+                                    }
+                                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 text-amber-800 transition hover:bg-amber-100 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-900/50"
+                                    title={t('customerDebts.collectPayment')}
+                                    aria-label={t('customerDebts.collectPayment')}
+                                  >
+                                    <Wallet className="h-4 w-4" aria-hidden />
+                                  </button>
+                                  {debtRowCanWriteOffAsDiscount(row) ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => openWriteoffConfirm(row)}
+                                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-800 transition hover:bg-violet-100 dark:border-violet-800/60 dark:bg-violet-950/40 dark:text-violet-200 dark:hover:bg-violet-900/50"
+                                      title={t('customerDebts.writeoffRemainderHint')}
+                                      aria-label={t('customerDebts.writeoffRemainderBtn')}
+                                    >
+                                      <Tag className="h-4 w-4" aria-hidden />
+                                    </button>
+                                  ) : null}
+                                </div>
                               ) : null}
                             </td>
                           </tr>
@@ -1151,6 +1223,55 @@ export function CustomerDebtsPage() {
                 className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
               >
                 {submittingPay ? t('pos.saving') : t('customerDebts.submitPayment')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {writeoffFor && (
+        <div
+          className="fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-4 sm:items-center"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setWriteoffFor(null)
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-amber-200 bg-white p-5 shadow-xl dark:border-amber-800/60 dark:bg-slate-800"
+            role="alertdialog"
+            aria-labelledby="writeoff-dialog-title"
+            aria-describedby="writeoff-dialog-desc"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              id="writeoff-dialog-title"
+              className="text-start text-lg font-semibold text-amber-900 dark:text-amber-100"
+            >
+              {t('customerDebts.writeoffRemainderTitle')}
+            </h2>
+            <p
+              id="writeoff-dialog-desc"
+              className="mt-3 text-start text-sm leading-relaxed text-slate-700 dark:text-slate-300"
+            >
+              {writeoffConfirmMessage(writeoffFor)}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setWriteoffFor(null)}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                {t('customerDebts.cancel')}
+              </button>
+              <button
+                type="button"
+                disabled={submittingWriteoff}
+                onClick={() => void submitWriteoff()}
+                className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+              >
+                {submittingWriteoff
+                  ? t('pos.saving')
+                  : t('customerDebts.writeoffRemainderConfirm')}
               </button>
             </div>
           </div>

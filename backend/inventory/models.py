@@ -360,6 +360,44 @@ class SaleReturnLine(models.Model):
     unit_price_usd = models.DecimalField(max_digits=18, decimal_places=4)
 
 
+class CustomerDebtDiscountWriteoff(ShopScopedModel):
+    """Debt remainder forgiven as customer discount (attributed to writeoff date for dashboard)."""
+
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name="debt_discount_writeoffs",
+    )
+    amount_usd = models.DecimalField(max_digits=18, decimal_places=4)
+    occurred_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-occurred_at", "-id"]
+
+
+class CustomerDebtDiscountWriteoffSale(models.Model):
+    writeoff = models.ForeignKey(
+        CustomerDebtDiscountWriteoff,
+        on_delete=models.CASCADE,
+        related_name="sale_lines",
+    )
+    sale = models.ForeignKey(
+        Sale,
+        on_delete=models.CASCADE,
+        related_name="debt_discount_writeoff_lines",
+    )
+    amount_usd = models.DecimalField(max_digits=18, decimal_places=4)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["writeoff", "sale"],
+                name="uniq_debt_writeoff_sale_line",
+            ),
+        ]
+
+
 class ExpenseCurrency(models.TextChoices):
     USD = "USD", "USD"
     IQD = "IQD", "IQD"

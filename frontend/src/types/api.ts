@@ -379,6 +379,13 @@ export type CustomerCollectPaymentResponse = {
   outstanding_balance_usd_after: string
 }
 
+/** POST /api/customers/:id/write-off-remainder-as-discount/ */
+export type CustomerDebtWriteoffResponse = {
+  written_off_usd: string
+  writeoff_id: number
+  outstanding_balance_usd_after: string
+}
+
 /** Line as returned on GET /api/sales/ */
 export type SaleLineRow = {
   id: number

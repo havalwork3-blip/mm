@@ -14,6 +14,8 @@ from django.utils import timezone
 
 from .models import (
     Company,
+    CustomerDebtDiscountWriteoff,
+    CustomerDebtDiscountWriteoffSale,
     EmployeeDebt,
     EmployeeDebtType,
     Expense,
@@ -126,6 +128,8 @@ def sale_unpaid_balance_usd(sale: Sale) -> Decimal:
 
 # Below this USD amount, debt is treated as zero for customer-debt listings (matches 2-decimal UI).
 CUSTOMER_DEBT_LIST_MIN_USD = Decimal("0.005")
+# Maximum outstanding balance that may be forgiven as discount from the debts page.
+CUSTOMER_DEBT_WRITEOFF_MAX_USD = Decimal("10")
 
 
 def customer_outstanding_balance_usd(shop_id: int, customer_id: int) -> Decimal:
@@ -185,6 +189,84 @@ def apply_customer_debt_payment_fifo(
 
     overpaid = payment_usd_eq - applied
     return applied.quantize(Decimal("0.0001")), overpaid.quantize(Decimal("0.0001"))
+
+
+def apply_customer_debt_remainder_as_discount(
+    shop_id: int,
+    customer_id: int,
+) -> tuple[Decimal, int]:
+    """
+    Forgive all outstanding customer debt as invoice discount (FIFO on sales).
+
+    Records CustomerDebtDiscountWriteoff so dashboard «total discounts» counts it on
+    the writeoff date without double-counting checkout discounts on in-range sales.
+    """
+    outstanding = customer_outstanding_balance_usd(shop_id, customer_id)
+    if outstanding <= Decimal("0.00005"):
+        raise ValueError("no_outstanding")
+    if outstanding > CUSTOMER_DEBT_WRITEOFF_MAX_USD:
+        raise ValueError("too_large")
+
+    now = timezone.now()
+    sale_chunks: list[tuple[int, Decimal]] = []
+
+    qs = (
+        Sale.objects.filter(shop_id=shop_id, customer_id=customer_id)
+        .order_by("occurred_at", "id")
+        .prefetch_related("lines__return_lines")
+    )
+    for sale in qs:
+        unpaid = sale_unpaid_balance_usd(sale)
+        if unpaid <= Decimal("0.00005"):
+            continue
+        line_sub = _sale_lines_subtotal_usd(sale)
+        new_disc = Decimal(sale.invoice_discount_usd) + unpaid
+        if new_disc > line_sub:
+            raise ValueError("discount_exceeds_subtotal")
+        sale_chunks.append((sale.pk, unpaid))
+
+    if not sale_chunks:
+        raise ValueError("no_outstanding")
+
+    with transaction.atomic():
+        writeoff = CustomerDebtDiscountWriteoff.objects.create(
+            shop_id=shop_id,
+            customer_id=customer_id,
+            amount_usd=outstanding,
+            occurred_at=now,
+        )
+        total = Decimal("0")
+        for sale_id, unpaid in sale_chunks:
+            Sale.objects.filter(pk=sale_id).update(
+                invoice_discount_usd=F("invoice_discount_usd") + unpaid,
+            )
+            CustomerDebtDiscountWriteoffSale.objects.create(
+                writeoff=writeoff,
+                sale_id=sale_id,
+                amount_usd=unpaid,
+            )
+            total += unpaid
+
+    return total.quantize(Decimal("0.0001")), writeoff.id
+
+
+def _debt_writeoff_discount_overlap_usd(
+    shop_id: int,
+    start: datetime,
+    end: datetime,
+    dec: DecimalField,
+) -> Decimal:
+    overlap = (
+        CustomerDebtDiscountWriteoffSale.objects.filter(
+            writeoff__shop_id=shop_id,
+            writeoff__occurred_at__gte=start,
+            writeoff__occurred_at__lte=end,
+            sale__occurred_at__gte=start,
+            sale__occurred_at__lte=end,
+        ).aggregate(s=Sum("amount_usd", output_field=dec))["s"]
+        or Decimal("0")
+    )
+    return Decimal(str(overlap))
 
 
 def total_receivables_usd(shop_id: int) -> Decimal:
@@ -425,10 +507,10 @@ def period_dashboard_petty_cash_usd_in_range(shop_id: int, d_from, d_to) -> Deci
 
 
 def total_customer_discounts_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
-    """Total customer invoice discounts in the selected date range (USD)."""
+    """Total customer discounts in range: checkout invoice discounts + debt writeoffs."""
     start, end = _bounds(d_from, d_to)
     dec = DecimalField(max_digits=24, decimal_places=4)
-    amount = (
+    sale_disc = (
         Sale.objects.filter(
             shop_id=shop_id,
             occurred_at__gte=start,
@@ -436,7 +518,17 @@ def total_customer_discounts_usd_in_range(shop_id: int, d_from, d_to) -> Decimal
         ).aggregate(s=Sum("invoice_discount_usd", output_field=dec))["s"]
         or Decimal("0")
     )
-    return Decimal(str(amount)).quantize(Decimal("0.0001"))
+    writeoff_disc = (
+        CustomerDebtDiscountWriteoff.objects.filter(
+            shop_id=shop_id,
+            occurred_at__gte=start,
+            occurred_at__lte=end,
+        ).aggregate(s=Sum("amount_usd", output_field=dec))["s"]
+        or Decimal("0")
+    )
+    overlap = _debt_writeoff_discount_overlap_usd(shop_id, start, end, dec)
+    total = Decimal(str(sale_disc)) + Decimal(str(writeoff_disc)) - overlap
+    return total.quantize(Decimal("0.0001"))
 
 
 def total_debtor_customers_count(shop_id: int) -> int:

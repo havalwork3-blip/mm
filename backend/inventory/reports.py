@@ -13,7 +13,16 @@ from django.utils import timezone
 
 from shops.models import Shop
 
-from .models import Expense, Purchase, Sale, SaleLine, Shareholder, ShareholderPayment
+from .models import (
+    CustomerDebtDiscountWriteoff,
+    CustomerDebtDiscountWriteoffSale,
+    Expense,
+    Purchase,
+    Sale,
+    SaleLine,
+    Shareholder,
+    ShareholderPayment,
+)
 from .sale_line_flags import sale_line_flags
 from .serializers import latest_usd_to_iqd_for_shop
 
@@ -139,6 +148,25 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
     cust_disc = sale_qs.aggregate(
         s=Sum("invoice_discount_usd", output_field=dec),
     )["s"] or Decimal("0")
+    writeoff_disc = (
+        CustomerDebtDiscountWriteoff.objects.filter(
+            shop_id=shop_id,
+            occurred_at__gte=start,
+            occurred_at__lte=end,
+        ).aggregate(s=Sum("amount_usd", output_field=dec))["s"]
+        or Decimal("0")
+    )
+    writeoff_overlap = (
+        CustomerDebtDiscountWriteoffSale.objects.filter(
+            writeoff__shop_id=shop_id,
+            writeoff__occurred_at__gte=start,
+            writeoff__occurred_at__lte=end,
+            sale__occurred_at__gte=start,
+            sale__occurred_at__lte=end,
+        ).aggregate(s=Sum("amount_usd", output_field=dec))["s"]
+        or Decimal("0")
+    )
+    cust_disc = Decimal(str(cust_disc)) + Decimal(str(writeoff_disc)) - Decimal(str(writeoff_overlap))
 
     expense_qs = Expense.objects.filter(
         shop_id=shop_id,

@@ -1061,6 +1061,16 @@ const en: Record<string, string> = {
   'customerDebts.filterPhoneLabel': 'Mobile number',
   'customerDebts.filterPhonePlaceholder': 'Search by phone digits…',
   'customerDebts.filterNoMatch': 'No customers match these filters.',
+  'customerDebts.writeoffRemainderBtn': 'Discount',
+  'customerDebts.writeoffRemainderHint':
+    'Forgive the remaining balance as a customer discount (added to dashboard total discounts).',
+  'customerDebts.writeoffRemainderTitle': 'Forgive remainder as discount?',
+  'customerDebts.writeoffRemainderMessage':
+    'Customer «{name}» still owes {usd} USD{eqIqd}. Do you want to add this amount to Total discounts on the dashboard and clear the balance?',
+  'customerDebts.writeoffRemainderIqdPart': ' ({iqd} IQD)',
+  'customerDebts.writeoffRemainderConfirm': 'Yes, add to discount',
+  'customerDebts.writeoffRemainderSuccess':
+    'Remaining balance forgiven as discount ({usd} USD).',
   'profit.dist': 'Profit distribution',
   'profit.distHint':
     'Each row shows one number: net profit for the selected date range multiplied by that shareholder’s percentage.',
@@ -2571,6 +2581,15 @@ const ar: Record<string, string> = {
   'customerDebts.filterPhoneLabel': 'رقم الجوال',
   'customerDebts.filterPhonePlaceholder': 'ابحث بأرقام الهاتف…',
   'customerDebts.filterNoMatch': 'لا يوجد عملاء يطابقون هذه المرشحات.',
+  'customerDebts.writeoffRemainderBtn': 'خصم',
+  'customerDebts.writeoffRemainderHint':
+    'إسقاط المبلغ المتبقي كخصم للعميل (يُضاف إلى إجمالي الخصومات في لوحة التحكم).',
+  'customerDebts.writeoffRemainderTitle': 'إسقاط المتبقي كخصم؟',
+  'customerDebts.writeoffRemainderMessage':
+    'العميل «{name}» ما زال عليه {usd} USD{eqIqd}. هل تريد إضافة هذا المبلغ إلى إجمالي الخصومات في لوحة التحكم وإصفار الرصيد؟',
+  'customerDebts.writeoffRemainderIqdPart': ' ({iqd} دينار)',
+  'customerDebts.writeoffRemainderConfirm': 'نعم، أضفه كخصم',
+  'customerDebts.writeoffRemainderSuccess': 'تم إسقاط المتبقي كخصم ({usd} USD).',
   'profit.totalsUsd': 'الإجماليات (دولار)',
   'profit.thProduct': 'المنتج',
   'profit.thProductName': 'اسم المنتج',
@@ -4006,6 +4025,15 @@ const ku: Record<string, string> = {
   'customerDebts.filterPhoneLabel': 'ژمارەی مۆبایل',
   'customerDebts.filterPhonePlaceholder': 'گەڕان بە ژمارەی تەلەفۆن…',
   'customerDebts.filterNoMatch': 'هیچ کڕیارێک لەگەڵ ئەم فلتەرانەدا نەگونجا.',
+  'customerDebts.writeoffRemainderBtn': 'داشکان',
+  'customerDebts.writeoffRemainderHint':
+    'بڕی ماوە وەک داشکاندنی کڕیار لێدەدرێت (زیاد دەبێت بۆ کۆی داشکاندن لە داشبۆرد).',
+  'customerDebts.writeoffRemainderTitle': 'ماوەکە بکرێتە داشکاندن؟',
+  'customerDebts.writeoffRemainderMessage':
+    'کڕیار «{name}» هێشتا {usd} USD{eqIqd} قەرزی هەیە. دەتەوێت ئەم بڕە زیاد بکرێت بۆ کۆی داشکاندن لە داشبۆرد و قەرز ببێتە سفر؟',
+  'customerDebts.writeoffRemainderIqdPart': ' ({iqd} دینار)',
+  'customerDebts.writeoffRemainderConfirm': 'بەڵێ، بیکە داشکاندن',
+  'customerDebts.writeoffRemainderSuccess': 'ماوەکە وەک داشکاندن لێدرا ({usd} USD).',
   'catalog.pageTitle': 'کەتەلۆگی سیستەم',
   'catalog.heroEyebrow': 'ڕێنمایی و زانیاری',
   'catalog.onThisPage': 'بازدان لەسەر ئەم لاپەڕەیە',
