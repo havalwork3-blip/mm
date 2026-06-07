@@ -28,6 +28,7 @@ from shops.scoping import get_shop_id_for_request, require_shop_id
 from .customer_sync import SYNC_FIELDS, sync_customer_profile_to_sibling_shops
 from .dashboard_tools import (
     apply_customer_debt_payment_fifo,
+    CUSTOMER_DEBT_LIST_MIN_USD,
     apply_supplier_debt_payment_fifo,
     company_outstanding_usd,
     customer_outstanding_balance_usd,
@@ -285,7 +286,7 @@ class CustomerViewSet(ShopScopedViewSet):
         rows_raw: list[dict] = []
         for c in qs:
             bal = customer_outstanding_balance_usd(shop_id, c.id)
-            if bal > 0:
+            if bal >= CUSTOMER_DEBT_LIST_MIN_USD:
                 iqd_str: str | None = None
                 if rate_dec is not None:
                     iqd_str = format((bal * rate_dec).quantize(Decimal("1")), "f")

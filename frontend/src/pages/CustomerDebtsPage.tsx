@@ -118,6 +118,15 @@ function debtRowPhonesDisplay(r: CustomerDebtRow) {
   return parts.length ? parts.join(' · ') : '—'
 }
 
+/** Rows where both USD and IQD columns display as zero (paid off or negligible dust). */
+function debtRowShowsZeroBalance(r: CustomerDebtRow) {
+  const usdDisplay = formatMoneyCompact(r.outstanding_balance_usd)
+  if (usdDisplay !== '0') return false
+  if (r.outstanding_balance_iqd == null || r.outstanding_balance_iqd === '') return true
+  const iqd = Number(String(r.outstanding_balance_iqd).replace(/,/g, ''))
+  return !Number.isFinite(iqd) || iqd === 0
+}
+
 export function CustomerDebtsPage() {
   const { t } = useLocale()
   const {
@@ -198,6 +207,7 @@ export function CustomerDebtsPage() {
     const rows = summary?.results ?? []
     const nq = debtFilterName.trim().toLowerCase()
     return rows.filter((r) => {
+      if (debtRowShowsZeroBalance(r)) return false
       if (nq && !String(r.name ?? '').toLowerCase().includes(nq)) return false
       if (debtDigitQuery && !debtRowMatchesPhoneFilter(r, debtDigitQuery)) return false
       return true
@@ -205,7 +215,7 @@ export function CustomerDebtsPage() {
   }, [summary, debtFilterName, debtDigitQuery])
 
   const debtCustomerNamesList = useMemo(() => {
-    const rows = summary?.results ?? []
+    const rows = (summary?.results ?? []).filter((r) => !debtRowShowsZeroBalance(r))
     return Array.from(new Set(rows.map((r) => String(r.name ?? '').trim()).filter(Boolean))).sort((a, b) =>
       a.localeCompare(b),
     )
@@ -895,7 +905,7 @@ export function CustomerDebtsPage() {
           <p className="text-slate-600 dark:text-slate-400">{t('common.loading')}</p>
         ) : summary && canAccessShopData ? (
           <>
-            {summary.results.length === 0 ? (
+            {summary.results.filter((r) => !debtRowShowsZeroBalance(r)).length === 0 ? (
               <p className="text-start text-slate-600 dark:text-slate-400">
                 {t('customerDebts.empty')}
               </p>

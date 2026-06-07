@@ -124,6 +124,10 @@ def sale_unpaid_balance_usd(sale: Sale) -> Decimal:
     return bal.quantize(Decimal("0.0001"))
 
 
+# Below this USD amount, debt is treated as zero for customer-debt listings (matches 2-decimal UI).
+CUSTOMER_DEBT_LIST_MIN_USD = Decimal("0.005")
+
+
 def customer_outstanding_balance_usd(shop_id: int, customer_id: int) -> Decimal:
     """Unpaid balance for one customer: sum of positive (final − paid) per sale, all time."""
     total = Decimal("0")
