@@ -1365,6 +1365,11 @@ const en: Record<string, string> = {
   'inv.loadProductsFailed': 'Failed to load products',
   'inv.loadRateFailed': 'Failed to load rate',
   'inv.saveRateFailed': 'Could not save rate',
+  'inv.rateTooLowHint':
+    'This rate is far too low. Enter IQD for 100 USD (e.g. 152000), not per 1 USD.',
+  'pos.ratePreviewLine': 'Example: 10 USD ≈ {iqd} IQD at this rate',
+  'pos.rateImplausibleBanner':
+    'Today’s rate looks wrong (too low). Tap to set IQD per 100 USD (e.g. 152000).',
   'inv.chooseFile': 'Choose file',
   'inv.noFileChosen': 'No file chosen',
   'common.loading': 'Loading…',
@@ -3956,6 +3961,11 @@ const ku: Record<string, string> = {
   'inv.loadProductsFailed': 'بارکردنی بەرهەم سەرکەوتوو نەبوو',
   'inv.loadRateFailed': 'بارکردنی نرخ سەرکەوتوو نەبوو',
   'inv.saveRateFailed': 'پاشەکەوتکردنی نرخ سەرکەوتوو نەبوو',
+  'inv.rateTooLowHint':
+    'ئەم نرخە زۆر نزمە. دینار بۆ ١٠٠ USD بنووسە (وەک ١٥٢٠٠٠)، نەک بۆ ١ USD.',
+  'pos.ratePreviewLine': 'نموونە: ١٠ USD ≈ {iqd} IQD بەم نرخە',
+  'pos.rateImplausibleBanner':
+    'نرخی ئەمڕۆ هەڵە دەردەکەوێت (زۆر نزمە). دینار بۆ ١٠٠ USD دابنێ (وەک ١٥٢٠٠٠).',
   'inv.emptyProducts': 'هیچ بەرهەمێک نییە. لە ئەدمین زیاد بکە.',
   'inv.loadingProducts': 'بارکردن…',
   'inv.updateRate': 'نوێکردنەوەی نرخ',

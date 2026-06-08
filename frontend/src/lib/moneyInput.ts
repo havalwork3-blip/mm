@@ -1,5 +1,7 @@
+import { normalizeNumericInput } from './exchangeRate'
+
 export function normalizeMoneyInput(s: string): string {
-  return s.replace(/[\s,،\u066C]/g, '').trim()
+  return normalizeNumericInput(s)
 }
 
 export function parseDec(s: string): number {

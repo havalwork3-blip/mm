@@ -19,6 +19,16 @@ import { useSubmitLock } from '../hooks/useSubmitLock'
 import { useSyncedSession } from '../hooks/useSyncedSession'
 import { apiJson, getGlobalView, resolveMediaUrl } from '../lib/api'
 import {
+  apiRateFromIqdPer100Input,
+  formatIqdInteger,
+  iqdPer100FromApiRate,
+  isPlausibleIqdPer100,
+  parseApiExchangeRate,
+  parseNumericInput,
+  usdToIqdAmount,
+} from '../lib/exchangeRate'
+import { normalizeMoneyInput, parseDec } from '../lib/moneyInput'
+import {
   buildBlankReceiptHtml,
   buildReceiptHtml,
   printReceiptHtml,
@@ -66,11 +76,6 @@ type PosDraft = {
 
 const MANUAL_SEARCH_OPTION_ID = -2147483648
 
-function parseDec(s: string) {
-  const n = parseFloat(s)
-  return Number.isNaN(n) ? 0 : n
-}
-
 /** POS line unit price: empty → 0; rejects negative and non-numeric input. */
 function parsePosUnitPriceUsd(raw: string): { ok: boolean; value: number } {
   const trimmed = raw.trim().replace(/,/g, '')
@@ -92,11 +97,6 @@ function formatMoneyCompact(value: string | number | null | undefined): string {
 function formatDecimalTrim(value: number, maxDecimals = 8): string {
   if (!Number.isFinite(value)) return ''
   return value.toFixed(maxDecimals).replace(/\.?0+$/, '')
-}
-
-/** Strip spaces / grouping commas so IQD inputs like 2,000 parse correctly */
-function normalizeMoneyInput(s: string) {
-  return s.replace(/[\s,،\u066C]/g, '').trim()
 }
 
 export function PosPage() {
@@ -304,28 +304,35 @@ export function PosPage() {
   }, [selectedCustomerId])
 
   const loadRate = useCallback(async () => {
-    const rows = await apiJson<CurrencyRow[]>('/api/currencies/')
-    const sorted = [...rows].sort(
+    const rows = await apiJson<CurrencyRow[] | { results: CurrencyRow[] }>(
+      '/api/currencies/',
+      { shopScoped: true },
+    )
+    const list = Array.isArray(rows) ? rows : rows.results ?? []
+    const sorted = [...list].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     )
     const latest = sorted[0]
-    if (latest) setRate(parseFloat(latest.usd_to_iqd))
-    else setRate(null)
+    setRate(latest ? parseApiExchangeRate(latest.usd_to_iqd) : null)
   }, [])
 
   function openRateEditor() {
-    setRatePer100Input(
-      rate !== null && Number.isFinite(rate) && rate > 0
-        ? String(Math.round(rate * 100))
-        : '',
-    )
+    setRatePer100Input(rate != null && rate > 0 ? iqdPer100FromApiRate(rate) : '')
     setRateEditorOpen(true)
   }
 
   async function saveRateFromPos() {
-    const normalized = ratePer100Input.replace(/[,\u066C،\s]/g, '').trim()
-    const parsed = Number.parseFloat(normalized)
-    if (!Number.isFinite(parsed) || parsed <= 0) {
+    const iqdPer100 = parseNumericInput(ratePer100Input)
+    if (iqdPer100 == null || iqdPer100 <= 0) {
+      setError(t('inv.saveRateFailed'))
+      return
+    }
+    if (!isPlausibleIqdPer100(iqdPer100)) {
+      setError(t('inv.rateTooLowHint'))
+      return
+    }
+    const apiRate = apiRateFromIqdPer100Input(ratePer100Input)
+    if (apiRate == null || apiRate <= 0) {
       setError(t('inv.saveRateFailed'))
       return
     }
@@ -334,7 +341,8 @@ export function PosPage() {
     try {
       await apiJson<CurrencyRow>('/api/currencies/set-today/', {
         method: 'POST',
-        body: JSON.stringify({ usd_to_iqd: String(parsed / 100) }),
+        shopScoped: true,
+        body: JSON.stringify({ usd_to_iqd: String(apiRate) }),
       })
       await loadRate()
       setRateEditorOpen(false)
@@ -981,7 +989,7 @@ export function PosPage() {
   const discountAmt = discountUsdParsed + discountFromIqdUsd
   const finalUsd = Math.max(0, subtotalUsd - discountAmt)
   const finalIqd =
-    rate !== null && !Number.isNaN(rate) ? finalUsd * rate : null
+    rate !== null && rate > 0 ? usdToIqdAmount(finalUsd, rate) : null
 
   const paidIqd = parseDec(normalizeMoneyInput(amountPaidIqd))
   const paidUsd = parseDec(normalizeMoneyInput(amountPaidUsd))
@@ -1017,7 +1025,7 @@ export function PosPage() {
   /** Remaining for THIS invoice only (prior debt is shown separately). */
   const remainingThisSaleUsd = balanceUsd
   const remainingThisSaleIqd =
-    rate !== null && !Number.isNaN(rate) ? remainingThisSaleUsd * rate : null
+    rate !== null && rate > 0 ? usdToIqdAmount(remainingThisSaleUsd, rate) : null
 
   const applyRemainderAsDiscountUsd = useCallback(() => {
     if (remainingThisSaleUsd <= 0.0001) return
@@ -1057,7 +1065,7 @@ export function PosPage() {
         setAmountPaidIqd('')
         return
       }
-      setAmountPaidIqd(String(Math.round(usd * rate)))
+      setAmountPaidIqd(String(usdToIqdAmount(usd, rate)))
     },
     [rate, paymentUsdLinked],
   )
@@ -1541,21 +1549,38 @@ export function PosPage() {
         <div className="no-print border-b border-slate-200 bg-white/95 px-4 py-2 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-800/95">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2">
             {rate !== null && rate > 0 && !Number.isNaN(rate) ? (
-              <div className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-indigo-50 px-3 py-2 text-start shadow-sm dark:border-violet-600/40 dark:from-violet-950/40 dark:to-indigo-950/40">
-                <span className="text-sm font-semibold tabular-nums text-violet-900 dark:text-violet-200">
+              <div
+                className={`inline-flex min-h-11 max-w-full flex-wrap items-center gap-2 rounded-xl border px-3 py-2 text-start shadow-sm ${
+                  isPlausibleIqdPer100(Number(iqdPer100FromApiRate(rate)))
+                    ? 'border-violet-200 bg-gradient-to-r from-violet-50 to-indigo-50 dark:border-violet-600/40 dark:from-violet-950/40 dark:to-indigo-950/40'
+                    : 'border-amber-300 bg-amber-50 dark:border-amber-600/50 dark:bg-amber-950/30'
+                }`}
+              >
+                <span
+                  className={`text-sm font-semibold tabular-nums ${
+                    isPlausibleIqdPer100(Number(iqdPer100FromApiRate(rate)))
+                      ? 'text-violet-900 dark:text-violet-200'
+                      : 'text-amber-950 dark:text-amber-100'
+                  }`}
+                >
                   {lang === 'ku'
-                    ? `نرخ: 100 $ = ${Math.round(rate * 100).toLocaleString()} IQD`
+                    ? `نرخ: 100 $ = ${Number(iqdPer100FromApiRate(rate)).toLocaleString('en-US')} IQD`
                     : t('pos.paymentRateLine').replace(
                         '{iqd100}',
-                        Math.round(rate * 100).toLocaleString(),
+                        Number(iqdPer100FromApiRate(rate)).toLocaleString('en-US'),
                       )}
                 </span>
+                {!isPlausibleIqdPer100(Number(iqdPer100FromApiRate(rate))) ? (
+                  <span className="text-xs font-medium text-amber-900 dark:text-amber-200">
+                    {t('pos.rateImplausibleBanner')}
+                  </span>
+                ) : null}
                 <button
                   type="button"
                   onClick={openRateEditor}
                   className="rounded-md border border-violet-300 bg-white/80 px-2 py-1 text-[11px] font-medium text-violet-700 hover:bg-white dark:border-violet-500/40 dark:bg-violet-950/40 dark:text-violet-200"
                 >
-                  {t('pos.apply')}
+                  {t('pos.setRateButton')}
                 </button>
               </div>
             ) : (
@@ -2278,7 +2303,7 @@ export function PosPage() {
               <div className="flex justify-between gap-4 text-start">
                 <dt>{t('pos.totalIqd')}</dt>
                 <dd className="font-mono tabular-nums">
-                  {finalIqd !== null ? Math.round(finalIqd).toLocaleString() : '—'}
+                  {finalIqd !== null ? formatIqdInteger(finalIqd) : '—'}
                 </dd>
               </div>
               {selectedCustomerId !== null &&
@@ -2315,7 +2340,7 @@ export function PosPage() {
                   </div>
                   {remainingThisSaleIqd !== null && (
                     <div className="mt-0.5 text-xs font-medium">
-                      {Math.round(remainingThisSaleIqd).toLocaleString()}{' '}
+                      {formatIqdInteger(remainingThisSaleIqd)}{' '}
                       {t('common.currencyIqd')}
                     </div>
                   )}
@@ -2747,14 +2772,31 @@ export function PosPage() {
             <p className="mt-1 text-start text-sm text-slate-600 dark:text-slate-400">
               {t('inv.rateDialogHint')}
             </p>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={ratePer100Input}
-              onChange={(e) => setRatePer100Input(e.target.value)}
-              className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-start tabular-nums dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-              placeholder={t('inv.ratePlaceholder')}
-            />
+            <label className="mt-3 block text-start">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                {t('inv.usdToIqd')}
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={ratePer100Input}
+                onChange={(e) => setRatePer100Input(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-start tabular-nums dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                placeholder={t('inv.ratePlaceholder')}
+              />
+            </label>
+            {(() => {
+              const previewRate = apiRateFromIqdPer100Input(ratePer100Input)
+              if (previewRate == null || previewRate <= 0) return null
+              return (
+                <p className="mt-2 text-start text-xs text-slate-500 dark:text-slate-400">
+                  {t('pos.ratePreviewLine').replace(
+                    '{iqd}',
+                    formatIqdInteger(usdToIqdAmount(10, previewRate)),
+                  )}
+                </p>
+              )
+            })()}
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
@@ -2794,9 +2836,7 @@ export function PosPage() {
             {t('pos.receiptRateLine').replace(
               '{rate}',
               String(
-                Math.round(
-                  Number(lastReceipt.exchange_rate_usd_to_iqd ?? 0) * 100,
-                ),
+                iqdPer100FromApiRate(lastReceipt.exchange_rate_usd_to_iqd ?? 0),
               ),
             )}
           </p>
@@ -2856,7 +2896,7 @@ export function PosPage() {
               <dt className="text-slate-600">{t('pos.finalIqdReceipt')}</dt>
               <dd className="font-mono tabular-nums">
                 {receiptSummary.finalIqd !== null
-                  ? Math.round(receiptSummary.finalIqd).toLocaleString()
+                  ? formatIqdInteger(receiptSummary.finalIqd)
                   : '—'}
               </dd>
             </div>
@@ -2867,9 +2907,9 @@ export function PosPage() {
                   {formatMoneyCompact(receiptSummary.balanceUsd)}
                   {receiptSummary.balanceUsd > 0.0001 ? ` ${t('pos.debtSuffix')}` : ''}
                 </div>
-                {rate !== null && !Number.isNaN(rate) && (
+                {rate !== null && rate > 0 && (
                   <div className="mt-0.5 text-xs font-medium">
-                    {Math.round(receiptSummary.balanceUsd * rate).toLocaleString()}{' '}
+                    {formatIqdInteger(usdToIqdAmount(receiptSummary.balanceUsd, rate))}{' '}
                     {t('common.currencyIqd')}
                   </div>
                 )}
