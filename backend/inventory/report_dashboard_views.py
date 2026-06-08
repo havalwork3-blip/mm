@@ -22,6 +22,7 @@ from .dashboard_tools import (
     total_returned_products_qty_in_range,
     total_returned_products_usd_in_range,
     period_dashboard_petty_cash_usd_in_range,
+    sales_cash_in_usd_range,
     total_sales_gross_usd_in_range,
     total_sales_usd_in_range,
     total_receivables_usd,
@@ -72,8 +73,10 @@ class DashboardStatsView(APIView):
             d_from,
             d_to,
         )
-        period_cash_in_usd = sales_net.quantize(Decimal("0.0001"))
-        period_cash_out_usd = (sales_net - period_cash_drawer_usd).quantize(Decimal("0.0001"))
+        period_cash_in_usd = sales_cash_in_usd_range(shop_id, d_from, d_to).quantize(
+            Decimal("0.0001"),
+        )
+        period_cash_out_usd = exp.quantize(Decimal("0.0001"))
         recv = total_receivables_usd(shop_id)
         pay = total_payables_usd(shop_id)
         stock = total_stock_value_usd(shop_id)
