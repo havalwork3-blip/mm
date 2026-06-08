@@ -1193,7 +1193,7 @@ export function HomePage() {
 
         {stats && !globalAdminStats && (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {isEmployeeDashboard || isSuperuserDashboard ? (
                 <>
                   <StatCard
@@ -1208,6 +1208,13 @@ export function HomePage() {
                     label={t('dash.totalExpenses')}
                     value={stats.total_expenses_usd}
                     tone="amber"
+                    currencyLabel={t('common.currencyUsd')}
+                  />
+                  <StatCard
+                    icon={<Users className="h-5 w-5" />}
+                    label={t('dash.totalDebtorCustomers')}
+                    value={stats.period_receivables_usd ?? '0'}
+                    tone="violet"
                     currencyLabel={t('common.currencyUsd')}
                   />
                   <StatCard

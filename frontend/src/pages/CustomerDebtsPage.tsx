@@ -167,6 +167,9 @@ export function CustomerDebtsPage() {
   const [submittingWriteoff, setSubmittingWriteoff] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyScope, setHistoryScope] = useState<'all_collections' | 'debt_repayments'>(
+    'all_collections',
+  )
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyRows, setHistoryRows] = useState<CustomerPaymentHistoryRow[]>([])
   const [localHistoryRows, setLocalHistoryRows] = useState<CustomerPaymentHistoryRow[]>(
@@ -430,7 +433,16 @@ export function CustomerDebtsPage() {
     })()
   }, [canAccessShopData, canView])
 
-  async function fetchPaymentHistory(dateFrom: string, dateTo: string) {
+  const historyTitleKey =
+    historyScope === 'debt_repayments'
+      ? 'customerDebtsPage.debtRepaymentsHistoryTitle'
+      : 'customerDebtsPage.paymentsHistoryTitle'
+
+  async function fetchPaymentHistory(
+    dateFrom: string,
+    dateTo: string,
+    scope: 'all_collections' | 'debt_repayments' = historyScope,
+  ) {
     setHistoryLoading(true)
     setError(null)
     try {
@@ -441,10 +453,16 @@ export function CustomerDebtsPage() {
       const led = await apiJson<{ entries: CustomerPaymentHistoryRow[] }>(
         `/api/cashier/ledger/?${q.toString()}`,
       )
-      const onlyCustomerPayments = (led.entries ?? []).filter(
-        (e) => e.kind === 'sale_payment' || e.kind === 'customer_debt_payment',
+      const onlyCustomerPayments = (led.entries ?? []).filter((e) =>
+        scope === 'debt_repayments'
+          ? e.kind === 'customer_debt_payment'
+          : e.kind === 'sale_payment' || e.kind === 'customer_debt_payment',
       )
-      const merged = [...localHistoryRows, ...onlyCustomerPayments]
+      const localRows =
+        scope === 'debt_repayments'
+          ? localHistoryRows.filter((e) => e.kind === 'customer_debt_payment')
+          : localHistoryRows
+      const merged = [...localRows, ...onlyCustomerPayments]
       const seen = new Set<string>()
       const deduped = merged.filter((r) => {
         const key = `${r.kind}-${r.id}-${r.occurred_at ?? r.occurred_on}`
@@ -461,13 +479,14 @@ export function CustomerDebtsPage() {
     }
   }
 
-  async function openPaymentHistory() {
+  async function openPaymentHistory(scope: 'all_collections' | 'debt_repayments') {
+    setHistoryScope(scope)
     setHistoryOpen(true)
     setHistoryCustomerQuery('')
     setHistoryCustomerOpen(false)
     setHistoryDateFrom('')
     setHistoryDateTo('')
-    await fetchPaymentHistory('', '')
+    await fetchPaymentHistory('', '', scope)
   }
 
   function closeHistoryEdit() {
@@ -631,7 +650,7 @@ export function CustomerDebtsPage() {
       </style>
       <div class="sheet">
         <div class="head">
-          <h2>${escapeHtml(t('customerDebtsPage.paymentsHistoryTitle'))}</h2>
+          <h2>${escapeHtml(t(historyTitleKey))}</h2>
           <p class="meta">${escapeHtml(dateText)}</p>
         </div>
         <table>
@@ -693,16 +712,20 @@ export function CustomerDebtsPage() {
     } finally {
       document.body.removeChild(container)
     }
-  }, [filteredHistoryRows, historyDateFrom, historyDateTo, t])
+  }, [filteredHistoryRows, historyDateFrom, historyDateTo, historyTitleKey, t])
 
   const downloadPaymentHistoryPdf = useCallback(async () => {
     try {
       const pdf = await buildPaymentHistoryPdfDoc()
-      pdf.save(`customer-payment-history-${new Date().toISOString().slice(0, 10)}.pdf`)
+      const prefix =
+        historyScope === 'debt_repayments'
+          ? 'customer-debt-repayment-history'
+          : 'customer-payment-history'
+      pdf.save(`${prefix}-${new Date().toISOString().slice(0, 10)}.pdf`)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     }
-  }, [buildPaymentHistoryPdfDoc, t])
+  }, [buildPaymentHistoryPdfDoc, historyScope, t])
 
   const printPaymentHistory = useCallback(async () => {
     const w = window.open('', '_blank')
@@ -945,10 +968,17 @@ export function CustomerDebtsPage() {
             </button>
             <button
               type="button"
-              onClick={() => void openPaymentHistory()}
+              onClick={() => void openPaymentHistory('all_collections')}
               className="min-h-9 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               {t('customerDebtsPage.paymentsHistoryBtn')}
+            </button>
+            <button
+              type="button"
+              onClick={() => void openPaymentHistory('debt_repayments')}
+              className="min-h-9 rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-800 hover:bg-violet-100 dark:border-violet-500/40 dark:bg-violet-950/40 dark:text-violet-100 dark:hover:bg-violet-900/50"
+            >
+              {t('customerDebtsPage.debtRepaymentsHistoryBtn')}
             </button>
             {me.is_superuser && (
               <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs dark:border-slate-600 dark:bg-slate-900">
@@ -1333,7 +1363,7 @@ export function CustomerDebtsPage() {
                 id="customer-payments-history-title"
                 className="text-base font-semibold text-slate-900 dark:text-slate-100"
               >
-                {t('customerDebtsPage.paymentsHistoryTitle')}
+                {t(historyTitleKey)}
               </h2>
               <div className="flex flex-wrap items-center gap-2">
                 <button

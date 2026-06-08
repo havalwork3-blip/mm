@@ -1004,7 +1004,9 @@ const en: Record<string, string> = {
   'companyDebtsPage.editLedgerHint':
     'Updates the linked purchase date and recorded paid amount (USD). Requires purchase edit permission.',
   'customerDebtsPage.paymentsHistoryBtn': 'All collection history',
+  'customerDebtsPage.debtRepaymentsHistoryBtn': 'All debt repayment history',
   'customerDebtsPage.paymentsHistoryTitle': 'Customer collection history',
+  'customerDebtsPage.debtRepaymentsHistoryTitle': 'Customer debt repayment history',
   'customerDebtsPage.paymentsHistoryEditTitle': 'Edit collection record',
   'customerDebtsPage.paymentsHistoryEditHint':
     'Updates this sale receipt’s date and total payment (USD equivalent). If the receipt had both USD and IQD payments, the split is scaled proportionally.',
@@ -2533,7 +2535,9 @@ const ar: Record<string, string> = {
   'companyDebtsPage.editLedgerHint':
     'يحدّث تاريخ المشتريات المرتبطة ومبلغ المدفوع المسجل (USD). يتطلب صلاحية تعديل المشتريات.',
   'customerDebtsPage.paymentsHistoryBtn': 'كل سجل التحصيل',
+  'customerDebtsPage.debtRepaymentsHistoryBtn': 'سجل كل الديون المستردة',
   'customerDebtsPage.paymentsHistoryTitle': 'سجل تحصيل العملاء',
+  'customerDebtsPage.debtRepaymentsHistoryTitle': 'سجل استرداد ديون العملاء',
   'customerDebtsPage.paymentsHistoryEditTitle': 'تعديل سجل التحصيل',
   'customerDebtsPage.paymentsHistoryEditHint':
     'يحدّث تاريخ الإيصال وإجمالي الدفع (ما يعادل USD). إذا كان الإيصال يحتوي دفعة USD وIQD معاً، يتم ضبط التقسيم بنفس النسبة.',
@@ -3749,7 +3753,9 @@ const ku: Record<string, string> = {
   'companyDebtsPage.editLedgerHint':
     'بەروار و بڕی دراوی کڕینەکە نوێ دەکاتەوە (USD). مۆڵەتی دەستکاری کڕین پێویستە.',
   'customerDebtsPage.paymentsHistoryBtn': 'مێژووی هەموو وەرگرتنەکان',
+  'customerDebtsPage.debtRepaymentsHistoryBtn': 'مێژووی هەموو قەرزە وەرگیراوەکان',
   'customerDebtsPage.paymentsHistoryTitle': 'مێژووی وەرگرتنی قەرزی کڕیارەکان',
+  'customerDebtsPage.debtRepaymentsHistoryTitle': 'مێژووی قەرزە گەڕاوەکان',
   'customerDebtsPage.paymentsHistoryEditTitle': 'دەستکاری تۆماری وەرگرتن',
   'customerDebtsPage.paymentsHistoryEditHint':
     'بەروار و کۆی پارەدان (هاوسەنگی USD) بۆ ئەم وەسڵی فرۆشتنە نوێ دەکاتەوە. ئەگەر وەسڵەکە USD و IQD هەبوو، هەمان ڕێژە پارە دەدرێت.',
