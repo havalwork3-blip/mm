@@ -962,6 +962,392 @@ export async function buildReceiptHtml(args: {
       </div></body></html>`
 }
 
+export type DebtPaymentReceiptData = {
+  customerName: string
+  customerPhone: string
+  customerAddress: string
+  occurredAt: string
+  paymentId: number | null
+  totalDebtUsd: number
+  totalDebtIqd: number | null
+  paidUsd: number
+  paidIqd: number
+  remainingUsd: number
+  exchangeRate: number
+}
+
+export async function buildDebtPaymentReceiptHtml(args: {
+  data: DebtPaymentReceiptData
+  receiptSettings: ReceiptSettingsRow | null
+}): Promise<string> {
+  const { data, receiptSettings } = args
+  const receiptQrBlock = await buildReceiptQrBlock(receiptSettings)
+
+  const showIqdOnPdf = receiptSettings?.show_iqd_on_pdf !== false
+  const rate = data.exchangeRate > 0 ? data.exchangeRate : 0
+  const totalDebtIqd =
+    data.totalDebtIqd != null && Number.isFinite(data.totalDebtIqd)
+      ? data.totalDebtIqd
+      : rate > 0
+        ? data.totalDebtUsd * rate
+        : null
+  const remainingIqd = rate > 0 ? data.remainingUsd * rate : null
+
+  const logo = receiptSettings?.logo_url
+    ? `<img src="${receiptSettings.logo_url}" alt="" class="logo-img" />`
+    : '<div class="logo-placeholder" aria-hidden="true">M&amp;M</div>'
+  const shopEn = escapeHtml(receiptSettings?.shop_name_en || '')
+  const shopKu = escapeHtml(receiptSettings?.shop_name_ku || '')
+  const sub = escapeHtml(
+    receiptSettings?.sub_title || 'بۆ بازرگانی مۆبایل و پێداویستییەکانی',
+  )
+  const footer = escapeHtml(
+    receiptSettings?.footer_note || 'هەڵە و سەهوو دەگەڕێتەوە بۆ هەردوولا',
+  )
+  const shopAddress = escapeHtml((receiptSettings?.address ?? '').trim())
+  const sigShopNameBlock =
+    shopKu || shopEn
+      ? `<div class="sig-shop-name">
+          ${shopKu ? `<div class="sig-shop-name__ku">${shopKu}</div>` : ''}
+          ${shopEn ? `<div class="sig-shop-name__en">${shopEn}</div>` : ''}
+        </div>`
+      : ''
+  const customerNameDisp = escapeHtml(data.customerName || '')
+  const customerPhone = escapeHtml(data.customerPhone || '')
+  const customerAddress = escapeHtml(data.customerAddress || '')
+  const occurredAt = data.occurredAt ? new Date(data.occurredAt) : new Date()
+  const occurred = occurredAt.toLocaleString()
+  const receiptNo =
+    data.paymentId != null && data.paymentId > 0
+      ? String(data.paymentId).padStart(6, '0')
+      : '—'
+
+  const totalDebtIqdRow = showIqdOnPdf
+    ? `<div class="tot-row tot-row--muted"><span>بری قەرزی گشتی (IQD)</span><span class="num">${totalDebtIqd != null ? fmtIqd(totalDebtIqd) : '—'}</span></div>`
+    : ''
+  const paidIqdRow = showIqdOnPdf
+    ? `<div class="tot-row tot-row--muted"><span>بری دراو (IQD)</span><span class="num">${fmtIqd(data.paidIqd)}</span></div>`
+    : ''
+  const remainingIqdRow = showIqdOnPdf
+    ? `<div class="tot-row tot-row--muted"><span>بری ماوە (IQD)</span><span class="num">${remainingIqd != null ? fmtIqd(remainingIqd) : '—'}</span></div>`
+    : ''
+
+  const styles = `
+        @page { size: A4 portrait; margin: 8mm; }
+        * { box-sizing: border-box; }
+        body {
+          margin: 0;
+          color: #0f172a;
+          background: #f1f5f9;
+          font-family: 'Segoe UI', Tahoma, Arial, 'Noto Sans Arabic', sans-serif;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .sheet {
+          width: 100%;
+          max-width: 195mm;
+          margin: 0 auto;
+          padding: 8px 0;
+          min-height: 281mm;
+          display: flex;
+        }
+        .receipt {
+          width: 100%;
+          border: 0;
+          border-radius: 14px;
+          overflow: hidden;
+          background: #fff;
+          font-size: 11px;
+          line-height: 1.35;
+          box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+          direction: rtl;
+          display: flex;
+          flex-direction: column;
+          min-height: 100%;
+        }
+        .invoice-hero {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 16px 18px;
+          background: #fff;
+          color: #0f172a;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .invoice-hero__brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .invoice-hero__badge { text-align: end; min-width: 220px; }
+        .invoice-hero__badge-ku {
+          margin: 0;
+          font-size: 34px;
+          line-height: 1;
+          font-weight: 900;
+          letter-spacing: 0.02em;
+          color: #f59e0b;
+        }
+        .invoice-hero__badge-en {
+          margin: 2px 0 0;
+          font-size: 12px;
+          color: #334155;
+          font-weight: 600;
+        }
+        .invoice-hero__badge-id {
+          margin: 4px 0 0;
+          font-size: 12px;
+          color: #334155;
+          font-weight: 700;
+        }
+        .logo-img,
+        .logo-placeholder {
+          width: 96px;
+          height: 96px;
+          border-radius: 18px;
+          border: 0;
+          flex-shrink: 0;
+          box-shadow: none;
+        }
+        .logo-img { object-fit: cover; }
+        .logo-placeholder {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f3f4f6;
+          color: #334155;
+          font-size: 18px;
+          font-weight: 800;
+        }
+        .receipt-titles .tag {
+          margin: 3px 0 0;
+          font-size: 10px;
+          color: #64748b;
+        }
+        .receipt-titles .shop-addr {
+          margin: 8px 0 0;
+          font-size: 10px;
+          line-height: 1.45;
+          color: #334155;
+          font-weight: 600;
+          white-space: pre-wrap;
+        }
+        .receipt-body { padding: 16px 18px 18px; flex: 1; }
+        .receipt-meta {
+          margin-top: 14px;
+          margin-bottom: 10px;
+          padding: 12px;
+          border: 1px solid #dbe3ef;
+          border-radius: 10px;
+          background: #f8fafc;
+          color: #111827;
+        }
+        .meta-line {
+          display: grid;
+          gap: 14px;
+          align-items: start;
+        }
+        .meta-line:not(.meta-line--with-qr) {
+          grid-template-columns: 1fr 1fr;
+        }
+        .meta-line--with-qr {
+          grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+          align-items: center;
+        }
+        .meta-line__qr {
+          grid-column: 2;
+          justify-self: center;
+          align-self: center;
+        }
+        .party-card--customer {
+          grid-column: 1;
+          justify-self: start;
+          text-align: left;
+          direction: ltr;
+        }
+        .party-card--meta {
+          grid-column: 2;
+          justify-self: end;
+          text-align: right;
+          direction: rtl;
+        }
+        .meta-line--with-qr .party-card--meta {
+          grid-column: 3;
+        }
+        .party-card h3 {
+          margin: 0 0 6px;
+          font-size: 11px;
+          color: #1f2937;
+          letter-spacing: 0.02em;
+        }
+        .party-card p {
+          margin: 0 0 2px;
+          font-size: 10px;
+          color: #475569;
+        }
+        .party-card p strong {
+          color: #6b7280;
+          font-weight: 600;
+          margin-inline-end: 6px;
+        }
+        .receipt-totals {
+          margin-bottom: 10px;
+          margin-left: auto;
+          width: min(54%, 320px);
+          border: 1px solid #dbe3ef;
+          border-radius: 10px;
+          overflow: hidden;
+          box-shadow: 0 1px 0 #f3f4f6 inset;
+        }
+        .receipt-totals .tot-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 10px;
+          border-bottom: 1px solid #e5e7eb;
+          background: #fff;
+          font-size: 10px;
+        }
+        .receipt-totals .tot-row:last-child { border-bottom: 0; }
+        .receipt-totals .num {
+          font-variant-numeric: tabular-nums;
+          font-weight: 700;
+          text-align: end;
+          min-width: 96px;
+        }
+        .tot-row--strong {
+          background: #fff !important;
+          border-top: 1px solid #e5e7eb;
+        }
+        .tot-row--strong .num {
+          color: #f59e0b !important;
+          font-size: 28px;
+          line-height: 1.1;
+          font-weight: 900;
+        }
+        .tot-row--muted { background: #f9fafb !important; }
+        .tot-row--balance { background: #f8fafc !important; }
+        .tot-row--balance .num { color: #b91c1c; }
+        .receipt-bottom {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+        .receipt-qr {
+          margin: 4px 0 8px;
+          text-align: start;
+          width: fit-content;
+          max-width: 110px;
+        }
+        .receipt-qr__caption-wrap { margin: 0 0 3px; }
+        .receipt-qr__caption {
+          margin: 0;
+          font-size: 9px;
+          line-height: 1.25;
+          color: #334155;
+          font-weight: 600;
+        }
+        .receipt-qr__link { display: inline-block; line-height: 0; vertical-align: top; }
+        .receipt-qr__img {
+          display: block;
+          width: 88px;
+          height: 88px;
+          margin: 0;
+          border: 0;
+          padding: 0;
+          background: transparent;
+        }
+        .sig {
+          display: block;
+          min-width: 200px;
+          text-align: end;
+          color: #6b7280;
+          font-size: 10px;
+        }
+        .sig-shop-name { margin-bottom: 8px; color: #0f172a; }
+        .sig-shop-name__ku { font-size: 16px; font-weight: 900; line-height: 1.2; }
+        .sig-shop-name__en {
+          margin-top: 2px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #334155;
+        }
+        .sig .line {
+          border-top: 1px solid #9ca3af;
+          width: 140px;
+          margin-inline-start: auto;
+          margin-bottom: 4px;
+        }
+        .receipt-footer {
+          margin: 0;
+          padding: 8px 14px;
+          text-align: center;
+          font-size: 10px;
+          font-weight: 600;
+          color: #0f172a;
+          background: #e2e8f0;
+          border-top: 1px solid #cbd5e1;
+        }
+    `
+
+  return `<!doctype html><html dir="rtl" lang="ku"><head><meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <style>${styles}</style></head><body>
+      <div class="sheet">
+      <div class="receipt">
+        <div class="invoice-hero">
+          <div class="invoice-hero__brand">
+            ${logo}
+            <div class="receipt-titles">
+              <p class="tag">${sub}</p>
+              ${shopAddress ? `<p class="shop-addr" dir="auto">${shopAddress}</p>` : ''}
+            </div>
+          </div>
+          <div class="invoice-hero__badge">
+            <p class="invoice-hero__badge-ku">RECEIPT</p>
+            <p class="invoice-hero__badge-en">پسوولەی پارەدان</p>
+            <p class="invoice-hero__badge-id">[ ژمارە: ${escapeHtml(receiptNo)} ]</p>
+          </div>
+        </div>
+        <div class="receipt-body">
+        <div class="receipt-meta">
+          <div class="meta-line${receiptQrBlock ? ' meta-line--with-qr' : ''}">
+            <div class="party-card party-card--customer">
+              <h3>زانیاری کریار</h3>
+              <p><strong>بۆ بەرزێز ${customerNameDisp}</strong></p>
+              <p>ژمارەی مۆبایل ${customerPhone}</p>
+              <p>ناونیشان ${customerAddress}</p>
+            </div>
+            ${receiptQrBlock ? `<div class="meta-line__qr">${receiptQrBlock}</div>` : ''}
+            <div class="party-card party-card--meta">
+              <h3>زانیاری پسوولە</h3>
+              <p><strong>ژمارەی پسوولە:</strong> ${escapeHtml(receiptNo)}</p>
+              <p><strong>بەروار و کات:</strong> ${escapeHtml(occurred)}</p>
+            </div>
+          </div>
+        </div>
+        <div class="receipt-totals">
+          <div class="tot-row"><span>بری قەرزی گشتی (USD)</span><span class="num">${fmtUsd(data.totalDebtUsd)}</span></div>
+          ${totalDebtIqdRow}
+          <div class="tot-row"><span>بری دراو (USD)</span><span class="num">${fmtUsd(data.paidUsd)}</span></div>
+          ${paidIqdRow}
+          <div class="tot-row tot-row--strong"><span>بری ماوە (USD)</span><span class="num">${fmtUsd(data.remainingUsd)}</span></div>
+          ${remainingIqdRow}
+        </div>
+        <div class="receipt-bottom">
+          <div></div>
+          <div class="sig">
+            ${sigShopNameBlock}
+            <div class="line"></div>
+            <div>واژووی بەرپرسی</div>
+          </div>
+        </div>
+        </div>
+        <footer class="receipt-footer">${footer}</footer>
+      </div>
+      </div></body></html>`
+}
+
 export function printReceiptHtml(html: string): void {
   if (!html) return
   const iframe = document.createElement('iframe')

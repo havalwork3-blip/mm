@@ -6,8 +6,14 @@ import { Link, Navigate } from 'react-router-dom'
 import { PageAuthLoading } from '../components/PageAuthLoading'
 import { useLocale } from '../context/LocaleContext'
 import { useSyncedSession } from '../hooks/useSyncedSession'
-import { apiJson } from '../lib/api'
+import { apiJson, type ApiFetchOptions } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
+import {
+  buildDebtPaymentReceiptHtml,
+  printReceiptHtml,
+  type DebtPaymentReceiptData,
+} from '../lib/receiptHtml'
+import { withReceiptPrefs } from '../lib/receiptPrefs'
 import type {
   CustomerCollectPaymentResponse,
   CustomerDebtPaymentRow,
@@ -15,8 +21,11 @@ import type {
   CustomerDebtRow,
   CustomerDebtSummaryResponse,
   CustomerRow,
+  ReceiptSettingsRow,
   SaleListRow,
 } from '../types/api'
+
+const SHOP_SCOPED: ApiFetchOptions = { shopScoped: true }
 
 function normalizeMoneyInput(s: string) {
   return s.replace(/[\s,،\u066C]/g, '').trim()
@@ -175,10 +184,9 @@ export function CustomerDebtsPage() {
   const [summary, setSummary] = useState<CustomerDebtSummaryResponse | null>(
     null,
   )
-  const [collectFor, setCollectFor] = useState<{
-    id: number
-    name: string
-  } | null>(null)
+  const [collectFor, setCollectFor] = useState<CustomerDebtRow | null>(null)
+  const [printPrompt, setPrintPrompt] = useState<DebtPaymentReceiptData | null>(null)
+  const [receiptSettings, setReceiptSettings] = useState<ReceiptSettingsRow | null>(null)
   const [payUsd, setPayUsd] = useState('')
   const [payIqd, setPayIqd] = useState('')
   const [submittingPay, setSubmittingPay] = useState(false)
@@ -330,7 +338,7 @@ export function CustomerDebtsPage() {
     }
   }
 
-  function openCollect(row: { id: number; name: string }) {
+  function openCollect(row: CustomerDebtRow) {
     setError(null)
     setWriteoffFor(null)
     setCollectFor(row)
@@ -414,13 +422,14 @@ export function CustomerDebtsPage() {
       setSuccessMsg(msg)
       const applied = parseFloat(data.applied_usd_eq)
       const paymentId = data.payment_id
+      const occurredAt = new Date().toISOString()
       if (applied > 0.000001 && paymentId != null) {
         setLocalHistoryRows((prev) => [
           {
             kind: 'customer_debt_payment',
             id: paymentId,
-            occurred_on: new Date().toISOString().slice(0, 10),
-            occurred_at: new Date().toISOString(),
+            occurred_on: occurredAt.slice(0, 10),
+            occurred_at: occurredAt,
             amount_usd: data.applied_usd_eq,
             direction: 'in',
             label: collectFor.name,
@@ -428,6 +437,26 @@ export function CustomerDebtsPage() {
           ...prev,
         ])
       }
+      const rate = parseFloat(summary?.exchange_rate_usd_to_iqd ?? '0')
+      const totalDebtUsd = parseDec(collectFor.outstanding_balance_usd)
+      const totalDebtIqdRaw = collectFor.outstanding_balance_iqd
+      const totalDebtIqd =
+        totalDebtIqdRaw != null && totalDebtIqdRaw !== ''
+          ? parseFloat(String(totalDebtIqdRaw).replace(/,/g, ''))
+          : null
+      setPrintPrompt({
+        customerName: collectFor.name,
+        customerPhone: debtRowPhonesDisplay(collectFor),
+        customerAddress: collectFor.address || '',
+        occurredAt,
+        paymentId,
+        totalDebtUsd,
+        totalDebtIqd: Number.isFinite(totalDebtIqd) ? totalDebtIqd : null,
+        paidUsd: parseDec(usdClean || '0'),
+        paidIqd: parseDec(iqdClean || '0'),
+        remainingUsd: parseDec(data.outstanding_balance_usd_after),
+        exchangeRate: Number.isFinite(rate) && rate > 0 ? rate : 0,
+      })
       setCollectFor(null)
       await fetchSummary()
     } catch (e) {
@@ -450,6 +479,13 @@ export function CustomerDebtsPage() {
         setCustomerLookup([])
       }
     })()
+  }, [canAccessShopData, canView])
+
+  useEffect(() => {
+    if (!canView || !canAccessShopData) return
+    void apiJson<ReceiptSettingsRow>('/api/receipt-settings/', SHOP_SCOPED)
+      .then((data) => setReceiptSettings(data))
+      .catch(() => setReceiptSettings(null))
   }, [canAccessShopData, canView])
 
   const historyTitleKey =
@@ -922,6 +958,21 @@ export function CustomerDebtsPage() {
     }
   }, [buildCustomerDebtsPdfDoc, t])
 
+  async function printDebtPaymentReceipt() {
+    if (!printPrompt) return
+    try {
+      const html = await buildDebtPaymentReceiptHtml({
+        data: printPrompt,
+        receiptSettings: receiptSettings ? withReceiptPrefs(receiptSettings) : null,
+      })
+      printReceiptHtml(html)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('common.error'))
+    } finally {
+      setPrintPrompt(null)
+    }
+  }
+
   const rateForHint = summary?.exchange_rate_usd_to_iqd
   const iqdPerUsdRounded =
     rateForHint !== null && rateForHint !== undefined
@@ -1202,9 +1253,7 @@ export function CustomerDebtsPage() {
                                 <div className="inline-flex items-center justify-center gap-1">
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      openCollect({ id: row.id, name: row.name })
-                                    }
+                                    onClick={() => openCollect(row)}
                                     className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 text-amber-800 transition hover:bg-amber-100 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-900/50"
                                     title={t('customerDebts.collectPayment')}
                                     aria-label={t('customerDebts.collectPayment')}
@@ -1262,6 +1311,43 @@ export function CustomerDebtsPage() {
         ) : null}
       </main>
 
+      {printPrompt && (
+        <div
+          className="fixed inset-0 z-[205] flex items-end justify-center bg-black/50 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="debt-print-prompt-title"
+        >
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:border dark:border-slate-600 dark:bg-slate-800">
+            <h2
+              id="debt-print-prompt-title"
+              className="text-center text-lg font-semibold text-slate-900 dark:text-slate-100"
+            >
+              {t('customerDebts.paymentRecorded')}
+            </h2>
+            <p className="mt-2 text-center text-sm text-slate-600 dark:text-slate-400">
+              {t('customerDebts.printPromptMessage')}
+            </p>
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => void printDebtPaymentReceipt()}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white hover:bg-violet-500"
+              >
+                <Printer className="h-4 w-4" aria-hidden />
+                {t('customerDebts.printReceipt')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintPrompt(null)}
+                className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                {t('customerDebts.skipPrint')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {collectFor && (
         <div
           className="fixed inset-0 z-[200] flex items-end justify-center bg-black/50 p-4 sm:items-center"
