@@ -689,7 +689,7 @@ const en: Record<string, string> = {
   'dash.cashOutPeriod': 'Cash paid out',
   'dash.periodCashNet': 'Net in period (petty cash)',
   'dash.periodCashFlowHint':
-    'How much cash came in from sales and collections vs what left the drawer in this date range.',
+    'Cash in = sales received + debt collected − returns. Cash out = expenses + discounts. Net = petty cash.',
   'admin.pettyCashByShop': 'Petty cash by shop (top 5)',
   'dash.returnsRate': 'Returns rate',
   'dash.ofSales': 'of sales',
@@ -3449,7 +3449,7 @@ const ku: Record<string, string> = {
   'dash.cashOutPeriod': 'پارەی چوو',
   'dash.periodCashNet': 'پوختە لە ماوەکە (قاسەی بچووک)',
   'dash.periodCashFlowHint':
-    'چەند پارە لە فرۆشتن و وەرگرتن هاتووە بەرامبەر ئەوەی لە ماوەکەدا لە قاسە چووە.',
+    'پارەی هاتوو = فرۆشتن + وەرگرتنی قەرز − گەڕاوە. پارەی چوو = خەرجی + داشکاندن. پوختە = قاسەی بچووک.',
   'admin.pettyCashByShop': 'قاسەی بچووک بەپێی دووکان (باشترین ٥)',
   'dash.returnsRate': 'ڕێژەی گەڕانەوەی بەرهەم',
   'dash.ofSales': 'لە فرۆشتن',

@@ -21,8 +21,6 @@ from .dashboard_tools import (
     total_payables_usd,
     total_returned_products_qty_in_range,
     total_returned_products_usd_in_range,
-    period_dashboard_petty_cash_usd_in_range,
-    sales_cash_in_usd_range,
     total_sales_gross_usd_in_range,
     total_sales_usd_in_range,
     total_receivables_usd,
@@ -65,11 +63,6 @@ class DashboardStatsView(APIView):
         returned_products_usd = total_returned_products_usd_in_range(shop_id, d_from, d_to)
         period_recv = total_receivables_usd_in_range(shop_id, d_from, d_to)
         cash_snapshot = cashier_snapshot(shop_id, d_from, d_to)
-        period_cash_drawer_usd = period_dashboard_petty_cash_usd_in_range(
-            shop_id,
-            d_from,
-            d_to,
-        )
         period_debt_collected_usd = customer_debt_payments_usd_in_range(
             shop_id,
             d_from,
@@ -77,10 +70,17 @@ class DashboardStatsView(APIView):
         )
         from .dashboard_tools import money_usd_2dp
 
+        exp_2dp = money_usd_2dp(exp)
+        discounts_2dp = money_usd_2dp(discounts_total)
+        returned_2dp = money_usd_2dp(returned_products_usd)
         period_cash_in_usd = money_usd_2dp(
-            sales_total + period_debt_collected_usd - returned_products_usd,
+            sales_total + period_debt_collected_usd - returned_2dp,
         )
-        period_cash_out_usd = money_usd_2dp(exp)
+        # Cash out = expenses + discounts so (cash in − cash out) = petty cash.
+        period_cash_out_usd = money_usd_2dp(exp_2dp + discounts_2dp)
+        period_cash_drawer_usd = money_usd_2dp(
+            period_cash_in_usd - period_cash_out_usd,
+        )
         recv = total_receivables_usd(shop_id)
         pay = total_payables_usd(shop_id)
         stock = total_stock_value_usd(shop_id)
@@ -91,14 +91,14 @@ class DashboardStatsView(APIView):
                 "date_from": d_from.isoformat(),
                 "date_to": d_to.isoformat(),
                 "net_profit_usd": format(np, "f"),
-                "total_expenses_usd": format(exp, "f"),
+                "total_expenses_usd": format(exp_2dp, "f"),
                 "total_inventory_loss_usd": format(inventory_loss, "f"),
                 "total_sales_gross_usd": format(sales_gross, "f"),
                 "total_sales_usd": format(sales_total, "f"),
-                "total_discounts_usd": format(discounts_total, "f"),
+                "total_discounts_usd": format(discounts_2dp, "f"),
                 "debtor_customers_count": debtor_customers_count,
                 "total_returned_products_qty": returned_products_qty,
-                "total_returned_products_usd": format(returned_products_usd, "f"),
+                "total_returned_products_usd": format(returned_2dp, "f"),
                 "period_receivables_usd": format(period_recv, "f"),
                 "period_cash_drawer_usd": format(period_cash_drawer_usd, "f"),
                 "period_customer_debt_collected_usd": format(period_debt_collected_usd, "f"),

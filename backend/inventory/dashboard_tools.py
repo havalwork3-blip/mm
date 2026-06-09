@@ -57,6 +57,25 @@ def _bounds(d_from, d_to):
     return start, end
 
 
+def _sales_in_calendar_range(shop_id: int, d_from, d_to):
+    """Sales in calendar date range (same filter as GET /api/sales/?date_from=&date_to=)."""
+    qs = Sale.objects.filter(shop_id=shop_id)
+    if d_from is not None:
+        qs = qs.filter(occurred_at__date__gte=d_from)
+    if d_to is not None:
+        qs = qs.filter(occurred_at__date__lte=d_to)
+    return qs
+
+
+def _datetime_in_calendar_range(qs, field: str, d_from, d_to):
+    """Filter a datetime field by calendar date (matches sales list date pickers)."""
+    if d_from is not None:
+        qs = qs.filter(**{f"{field}__date__gte": d_from})
+    if d_to is not None:
+        qs = qs.filter(**{f"{field}__date__lte": d_to})
+    return qs
+
+
 def net_profit_in_range(shop_id: int, d_from, d_to) -> Decimal:
     from .reports import profit_report_for_shop
 
@@ -409,13 +428,10 @@ def total_receivables_usd(shop_id: int) -> Decimal:
 
 def total_receivables_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
     """Outstanding balances only for sales created in the selected date range."""
-    start, end = _bounds(d_from, d_to)
     total = Decimal("0")
-    qs = Sale.objects.filter(
-        shop_id=shop_id,
-        occurred_at__gte=start,
-        occurred_at__lte=end,
-    ).prefetch_related("lines__return_lines")
+    qs = _sales_in_calendar_range(shop_id, d_from, d_to).prefetch_related(
+        "lines__return_lines",
+    )
     for sale in qs:
         total += sale_unpaid_balance_usd(sale)
     return total.quantize(Decimal("0.0001"))
@@ -564,13 +580,14 @@ def _sale_paid_usd_equiv(sale: Sale) -> Decimal:
 
 def customer_debt_payments_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
     """Cash collected from customer debt repayments in the date range (USD equivalent)."""
-    start, end = _bounds(d_from, d_to)
+    qs = _datetime_in_calendar_range(
+        CustomerDebtPayment.objects.filter(shop_id=shop_id),
+        "occurred_at",
+        d_from,
+        d_to,
+    )
     total = Decimal("0")
-    for payment in CustomerDebtPayment.objects.filter(
-        shop_id=shop_id,
-        occurred_at__gte=start,
-        occurred_at__lte=end,
-    ):
+    for payment in qs:
         total += customer_debt_payment_usd_eq_display(payment)
     return money_usd_2dp(total)
 
@@ -634,13 +651,8 @@ def sales_checkout_received_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
 
     Matches sales history «کۆی بڕی وەرگیراو (دۆلار)» and GET /api/sales/ date filters.
     """
-    qs = Sale.objects.filter(shop_id=shop_id)
-    if d_from is not None:
-        qs = qs.filter(occurred_at__date__gte=d_from)
-    if d_to is not None:
-        qs = qs.filter(occurred_at__date__lte=d_to)
     total = Decimal("0")
-    for sale in qs:
+    for sale in _sales_in_calendar_range(shop_id, d_from, d_to):
         total += _sale_paid_usd_equiv(sale)
     return money_usd_2dp(total)
 
@@ -670,27 +682,27 @@ def period_dashboard_petty_cash_usd_in_range(shop_id: int, d_from, d_to) -> Deci
 
 def total_customer_discounts_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
     """Total customer discounts in range: checkout invoice discounts + debt writeoffs."""
-    start, end = _bounds(d_from, d_to)
     dec = DecimalField(max_digits=24, decimal_places=4)
     sale_disc = (
-        Sale.objects.filter(
-            shop_id=shop_id,
-            occurred_at__gte=start,
-            occurred_at__lte=end,
-        ).aggregate(s=Sum("invoice_discount_usd", output_field=dec))["s"]
+        _sales_in_calendar_range(shop_id, d_from, d_to).aggregate(
+            s=Sum("invoice_discount_usd", output_field=dec),
+        )["s"]
         or Decimal("0")
+    )
+    writeoff_qs = _datetime_in_calendar_range(
+        CustomerDebtDiscountWriteoff.objects.filter(shop_id=shop_id),
+        "occurred_at",
+        d_from,
+        d_to,
     )
     writeoff_disc = (
-        CustomerDebtDiscountWriteoff.objects.filter(
-            shop_id=shop_id,
-            occurred_at__gte=start,
-            occurred_at__lte=end,
-        ).aggregate(s=Sum("amount_usd", output_field=dec))["s"]
+        writeoff_qs.aggregate(s=Sum("amount_usd", output_field=dec))["s"]
         or Decimal("0")
     )
+    start, end = _bounds(d_from, d_to)
     overlap = _debt_writeoff_discount_overlap_usd(shop_id, start, end, dec)
     total = Decimal(str(sale_disc)) + Decimal(str(writeoff_disc)) - overlap
-    return total.quantize(Decimal("0.0001"))
+    return money_usd_2dp(total)
 
 
 def total_debtor_customers_count(shop_id: int) -> int:
@@ -712,31 +724,29 @@ def total_debtor_customers_count(shop_id: int) -> int:
 
 def total_returned_products_qty_in_range(shop_id: int, d_from, d_to) -> int:
     """Total quantity of returned sale products during the selected range."""
-    start, end = _bounds(d_from, d_to)
-    qty = (
-        SaleReturnLine.objects.filter(
-            sale_return__shop_id=shop_id,
-            sale_return__occurred_at__gte=start,
-            sale_return__occurred_at__lte=end,
-        ).aggregate(s=Sum("quantity"))["s"]
-        or 0
+    qs = _datetime_in_calendar_range(
+        SaleReturnLine.objects.filter(sale_return__shop_id=shop_id),
+        "sale_return__occurred_at",
+        d_from,
+        d_to,
     )
+    qty = qs.aggregate(s=Sum("quantity"))["s"] or 0
     return int(qty)
 
 
 def total_returned_products_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
     """Total returned products value in USD during the selected range."""
-    start, end = _bounds(d_from, d_to)
     dec = DecimalField(max_digits=24, decimal_places=4)
-    amount = (
-        SaleReturnLine.objects.filter(
-            sale_return__shop_id=shop_id,
-            sale_return__occurred_at__gte=start,
-            sale_return__occurred_at__lte=end,
-        ).aggregate(s=Sum(F("quantity") * F("unit_price_usd"), output_field=dec))["s"]
-        or Decimal("0")
+    qs = _datetime_in_calendar_range(
+        SaleReturnLine.objects.filter(sale_return__shop_id=shop_id),
+        "sale_return__occurred_at",
+        d_from,
+        d_to,
     )
-    return Decimal(str(amount)).quantize(Decimal("0.0001"))
+    amount = qs.aggregate(
+        s=Sum(F("quantity") * F("unit_price_usd"), output_field=dec),
+    )["s"] or Decimal("0")
+    return money_usd_2dp(Decimal(str(amount)))
 
 
 def top_selling_products_in_range(
