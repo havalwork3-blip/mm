@@ -3460,7 +3460,7 @@ const ku: Record<string, string> = {
   'dash.profitVsExpensesWithCash': 'قازانج بەرامبەر خەرجی بەرامبەر جوڵەی پارە',
   'dash.cashVsExpenses': 'قاسەی بچووک',
   'dash.pettyCashTrendTitle': 'قاسەی بچووک — ٣٠ ڕۆژی ڕابردوو',
-  'dash.pettyCashTrendSubtitle': 'باڵانسی کۆکراوە (پارەی هاتوو − خەرجی).',
+  'dash.pettyCashTrendSubtitle': 'باڵانسی کۆکراوە ',
   'dash.pettyCashRange7': '٧ ڕۆژ',
   'dash.pettyCashRange14': '١٤ ڕۆژ',
   'dash.pettyCashRange30': '٣٠ ڕۆژ',
