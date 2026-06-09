@@ -1178,8 +1178,8 @@ def petty_cash_trend_points(
     d_to=None,
 ) -> dict:
     """
-    Cumulative petty-cash balance (cash in − expenses) from window start through each day.
-    Matches dashboard ``period_cash_drawer_usd`` logic for [start, day] ranges.
+    Daily petty-cash (قاسەی بچووک) for each calendar day in the window.
+    Each point matches ``period_dashboard_petty_cash_usd_in_range(shop_id, d, d)``.
     """
     today = _business_today()
     if d_from is not None and d_to is not None:
@@ -1202,12 +1202,7 @@ def petty_cash_trend_points(
     points: list[dict] = []
     for offset in range(span_days):
         d = start + timedelta(days=offset)
-        sales_total = total_sales_usd_in_range(shop_id, start, d)
-        debt_collected = customer_debt_payments_usd_in_range(shop_id, start, d)
-        returned = total_returned_products_usd_in_range(shop_id, start, d)
-        exp = total_expenses_usd_in_range(shop_id, start, d)
-        cash_in = money_usd_2dp(sales_total + debt_collected - returned)
-        drawer = money_usd_2dp(cash_in - exp)
+        drawer = period_dashboard_petty_cash_usd_in_range(shop_id, d, d)
         points.append({"date": d.isoformat(), "value_usd": format(drawer, "f")})
     return {
         "date_from": start.isoformat(),
