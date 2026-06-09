@@ -14,11 +14,11 @@ _started = False
 
 def scheduler_enabled() -> bool:
     """
-    In-process APScheduler tick. Default OFF — production should use
-    backend/scripts/cron_manager_telegram.sh (every 5 min) only.
-    Set MANAGER_TELEGRAM_SCHEDULER=1 only if you are NOT using that cron.
+    In-process APScheduler tick.
+    Default ``auto``: ON in DEBUG (local dev), OFF in production (use cron every 5 min).
+    Set MANAGER_TELEGRAM_SCHEDULER=1 to force on; =0 to force off.
     """
-    raw = os.environ.get("MANAGER_TELEGRAM_SCHEDULER", "0").strip().lower()
+    raw = os.environ.get("MANAGER_TELEGRAM_SCHEDULER", "auto").strip().lower()
     if raw in ("0", "false", "no", "off"):
         return False
     if raw in ("1", "true", "yes", "on"):
@@ -26,7 +26,7 @@ def scheduler_enabled() -> bool:
     if raw == "auto":
         from django.conf import settings
 
-        return not settings.DEBUG
+        return bool(settings.DEBUG)
     return False
 
 
@@ -81,17 +81,24 @@ def run_scheduled_manager_digest() -> dict:
             return {"skipped": True, "reason": "lock_busy"}
         if not should_run_scheduled_send(settings):
             return skipped
-        # Claim the day before Telegram I/O so failed/partial sends do not spam all evening.
-        settings.manager_telegram_last_sent_date = report_date
-        settings.save(update_fields=["manager_telegram_last_sent_date", "updated_at"])
 
     settings = QrLandingSettings.load()
-    return send_manager_daily_digest(
+    result = send_manager_daily_digest(
         settings,
         report_date=report_date,
         force=True,
         record_last_sent=False,
     )
+    if int(result.get("sent") or 0) > 0:
+        with transaction.atomic():
+            try:
+                locked = QrLandingSettings.objects.select_for_update().get(pk=1)
+            except OperationalError:
+                return result
+            if locked.manager_telegram_last_sent_date != report_date:
+                locked.manager_telegram_last_sent_date = report_date
+                locked.save(update_fields=["manager_telegram_last_sent_date", "updated_at"])
+    return result
 
 
 def refresh_manager_telegram_schedule() -> None:

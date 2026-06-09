@@ -541,7 +541,7 @@ class QrLandingAdminPatchSerializer(serializers.Serializer):
     manager_telegram_send_minute = serializers.IntegerField(
         required=False,
         min_value=0,
-        max_value=59,
+        max_value=0,
     )
     manager_telegram_clear_last_sent = serializers.BooleanField(required=False, default=False)
 

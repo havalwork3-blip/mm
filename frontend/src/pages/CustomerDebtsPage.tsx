@@ -148,6 +148,11 @@ function debtRowPhonesDisplay(r: CustomerDebtRow) {
   return parts.length ? parts.join(' · ') : '—'
 }
 
+function customerPhonesDisplay(c: CustomerRow) {
+  const parts = [c.phone_1, c.phone_2].map((x) => String(x ?? '').trim()).filter(Boolean)
+  return parts.length ? parts.join(' · ') : '—'
+}
+
 /** Max outstanding (USD) that may be forgiven as discount from the debts table. */
 const DEBT_WRITEOFF_MAX_USD = 10
 
@@ -958,18 +963,73 @@ export function CustomerDebtsPage() {
     }
   }, [buildCustomerDebtsPdfDoc, t])
 
+  function buildDebtReceiptFromPayment(
+    payment: CustomerDebtPaymentRow,
+    historySource: CustomerPaymentHistoryRow[],
+  ): DebtPaymentReceiptData {
+    const appliedEq = parseDec(payment.amount_usd_eq)
+    const rate = parseFloat(payment.exchange_rate_usd_to_iqd)
+    const debtRow = summary?.results.find((r) => r.id === payment.customer)
+    const currentOutstanding = debtRow ? parseDec(debtRow.outstanding_balance_usd) : 0
+    const paymentTime = payment.occurred_at
+    const laterAppliedSum = historySource
+      .filter(
+        (row) =>
+          row.kind === 'customer_debt_payment' &&
+          row.id > 0 &&
+          row.id !== payment.id &&
+          row.label === payment.customer_name &&
+          (row.occurred_at ?? row.occurred_on) > paymentTime,
+      )
+      .reduce((acc, row) => acc + parseDec(row.amount_usd), 0)
+    const remainingAfter = Math.max(0, currentOutstanding + laterAppliedSum)
+    const totalDebtBefore = appliedEq + remainingAfter
+    const customer = customerLookup.find((c) => c.id === payment.customer)
+    return {
+      customerName: payment.customer_name,
+      customerPhone: customer ? customerPhonesDisplay(customer) : debtRow ? debtRowPhonesDisplay(debtRow) : '—',
+      customerAddress: customer?.address || debtRow?.address || '',
+      occurredAt: payment.occurred_at,
+      paymentId: payment.id,
+      totalDebtUsd: totalDebtBefore,
+      totalDebtIqd: Number.isFinite(rate) && rate > 0 ? totalDebtBefore * rate : null,
+      paidUsd: parseDec(payment.amount_paid_usd),
+      paidIqd: parseDec(payment.amount_paid_iqd),
+      remainingUsd: remainingAfter,
+      exchangeRate: Number.isFinite(rate) && rate > 0 ? rate : 0,
+    }
+  }
+
+  async function printDebtReceiptData(data: DebtPaymentReceiptData) {
+    const html = await buildDebtPaymentReceiptHtml({
+      data,
+      receiptSettings: receiptSettings ? withReceiptPrefs(receiptSettings) : null,
+    })
+    printReceiptHtml(html)
+  }
+
   async function printDebtPaymentReceipt() {
     if (!printPrompt) return
     try {
-      const html = await buildDebtPaymentReceiptHtml({
-        data: printPrompt,
-        receiptSettings: receiptSettings ? withReceiptPrefs(receiptSettings) : null,
-      })
-      printReceiptHtml(html)
+      await printDebtReceiptData(printPrompt)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
       setPrintPrompt(null)
+    }
+  }
+
+  async function printHistoryDebtPayment(r: CustomerPaymentHistoryRow) {
+    if (r.kind !== 'customer_debt_payment' || r.id <= 0) return
+    setError(null)
+    try {
+      const payment = await apiJson<CustomerDebtPaymentRow>(
+        `/api/customer-debt-payments/${r.id}/`,
+      )
+      const data = buildDebtReceiptFromPayment(payment, historyRows)
+      await printDebtReceiptData(data)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('common.error'))
     }
   }
 
@@ -1620,7 +1680,7 @@ export function CustomerDebtsPage() {
                         </th>
                         <th className="px-3 py-2 text-end">{t('cashier.ledgerColAmount')}</th>
                         {canRecordPayment ? (
-                          <th className="sticky end-0 z-10 min-w-[3rem] bg-slate-50 px-2 py-2 text-center shadow-[-6px_0_8px_-4px_rgba(15,23,42,0.15)] dark:bg-slate-800/95 dark:shadow-[-6px_0_8px_-4px_rgba(0,0,0,0.35)]">
+                          <th className="sticky end-0 z-10 min-w-[5.5rem] bg-slate-50 px-2 py-2 text-center shadow-[-6px_0_8px_-4px_rgba(15,23,42,0.15)] dark:bg-slate-800/95 dark:shadow-[-6px_0_8px_-4px_rgba(0,0,0,0.35)]">
                             {t('purchasePage.colActions')}
                           </th>
                         ) : null}
@@ -1649,15 +1709,28 @@ export function CustomerDebtsPage() {
                             {canRecordPayment ? (
                               <td className="sticky end-0 z-10 border-s border-slate-100 bg-white px-2 py-2 text-center align-middle shadow-[-6px_0_8px_-4px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-900 dark:shadow-[-6px_0_8px_-4px_rgba(0,0,0,0.35)]">
                                 {r.id > 0 ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => void openHistoryEdit(r)}
-                                    className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
-                                    title={t('purchasePage.editHistoryRow')}
-                                    aria-label={t('purchasePage.editHistoryRow')}
-                                  >
-                                    <Pencil className="h-4 w-4 shrink-0" aria-hidden />
-                                  </button>
+                                  <div className="inline-flex items-center justify-center gap-1">
+                                    {r.kind === 'customer_debt_payment' ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => void printHistoryDebtPayment(r)}
+                                        className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                                        title={t('customerDebts.printReceipt')}
+                                        aria-label={t('customerDebts.printReceipt')}
+                                      >
+                                        <Printer className="h-4 w-4 shrink-0" aria-hidden />
+                                      </button>
+                                    ) : null}
+                                    <button
+                                      type="button"
+                                      onClick={() => void openHistoryEdit(r)}
+                                      className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                                      title={t('purchasePage.editHistoryRow')}
+                                      aria-label={t('purchasePage.editHistoryRow')}
+                                    >
+                                      <Pencil className="h-4 w-4 shrink-0" aria-hidden />
+                                    </button>
+                                  </div>
                                 ) : null}
                               </td>
                             ) : null}

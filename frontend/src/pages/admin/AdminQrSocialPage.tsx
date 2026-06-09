@@ -197,7 +197,7 @@ export function AdminQrSocialPage() {
           manager_telegram_notify_enabled: cfg.manager_telegram_notify_enabled,
           manager_telegram_chat_id: cfg.manager_telegram_chat_id,
           manager_telegram_send_hour: cfg.manager_telegram_send_hour,
-          manager_telegram_send_minute: cfg.manager_telegram_send_minute,
+          manager_telegram_send_minute: 0,
           ...(managerTokenInput.trim()
             ? { manager_telegram_bot_token: managerTokenInput.trim() }
             : {}),
@@ -740,13 +740,13 @@ export function AdminQrSocialPage() {
                       className="mt-1"
                       hour24={cfg.manager_telegram_send_hour}
                       minute={cfg.manager_telegram_send_minute}
-                      onChange={(hour24, minute) =>
+                      onChange={(hour24) =>
                         setCfg((c) =>
                           c
                             ? {
                                 ...c,
                                 manager_telegram_send_hour: hour24,
-                                manager_telegram_send_minute: minute,
+                                manager_telegram_send_minute: 0,
                               }
                             : c,
                         )
