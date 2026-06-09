@@ -666,8 +666,8 @@ def period_dashboard_petty_cash_usd_in_range(shop_id: int, d_from, d_to) -> Deci
     """
     Dashboard «petty cash» (قاسەی بچووک):
 
-    total sold − expenses + debt collected − returned products − discounts.
-    Each term matches the corresponding dashboard category card (2 dp).
+    total sold − expenses + debt collected − returned products.
+    Discounts are informational only — not subtracted from petty cash.
     Debt repayments count on the payment date, not the original sale date.
     """
     petty = (
@@ -675,7 +675,6 @@ def period_dashboard_petty_cash_usd_in_range(shop_id: int, d_from, d_to) -> Deci
         - money_usd_2dp(total_expenses_usd_in_range(shop_id, d_from, d_to))
         + customer_debt_payments_usd_in_range(shop_id, d_from, d_to)
         - money_usd_2dp(total_returned_products_usd_in_range(shop_id, d_from, d_to))
-        - money_usd_2dp(total_customer_discounts_usd_in_range(shop_id, d_from, d_to))
     )
     return money_usd_2dp(petty)
 

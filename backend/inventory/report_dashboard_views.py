@@ -76,8 +76,7 @@ class DashboardStatsView(APIView):
         period_cash_in_usd = money_usd_2dp(
             sales_total + period_debt_collected_usd - returned_2dp,
         )
-        # Cash out = expenses + discounts so (cash in − cash out) = petty cash.
-        period_cash_out_usd = money_usd_2dp(exp_2dp + discounts_2dp)
+        period_cash_out_usd = exp_2dp
         period_cash_drawer_usd = money_usd_2dp(
             period_cash_in_usd - period_cash_out_usd,
         )
