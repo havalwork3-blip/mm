@@ -87,6 +87,14 @@ function formatCompactNumber(value: string | number | null | undefined): string 
   return n.toFixed(2).replace(/\.?0+$/, '')
 }
 
+/** USD on dashboard cards: always 2 decimals so manual sums match (e.g. 2039.60 not 2039.6). */
+function formatUsdAmount(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return '0.00'
+  const n = Number(String(value).replace(/,/g, '').trim())
+  if (!Number.isFinite(n)) return '0.00'
+  return n.toFixed(2)
+}
+
 function formatDateInputValue(d: Date): string {
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
@@ -530,7 +538,7 @@ export function HomePage() {
     // period_cash_drawer_usd already includes expenses from backend snapshot:
     // current_cash = opening + sales_in - expenses - debt_effect
     // Avoid subtracting expenses a second time here.
-    return { value: cashAfterExpenses.toFixed(4), positive: cashAfterExpenses >= 0 }
+    return { value: cashAfterExpenses.toFixed(2), positive: cashAfterExpenses >= 0 }
   }, [stats])
 
   const isEmployeeDashboard = Boolean(me && !me.is_superuser && me.role !== 'owner')
@@ -1644,7 +1652,7 @@ function PettyCashHighlight({
             positive ? 'text-indigo-950 dark:text-indigo-50' : 'text-rose-950 dark:text-rose-50'
           }`}
         >
-          {formatCompactNumber(amount)}
+          {formatUsdAmount(amount)}
           <span
             className={`ms-2 text-sm font-medium ${
               positive
@@ -1694,7 +1702,7 @@ function StatCard({
         <span className="min-w-0 break-words text-xs font-medium leading-snug">{label}</span>
       </div>
       <p className="break-words text-start text-lg font-semibold tabular-nums text-slate-900 dark:text-slate-100">
-        {formatCompactNumber(value)}
+        {unit === 'usd' ? formatUsdAmount(value) : formatCompactNumber(value)}
       </p>
       {unit === 'usd' ? (
         <span className="text-xs text-slate-600 dark:text-slate-400">{currencyLabel}</span>
@@ -1935,7 +1943,7 @@ function PeriodCashFlowPanel({
                 {labelIn}
               </p>
               <p className="mt-1.5 text-2xl font-bold tabular-nums tracking-tight text-emerald-900 dark:text-emerald-100">
-                {formatCompactNumber(cashIn)}
+                {formatUsdAmount(cashIn)}
               </p>
               <p className="mt-0.5 text-[11px] font-medium text-emerald-600/80 dark:text-emerald-400/80">
                 {currencyLabel}
@@ -1954,7 +1962,7 @@ function PeriodCashFlowPanel({
                 {labelOut}
               </p>
               <p className="mt-1.5 text-2xl font-bold tabular-nums tracking-tight text-rose-900 dark:text-rose-100">
-                {formatCompactNumber(cashOut)}
+                {formatUsdAmount(cashOut)}
               </p>
               <p className="mt-0.5 text-[11px] font-medium text-rose-600/80 dark:text-rose-400/80">
                 {currencyLabel}
@@ -2005,7 +2013,7 @@ function PeriodCashFlowPanel({
               : 'text-rose-700 dark:text-rose-200'
           }`}
         >
-          {formatCompactNumber(net)}{' '}
+          {formatUsdAmount(net)}{' '}
           <span className="text-sm font-semibold opacity-80">{currencyLabel}</span>
         </p>
       </div>

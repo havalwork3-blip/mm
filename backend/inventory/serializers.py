@@ -1793,9 +1793,9 @@ class CustomerDebtPaymentSerializer(serializers.ModelSerializer):
         ]
 
     def get_amount_usd_eq(self, obj: CustomerDebtPayment) -> str:
-        from .dashboard_tools import customer_debt_payment_usd_eq
+        from .dashboard_tools import customer_debt_payment_usd_eq_display
 
-        return format(customer_debt_payment_usd_eq(obj), "f")
+        return format(customer_debt_payment_usd_eq_display(obj), "f")
 
     def validate(self, attrs):
         for key in ("amount_paid_usd", "amount_paid_iqd"):

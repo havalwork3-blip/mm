@@ -75,10 +75,12 @@ class DashboardStatsView(APIView):
             d_from,
             d_to,
         )
-        period_cash_in_usd = (
-            sales_net + period_debt_collected_usd - returned_products_usd
-        ).quantize(Decimal("0.0001"))
-        period_cash_out_usd = exp.quantize(Decimal("0.0001"))
+        from .dashboard_tools import money_usd_2dp
+
+        period_cash_in_usd = money_usd_2dp(
+            sales_net + period_debt_collected_usd - returned_products_usd,
+        )
+        period_cash_out_usd = money_usd_2dp(exp)
         recv = total_receivables_usd(shop_id)
         pay = total_payables_usd(shop_id)
         stock = total_stock_value_usd(shop_id)

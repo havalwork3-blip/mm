@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, time
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from zoneinfo import ZoneInfo
 
 from django.db import transaction
@@ -31,6 +31,13 @@ from .models import (
 )
 from .reports import profit_report_for_shop
 from .serializers import latest_usd_to_iqd_for_shop
+
+USD_2DP = Decimal("0.01")
+
+
+def money_usd_2dp(value: Decimal) -> Decimal:
+    """Round USD for dashboard / UI (2 decimals, half-up)."""
+    return value.quantize(USD_2DP, rounding=ROUND_HALF_UP)
 
 
 def _bounds(d_from, d_to):
@@ -164,6 +171,11 @@ def customer_debt_payment_usd_eq(payment: CustomerDebtPayment) -> Decimal:
     if rate > 0:
         paid += Decimal(payment.amount_paid_iqd) / rate
     return paid.quantize(Decimal("0.0001"))
+
+
+def customer_debt_payment_usd_eq_display(payment: CustomerDebtPayment) -> Decimal:
+    """USD equivalent for UI / dashboard totals (2 dp so row sums match the card)."""
+    return money_usd_2dp(customer_debt_payment_usd_eq(payment))
 
 
 def _allocate_customer_debt_payment_fifo(
@@ -559,8 +571,8 @@ def customer_debt_payments_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
         occurred_at__gte=start,
         occurred_at__lte=end,
     ):
-        total += customer_debt_payment_usd_eq(payment)
-    return total.quantize(Decimal("0.0001"))
+        total += customer_debt_payment_usd_eq_display(payment)
+    return money_usd_2dp(total)
 
 
 def sales_cash_in_usd_range(shop_id: int, d_from, d_to) -> Decimal:
@@ -629,12 +641,12 @@ def period_dashboard_petty_cash_usd_in_range(shop_id: int, d_from, d_to) -> Deci
     Debt repayments count on the payment date, not the original sale date.
     """
     petty = (
-        total_sales_usd_in_range(shop_id, d_from, d_to)
-        - total_expenses_usd_in_range(shop_id, d_from, d_to)
+        money_usd_2dp(total_sales_usd_in_range(shop_id, d_from, d_to))
+        - money_usd_2dp(total_expenses_usd_in_range(shop_id, d_from, d_to))
         + customer_debt_payments_usd_in_range(shop_id, d_from, d_to)
-        - total_returned_products_usd_in_range(shop_id, d_from, d_to)
+        - money_usd_2dp(total_returned_products_usd_in_range(shop_id, d_from, d_to))
     )
-    return petty.quantize(Decimal("0.0001"))
+    return money_usd_2dp(petty)
 
 
 def total_customer_discounts_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
