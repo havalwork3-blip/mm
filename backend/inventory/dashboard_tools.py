@@ -624,20 +624,50 @@ def sales_invoiced_usd_range(shop_id: int, d_from, d_to) -> Decimal:
 
 
 def total_sales_gross_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
-    """Gross merchandise sold before invoice discounts (dashboard «total sold»)."""
+    """Gross merchandise sold before invoice discounts."""
     return sales_gross_usd_range(shop_id, d_from, d_to)
 
 
+def _sale_list_sold_price_usd(sale: Sale) -> Decimal:
+    """
+    Sold price on one invoice (Σ line qty × unit price − invoice discount).
+
+    Matches sales history «نرخی گشتی (USD)» per receipt; returns are a separate card.
+    """
+    line_sum = Decimal("0")
+    for ln in sale.lines.all():
+        line_sum += Decimal(int(ln.quantity)) * Decimal(ln.unit_price_usd)
+    final = line_sum - Decimal(sale.invoice_discount_usd)
+    if final < 0:
+        final = Decimal("0")
+    return final.quantize(Decimal("0.0001"))
+
+
+def sales_list_sold_price_usd_range(shop_id: int, d_from, d_to) -> Decimal:
+    """Sum of per-invoice sold prices (sales history «نرخی گشتی» basis)."""
+    start, end = _bounds(d_from, d_to)
+    total = Decimal("0")
+    qs = Sale.objects.filter(
+        shop_id=shop_id,
+        occurred_at__gte=start,
+        occurred_at__lte=end,
+    ).prefetch_related("lines")
+    for sale in qs:
+        total += _sale_list_sold_price_usd(sale)
+    return money_usd_2dp(total)
+
+
 def total_sales_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
-    """Net invoiced sales (line totals minus invoice discount) — dashboard «total sold»."""
-    return sales_invoiced_usd_range(shop_id, d_from, d_to)
+    """Dashboard «total sold» — sum of sold prices, same basis as sales history."""
+    return sales_list_sold_price_usd_range(shop_id, d_from, d_to)
 
 
 def period_dashboard_petty_cash_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
     """
     Dashboard «petty cash» (قاسەی بچووک):
 
-    total sold − expenses + debt collected in period − returned products.
+    total sold − expenses + debt collected − returned products − discounts.
+    Each term matches the corresponding dashboard category card (2 dp).
     Debt repayments count on the payment date, not the original sale date.
     """
     petty = (
@@ -645,6 +675,7 @@ def period_dashboard_petty_cash_usd_in_range(shop_id: int, d_from, d_to) -> Deci
         - money_usd_2dp(total_expenses_usd_in_range(shop_id, d_from, d_to))
         + customer_debt_payments_usd_in_range(shop_id, d_from, d_to)
         - money_usd_2dp(total_returned_products_usd_in_range(shop_id, d_from, d_to))
+        - money_usd_2dp(total_customer_discounts_usd_in_range(shop_id, d_from, d_to))
     )
     return money_usd_2dp(petty)
 

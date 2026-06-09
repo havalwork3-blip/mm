@@ -458,7 +458,7 @@ export type DashboardStats = {
   total_inventory_loss_usd?: string
   /** Line totals before invoice-level discounts. */
   total_sales_gross_usd: string
-  /** Net sales after invoice discounts (≈ cash when fully paid). */
+  /** Sum of sold prices per invoice (matches sales history «نرخی گشتی»). */
   total_sales_usd: string
   total_discounts_usd: string
   debtor_customers_count: number

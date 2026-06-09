@@ -58,7 +58,7 @@ class DashboardStatsView(APIView):
         exp = total_expenses_usd_in_range(shop_id, d_from, d_to)
         inventory_loss = total_inventory_loss_usd_in_range(shop_id, d_from, d_to)
         sales_gross = total_sales_gross_usd_in_range(shop_id, d_from, d_to)
-        sales_net = total_sales_usd_in_range(shop_id, d_from, d_to)
+        sales_total = total_sales_usd_in_range(shop_id, d_from, d_to)
         discounts_total = total_customer_discounts_usd_in_range(shop_id, d_from, d_to)
         debtor_customers_count = total_debtor_customers_count(shop_id)
         returned_products_qty = total_returned_products_qty_in_range(shop_id, d_from, d_to)
@@ -78,7 +78,7 @@ class DashboardStatsView(APIView):
         from .dashboard_tools import money_usd_2dp
 
         period_cash_in_usd = money_usd_2dp(
-            sales_net + period_debt_collected_usd - returned_products_usd,
+            sales_total + period_debt_collected_usd - returned_products_usd,
         )
         period_cash_out_usd = money_usd_2dp(exp)
         recv = total_receivables_usd(shop_id)
@@ -94,7 +94,7 @@ class DashboardStatsView(APIView):
                 "total_expenses_usd": format(exp, "f"),
                 "total_inventory_loss_usd": format(inventory_loss, "f"),
                 "total_sales_gross_usd": format(sales_gross, "f"),
-                "total_sales_usd": format(sales_net, "f"),
+                "total_sales_usd": format(sales_total, "f"),
                 "total_discounts_usd": format(discounts_total, "f"),
                 "debtor_customers_count": debtor_customers_count,
                 "total_returned_products_qty": returned_products_qty,
