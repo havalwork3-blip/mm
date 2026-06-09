@@ -628,38 +628,26 @@ def total_sales_gross_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
     return sales_gross_usd_range(shop_id, d_from, d_to)
 
 
-def _sale_list_sold_price_usd(sale: Sale) -> Decimal:
+def sales_checkout_received_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
     """
-    Sold price on one invoice (Σ line qty × unit price − invoice discount).
+    Sum of USD received at checkout for sales in the date range.
 
-    Matches sales history «نرخی گشتی (USD)» per receipt; returns are a separate card.
+    Matches sales history «کۆی بڕی وەرگیراو (دۆلار)» and GET /api/sales/ date filters.
     """
-    line_sum = Decimal("0")
-    for ln in sale.lines.all():
-        line_sum += Decimal(int(ln.quantity)) * Decimal(ln.unit_price_usd)
-    final = line_sum - Decimal(sale.invoice_discount_usd)
-    if final < 0:
-        final = Decimal("0")
-    return final.quantize(Decimal("0.0001"))
-
-
-def sales_list_sold_price_usd_range(shop_id: int, d_from, d_to) -> Decimal:
-    """Sum of per-invoice sold prices (sales history «نرخی گشتی» basis)."""
-    start, end = _bounds(d_from, d_to)
+    qs = Sale.objects.filter(shop_id=shop_id)
+    if d_from is not None:
+        qs = qs.filter(occurred_at__date__gte=d_from)
+    if d_to is not None:
+        qs = qs.filter(occurred_at__date__lte=d_to)
     total = Decimal("0")
-    qs = Sale.objects.filter(
-        shop_id=shop_id,
-        occurred_at__gte=start,
-        occurred_at__lte=end,
-    ).prefetch_related("lines")
     for sale in qs:
-        total += _sale_list_sold_price_usd(sale)
+        total += _sale_paid_usd_equiv(sale)
     return money_usd_2dp(total)
 
 
 def total_sales_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
-    """Dashboard «total sold» — sum of sold prices, same basis as sales history."""
-    return sales_list_sold_price_usd_range(shop_id, d_from, d_to)
+    """Dashboard «total sold» — checkout USD received (sales history card)."""
+    return sales_checkout_received_usd_in_range(shop_id, d_from, d_to)
 
 
 def period_dashboard_petty_cash_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
