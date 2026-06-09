@@ -6,6 +6,7 @@ from .admin_views import GlobalAdminStatsView
 from .report_dashboard_views import (
     CashierLedgerView,
     CashierSummaryView,
+    DashboardPettyCashTrendView,
     DashboardStatsView,
     ShopOpeningCashDetailView,
     ShopOpeningCashView,
@@ -85,6 +86,11 @@ urlpatterns = [
     path("reports/profit/", ProfitReportView.as_view(), name="profit-report"),
     path("reports/jard/", JardReportView.as_view(), name="jard-report"),
     path("dashboard/stats/", DashboardStatsView.as_view(), name="dashboard-stats"),
+    path(
+        "dashboard/petty-cash-trend/",
+        DashboardPettyCashTrendView.as_view(),
+        name="dashboard-petty-cash-trend",
+    ),
     path("cashier/summary/", CashierSummaryView.as_view(), name="cashier-summary"),
     path("cashier/ledger/", CashierLedgerView.as_view(), name="cashier-ledger"),
     path("cashier/opening/<int:pk>/", ShopOpeningCashDetailView.as_view(), name="cashier-opening-detail"),

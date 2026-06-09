@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from zoneinfo import ZoneInfo
 
@@ -1158,4 +1158,60 @@ def cashier_snapshot(
             "f",
         ),
         "period_net_profit_usd": format(net_p.quantize(Decimal("0.0001")), "f"),
+    }
+
+
+def _business_today():
+    tz_name = os.environ.get("DJANGO_BUSINESS_TZ", "Asia/Baghdad")
+    try:
+        tz = ZoneInfo(tz_name)
+    except Exception:
+        tz = timezone.get_current_timezone()
+    return timezone.now().astimezone(tz).date()
+
+
+def petty_cash_trend_points(
+    shop_id: int,
+    *,
+    days: int | None = None,
+    d_from=None,
+    d_to=None,
+) -> dict:
+    """
+    Cumulative petty-cash balance (cash in − expenses) from window start through each day.
+    Matches dashboard ``period_cash_drawer_usd`` logic for [start, day] ranges.
+    """
+    today = _business_today()
+    if d_from is not None and d_to is not None:
+        start = d_from
+        end = d_to
+        if end > today:
+            end = today
+        if start > end:
+            start, end = end, start
+        span_days = (end - start).days + 1
+        if span_days > 365:
+            start = end - timedelta(days=364)
+            span_days = 365
+    else:
+        day_count = max(7, min(int(days or 30), 365))
+        end = today
+        start = end - timedelta(days=day_count - 1)
+        span_days = day_count
+
+    points: list[dict] = []
+    for offset in range(span_days):
+        d = start + timedelta(days=offset)
+        sales_total = total_sales_usd_in_range(shop_id, start, d)
+        debt_collected = customer_debt_payments_usd_in_range(shop_id, start, d)
+        returned = total_returned_products_usd_in_range(shop_id, start, d)
+        exp = total_expenses_usd_in_range(shop_id, start, d)
+        cash_in = money_usd_2dp(sales_total + debt_collected - returned)
+        drawer = money_usd_2dp(cash_in - exp)
+        points.append({"date": d.isoformat(), "value_usd": format(drawer, "f")})
+    return {
+        "date_from": start.isoformat(),
+        "date_to": end.isoformat(),
+        "days": span_days,
+        "points": points,
     }

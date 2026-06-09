@@ -483,6 +483,14 @@ export type DashboardStats = {
   }>
 }
 
+/** GET /api/dashboard/petty-cash-trend/ */
+export type PettyCashTrendResponse = {
+  date_from: string
+  date_to: string
+  days: number
+  points: Array<{ date: string; value_usd: string }>
+}
+
 /** GET /api/admin/stats/ (superuser, global) */
 export type AdminGlobalStats = {
   date_from: string

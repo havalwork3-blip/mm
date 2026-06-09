@@ -37,6 +37,7 @@ import {
   YAxis,
 } from 'recharts'
 import { LangSwitcher } from '../components/LangSwitcher'
+import { PettyCashTrendChart } from '../components/dashboard/PettyCashTrendChart'
 import { SuperuserDashboardScopeCard } from '../components/SuperuserDashboardScopeCard'
 import { useLocale } from '../context/LocaleContext'
 import { useShopSwitchOptional } from '../context/ShopSwitchContext'
@@ -59,6 +60,7 @@ import type {
   AdminGlobalStats,
   DashboardStats,
   Paginated,
+  PettyCashTrendResponse,
   ProductRow,
   ShopRow,
   ShopSettingsRow,
@@ -115,6 +117,9 @@ export function HomePage() {
   const [dFrom, setDFrom] = useState(() => new Date().toISOString().slice(0, 10))
   const [dTo, setDTo] = useState(() => new Date().toISOString().slice(0, 10))
   const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [pettyCashTrend, setPettyCashTrend] = useState<PettyCashTrendResponse | null>(null)
+  const [pettyCashQuery, setPettyCashQuery] = useState('days=7')
+  const [loadingPettyCashTrend, setLoadingPettyCashTrend] = useState(false)
   const [globalAdminStats, setGlobalAdminStats] = useState<AdminGlobalStats | null>(null)
   /** When superuser views a single shop (not global), still load all-shop rankings for comparison. */
   const [superuserShopRankings, setSuperuserShopRankings] = useState<AdminGlobalStats | null>(null)
@@ -295,6 +300,25 @@ export function HomePage() {
     }
   }, [shouldFetchStats, statsForbidden, me?.is_superuser, dFrom, dTo, t])
 
+  const fetchPettyCashTrend = useCallback(async () => {
+    if (!canFetchShopDashboardExtras) {
+      setPettyCashTrend(null)
+      return
+    }
+    setLoadingPettyCashTrend(true)
+    try {
+      const data = await apiJson<PettyCashTrendResponse>(
+        `/api/dashboard/petty-cash-trend/?${pettyCashQuery}`,
+        { shopScoped: Boolean(me?.is_superuser) },
+      )
+      setPettyCashTrend(data)
+    } catch {
+      setPettyCashTrend(null)
+    } finally {
+      setLoadingPettyCashTrend(false)
+    }
+  }, [canFetchShopDashboardExtras, me?.is_superuser, pettyCashQuery])
+
   const fetchTopSellingProducts = useCallback(async () => {
     if (!me || getGlobalView()) return
     if (me.is_superuser && !getPersistedSuperuserShopId()) return
@@ -376,14 +400,16 @@ export function HomePage() {
         setStockProducts([])
         setTopSellingProducts([])
       }
+      setPettyCashTrend(null)
       return
     }
     const deferId = window.setTimeout(() => {
       void fetchStockProducts()
       void fetchShopSettings()
+      void fetchPettyCashTrend()
     }, 300)
     return () => window.clearTimeout(deferId)
-  }, [me, canFetchShopDashboardExtras, fetchStockProducts, fetchShopSettings])
+  }, [me, canFetchShopDashboardExtras, fetchStockProducts, fetchShopSettings, fetchPettyCashTrend])
 
   useEffect(() => {
     const onRefresh = () => {
@@ -398,6 +424,7 @@ export function HomePage() {
         window.setTimeout(() => {
           void fetchStockProducts()
           void fetchShopSettings()
+          void fetchPettyCashTrend()
         }, 300)
       }
     }
@@ -412,6 +439,7 @@ export function HomePage() {
     fetchTopSellingProducts,
     fetchStockProducts,
     fetchShopSettings,
+    fetchPettyCashTrend,
     syncSuperuserScope,
   ])
 
@@ -1287,6 +1315,28 @@ export function HomePage() {
                 label={t('dash.cashVsExpenses')}
                 currencyLabel={t('common.currencyUsd')}
               />
+            ) : null}
+            {canFetchShopDashboardExtras && (isEmployeeDashboard || isSuperuserDashboard) ? (
+              <div className="mt-4">
+                <PettyCashTrendChart
+                  data={pettyCashTrend}
+                  loading={loadingPettyCashTrend}
+                  query={pettyCashQuery}
+                  onQueryChange={setPettyCashQuery}
+                  title={t('dash.pettyCashTrendTitle')}
+                  subtitle={t('dash.pettyCashTrendSubtitle')}
+                  currencyLabel={t('common.currencyUsd')}
+                  emptyLabel={t('common.noData')}
+                  range7Label={t('dash.pettyCashRange7')}
+                  range14Label={t('dash.pettyCashRange14')}
+                  range30Label={t('dash.pettyCashRange30')}
+                  rangeAllLabel={t('dash.pettyCashRangeAll')}
+                  rangeCustomLabel={t('dash.pettyCashRangeCustom')}
+                  fromLabel={t('dash.from')}
+                  toLabel={t('dash.to')}
+                  applyLabel={t('dash.apply')}
+                />
+              </div>
             ) : null}
             {onlineStorefrontDashboardSection}
             <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

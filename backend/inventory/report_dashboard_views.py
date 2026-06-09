@@ -13,6 +13,7 @@ from .dashboard_tools import (
     cashier_snapshot,
     customer_debt_payments_usd_in_range,
     net_profit_in_range,
+    petty_cash_trend_points,
     total_customer_discounts_usd_in_range,
     total_debtor_customers_count,
     top_selling_products_in_range,
@@ -114,6 +115,31 @@ class DashboardStatsView(APIView):
                 "top_selling_products": top_products,
             },
         )
+
+
+class DashboardPettyCashTrendView(APIView):
+    permission_classes = [IsAuthenticated, IsShopOwnerOrPermission]
+    permission_codenames_by_method = {"GET": ("view_sale", "view_report", "view_expense")}
+
+    def get(self, request):
+        from django.utils.dateparse import parse_date
+
+        shop_id = require_shop_id(request)
+        from_str = request.query_params.get("from")
+        to_str = request.query_params.get("to")
+        if from_str and to_str:
+            d_from = parse_date(from_str.strip())
+            d_to = parse_date(to_str.strip())
+            if d_from is None or d_to is None:
+                return Response({"detail": "Invalid date range."}, status=400)
+            return Response(
+                petty_cash_trend_points(shop_id, d_from=d_from, d_to=d_to),
+            )
+        try:
+            days = int(request.query_params.get("days", "30"))
+        except (TypeError, ValueError):
+            days = 30
+        return Response(petty_cash_trend_points(shop_id, days=days))
 
 
 class CashierSummaryView(APIView):
