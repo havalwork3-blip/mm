@@ -625,15 +625,14 @@ def period_dashboard_petty_cash_usd_in_range(shop_id: int, d_from, d_to) -> Deci
     """
     Dashboard «petty cash» (قاسەی بچووک):
 
-    Actual cash movement in the selected period: checkout payments on sales in
-    range, plus debt repayments on their payment dates, minus expenses and
-    sale-return refunds. Later debt collections count in the period when
-    received, not when the original credit sale occurred.
+    total sold − expenses + debt collected in period − returned products.
+    Debt repayments count on the payment date, not the original sale date.
     """
-    petty = sales_cash_in_usd_range(shop_id, d_from, d_to) - total_expenses_usd_in_range(
-        shop_id,
-        d_from,
-        d_to,
+    petty = (
+        total_sales_usd_in_range(shop_id, d_from, d_to)
+        - total_expenses_usd_in_range(shop_id, d_from, d_to)
+        + customer_debt_payments_usd_in_range(shop_id, d_from, d_to)
+        - total_returned_products_usd_in_range(shop_id, d_from, d_to)
     )
     return petty.quantize(Decimal("0.0001"))
 
