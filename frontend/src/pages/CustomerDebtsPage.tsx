@@ -55,6 +55,25 @@ function stripAnyParens(label: string): string {
     .trim()
 }
 
+function normalizeHistoryDateRange(dateFrom: string, dateTo: string): { from: string; to: string } {
+  const today = new Date().toISOString().slice(0, 10)
+  let from = dateFrom.trim() || '2000-01-01'
+  let to = dateTo.trim() || today
+  if (from > to) {
+    ;[from, to] = [to, from]
+  }
+  return { from, to }
+}
+
+function historyRowOnDate(row: CustomerPaymentHistoryRow): string {
+  return (row.occurred_at ?? row.occurred_on).slice(0, 10)
+}
+
+function historyRowInRange(row: CustomerPaymentHistoryRow, from: string, to: string): boolean {
+  const d = historyRowOnDate(row)
+  return d >= from && d <= to
+}
+
 function formatDateTimeCell(value: string | null | undefined): string {
   if (!value) return '—'
   const dt = new Date(value)
@@ -446,30 +465,55 @@ export function CustomerDebtsPage() {
     setHistoryLoading(true)
     setError(null)
     try {
-      const today = new Date().toISOString().slice(0, 10)
-      const from = dateFrom.trim() || '2000-01-01'
-      const to = dateTo.trim() || today
-      const q = new URLSearchParams({ from, to })
-      const led = await apiJson<{ entries: CustomerPaymentHistoryRow[] }>(
-        `/api/cashier/ledger/?${q.toString()}`,
-      )
-      const onlyCustomerPayments = (led.entries ?? []).filter((e) =>
-        scope === 'debt_repayments'
-          ? e.kind === 'customer_debt_payment'
-          : e.kind === 'sale_payment' || e.kind === 'customer_debt_payment',
-      )
-      const localRows =
+      const { from, to } = normalizeHistoryDateRange(dateFrom, dateTo)
+      if (dateFrom.trim() && dateTo.trim() && dateFrom.trim() > dateTo.trim()) {
+        setHistoryDateFrom(from)
+        setHistoryDateTo(to)
+      }
+
+      let onlyCustomerPayments: CustomerPaymentHistoryRow[] = []
+
+      if (scope === 'debt_repayments') {
+        const q = new URLSearchParams({ from, to })
+        const data = await apiJson<
+          CustomerDebtPaymentRow[] | { results: CustomerDebtPaymentRow[] }
+        >(`/api/customer-debt-payments/?${q.toString()}`)
+        const list = Array.isArray(data) ? data : (data.results ?? [])
+        onlyCustomerPayments = list.map((p) => ({
+          kind: 'customer_debt_payment' as const,
+          id: p.id,
+          occurred_on: p.occurred_at.slice(0, 10),
+          occurred_at: p.occurred_at,
+          amount_usd: p.amount_usd_eq,
+          direction: 'in' as const,
+          label: p.customer_name,
+        }))
+      } else {
+        const q = new URLSearchParams({ from, to })
+        const led = await apiJson<{ entries: CustomerPaymentHistoryRow[] }>(
+          `/api/cashier/ledger/?${q.toString()}`,
+        )
+        onlyCustomerPayments = (led.entries ?? []).filter(
+          (e) => e.kind === 'sale_payment' || e.kind === 'customer_debt_payment',
+        )
+      }
+
+      const localRows = (
         scope === 'debt_repayments'
           ? localHistoryRows.filter((e) => e.kind === 'customer_debt_payment')
           : localHistoryRows
+      ).filter((r) => historyRowInRange(r, from, to))
+
       const merged = [...localRows, ...onlyCustomerPayments]
       const seen = new Set<string>()
-      const deduped = merged.filter((r) => {
-        const key = `${r.kind}-${r.id}-${r.occurred_at ?? r.occurred_on}`
-        if (seen.has(key)) return false
-        seen.add(key)
-        return true
-      })
+      const deduped = merged
+        .filter((r) => {
+          const key = `${r.kind}-${r.id}-${r.occurred_at ?? r.occurred_on}`
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        .sort((a, b) => historyRowOnDate(b).localeCompare(historyRowOnDate(a)))
       setHistoryRows(deduped)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))

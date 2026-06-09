@@ -894,11 +894,34 @@ class CustomerDebtPaymentViewSet(OwnerScopedViewSet):
 
     queryset = CustomerDebtPayment.objects.select_related("customer", "shop").all()
     serializer_class = CustomerDebtPaymentSerializer
-    permission_classes = [IsAuthenticated, IsShopOwnerOrCanRecordSalePayment]
+    permission_classes = [IsAuthenticated, IsShopOwnerOrPermission]
+    permission_codenames_by_method = {
+        "GET": ("view_customer", "view_cashier", "change_sale", "add_sale"),
+        "PATCH": ("change_sale", "add_sale"),
+    }
     http_method_names = ["get", "patch", "head", "options"]
 
     def get_queryset(self):
-        return super().get_queryset()
+        from datetime import date as date_cls
+
+        from django.utils import timezone
+        from django.utils.dateparse import parse_date
+
+        from .dashboard_tools import _bounds
+
+        qs = super().get_queryset()
+        from_str = self.request.query_params.get("from")
+        to_str = self.request.query_params.get("to")
+        if not from_str and not to_str:
+            return qs
+        d_from = parse_date(from_str) if from_str else date_cls(2000, 1, 1)
+        d_to = parse_date(to_str) if to_str else timezone.localdate()
+        if d_from is None or d_to is None:
+            return qs
+        if d_to < d_from:
+            d_from, d_to = d_to, d_from
+        start, end = _bounds(d_from, d_to)
+        return qs.filter(occurred_at__gte=start, occurred_at__lte=end)
 
 
 class ShareholderPaymentViewSet(OwnerScopedViewSet):

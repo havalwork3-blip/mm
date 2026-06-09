@@ -48,8 +48,10 @@ class DashboardStatsView(APIView):
             )
         d_from = parse_date(from_str)
         d_to = parse_date(to_str)
-        if d_from is None or d_to is None or d_to < d_from:
+        if d_from is None or d_to is None:
             return Response({"detail": "Invalid date range."}, status=400)
+        if d_to < d_from:
+            d_from, d_to = d_to, d_from
 
         shop_id = require_shop_id(request)
         np = net_profit_in_range(shop_id, d_from, d_to)
@@ -160,8 +162,10 @@ class CashierLedgerView(APIView):
             )
         d_from = parse_date(from_str)
         d_to = parse_date(to_str)
-        if d_from is None or d_to is None or d_to < d_from:
+        if d_from is None or d_to is None:
             return Response({"detail": "Invalid date range."}, status=400)
+        if d_to < d_from:
+            d_from, d_to = d_to, d_from
 
         shop_id = require_shop_id(request)
         entries = cashier_ledger_entries(shop_id, d_from, d_to)
