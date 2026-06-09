@@ -1248,6 +1248,8 @@ const en: Record<string, string> = {
   'sales.discountUsd': 'Discount (USD)',
   'sales.netTotalUsd': 'Gross total (USD)',
   'sales.receivedAmountUsd': 'Received amount (Dollar)',
+  'sales.totalReceivedUsdCard': 'Total received (USD) — filtered sales',
+  'sales.filteredReceiptCount': '{count} receipts',
   'sales.fullDetailHint':
     'Each card lists customer, rate snapshot, payments, line items, and remaining balance.',
   'sales.lineBuy': 'buy',
@@ -1732,6 +1734,8 @@ const ar: Record<string, string> = {
   'sales.discountUsd': 'الخصم (USD)',
   'sales.netTotalUsd': 'الإجمالي (USD)',
   'sales.receivedAmountUsd': 'المبلغ المستلم (دولار)',
+  'sales.totalReceivedUsdCard': 'إجمالي المستلم (USD) — المبيعات المفلترة',
+  'sales.filteredReceiptCount': '{count} إيصال',
   'sales.fullDetailHint':
     'كل بطاقة تعرض العميل، سعر الصرف، المدفوعات، الأصناف، والمتبقي.',
   'sales.lineBuy': 'شراء',
@@ -3819,6 +3823,8 @@ const ku: Record<string, string> = {
   'sales.discountUsd': 'داشکاندن (USD)',
   'sales.netTotalUsd': 'نرخی گشتی (USD)',
   'sales.receivedAmountUsd': 'بڕی وەرگیراو (دۆلار)',
+  'sales.totalReceivedUsdCard': 'کۆی بڕی وەرگیراو (دۆلار) — فرۆشتنە فلتەرکراوەکان',
+  'sales.filteredReceiptCount': '{count} وەسڵ',
   'sales.fullDetailHint':
     'هەر کارتی فرۆشتن: کڕیار، نرخ، پارەدراو، هێڵەکان، ماوە.',
   'sales.lineBuy': 'کڕین',

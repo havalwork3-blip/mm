@@ -9,6 +9,7 @@ import {
   printReceiptHtml,
 } from '../../lib/receiptHtml'
 import { saleHasLossLines, saleLineFlagsFromRow } from '../../lib/saleLineFlags'
+import { salePaidUsdEquivalent } from '../../lib/salePayments'
 import { formatSaleReceiptNumber } from '../../lib/shopReceiptNumbers'
 import type { ReceiptSettingsRow, SaleListRow as SaleRow } from '../../types/api'
 import { formatMoney } from '../../utils/inventoryFormat'
@@ -30,14 +31,6 @@ function lineSubtotalUsd(sale: SaleRow): number {
   }, 0)
 }
 
-function paidUsdEquivalent(sale: SaleRow): number {
-  const rate = parseFloat(String(sale.exchange_rate_usd_to_iqd))
-  const paidUsd = parseFloat(String(sale.amount_paid_usd)) || 0
-  const paidIqd = parseFloat(String(sale.amount_paid_iqd)) || 0
-  if (!Number.isFinite(rate) || rate <= 0) return paidUsd
-  return paidUsd + paidIqd / rate
-}
-
 export const SaleListRow = memo(function SaleListRowCard({
   sale,
   t,
@@ -52,7 +45,7 @@ export const SaleListRow = memo(function SaleListRowCard({
   const discount = parseFloat(String(sale.invoice_discount_usd)) || 0
   const finalUsd = Math.max(0, subtotal - discount)
   const paidIqd = parseFloat(String(sale.amount_paid_iqd)) || 0
-  const paidEq = useMemo(() => paidUsdEquivalent(sale), [sale])
+  const paidEq = useMemo(() => salePaidUsdEquivalent(sale), [sale])
   const balanceUsd = finalUsd - paidEq
   const prevDebt = parseFloat(String(sale.previous_debt_usd ?? '0')) || 0
   const customerName = sale.customer_name?.trim() || '—'

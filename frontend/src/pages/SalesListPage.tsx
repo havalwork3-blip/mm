@@ -1,3 +1,4 @@
+import { Banknote } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
@@ -9,8 +10,10 @@ import { resolveActiveShopId } from '../lib/activeShop'
 import { apiJson, type ApiFetchOptions } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
 import { withReceiptPrefs } from '../lib/receiptPrefs'
+import { salePaidUsdEquivalent } from '../lib/salePayments'
 import { digitsOnlyAscii } from '../lib/shopReceiptNumbers'
 import { useSalesListStore } from '../stores/salesListStore'
+import { formatMoney } from '../utils/inventoryFormat'
 import type {
   CustomerRow,
   Paginated,
@@ -224,6 +227,11 @@ export function SalesListPage() {
         canEditInPos: Boolean(me && hasPerm(me, 'change_sale', 'add_sale')),
       })),
     [saleItems, me],
+  )
+
+  const totalReceivedUsd = useMemo(
+    () => saleItems.reduce((sum, sale) => sum + salePaidUsdEquivalent(sale), 0),
+    [saleItems],
   )
 
   useEffect(() => {
@@ -555,6 +563,14 @@ export function SalesListPage() {
           </form>
         )}
 
+        {!needsShop && !loading && saleItems.length > 0 ? (
+          <SalesReceivedUsdSummary
+            total={totalReceivedUsd}
+            receiptCount={saleItems.length}
+            t={t}
+          />
+        ) : null}
+
         {loading ? (
           <p className="text-center text-sm text-slate-500">{t('common.loading')}</p>
         ) : needsShop ? null : saleItems.length === 0 ? (
@@ -568,6 +584,42 @@ export function SalesListPage() {
         )}
       </main>
     </div>
+  )
+}
+
+function SalesReceivedUsdSummary({
+  total,
+  receiptCount,
+  t,
+}: {
+  total: number
+  receiptCount: number
+  t: (key: string) => string
+}) {
+  return (
+    <section className="mb-6 overflow-hidden rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 via-white to-teal-50/80 p-4 shadow-sm dark:border-emerald-500/30 dark:from-emerald-950/40 dark:via-slate-900 dark:to-teal-950/30">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-700 ring-1 ring-emerald-500/25 dark:bg-emerald-500/20 dark:text-emerald-300">
+            <Banknote className="h-5 w-5" aria-hidden />
+          </span>
+          <div className="min-w-0 text-start">
+            <p className="text-xs font-medium text-emerald-800/80 dark:text-emerald-200/80">
+              {t('sales.totalReceivedUsdCard')}
+            </p>
+            <p className="mt-0.5 font-mono text-2xl font-bold tabular-nums text-emerald-950 dark:text-emerald-50">
+              {formatMoney(total)}
+              <span className="ms-2 text-sm font-semibold text-emerald-700/90 dark:text-emerald-300/90">
+                {t('common.currencyUsd')}
+              </span>
+            </p>
+          </div>
+        </div>
+        <p className="rounded-full border border-emerald-200/80 bg-white/80 px-3 py-1 text-xs font-medium text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-950/50 dark:text-emerald-100">
+          {t('sales.filteredReceiptCount').replace('{count}', String(receiptCount))}
+        </p>
+      </div>
+    </section>
   )
 }
 
