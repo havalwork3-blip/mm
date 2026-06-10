@@ -13,6 +13,7 @@ from .dashboard_tools import (
     cashier_snapshot,
     customer_debt_payments_usd_in_range,
     net_profit_in_range,
+    period_dashboard_petty_cash_usd_in_range,
     petty_cash_trend_points,
     total_customer_discounts_usd_in_range,
     total_debtor_customers_count,
@@ -74,13 +75,15 @@ class DashboardStatsView(APIView):
         exp_2dp = money_usd_2dp(exp)
         discounts_2dp = money_usd_2dp(discounts_total)
         returned_2dp = money_usd_2dp(returned_products_usd)
+        period_cash_drawer_usd = period_dashboard_petty_cash_usd_in_range(
+            shop_id,
+            d_from,
+            d_to,
+        )
         period_cash_in_usd = money_usd_2dp(
             sales_total + period_debt_collected_usd - returned_2dp,
         )
         period_cash_out_usd = exp_2dp
-        period_cash_drawer_usd = money_usd_2dp(
-            period_cash_in_usd - period_cash_out_usd,
-        )
         recv = total_receivables_usd(shop_id)
         pay = total_payables_usd(shop_id)
         stock = total_stock_value_usd(shop_id)

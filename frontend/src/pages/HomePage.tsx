@@ -1323,10 +1323,15 @@ export function HomePage() {
                   loading={loadingPettyCashTrend}
                   query={pettyCashQuery}
                   onQueryChange={setPettyCashQuery}
+                  dashboardPeriodCashUsd={stats?.period_cash_drawer_usd}
+                  dashboardDateFrom={dFrom}
+                  dashboardDateTo={dTo}
                   title={t('dash.pettyCashTrendTitle')}
                   subtitle={t('dash.pettyCashTrendSubtitle')}
                   currencyLabel={t('common.currencyUsd')}
                   emptyLabel={t('common.noData')}
+                  todayLabel={t('dash.pettyCashToday')}
+                  rangeTotalLabel={t('dash.pettyCashRangeTotal')}
                   range7Label={t('dash.pettyCashRange7')}
                   range14Label={t('dash.pettyCashRange14')}
                   range30Label={t('dash.pettyCashRange30')}

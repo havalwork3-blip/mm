@@ -63,31 +63,9 @@ function presetFromQuery(query: string): PettyCashRangePreset {
   return '30'
 }
 
-function easeOutCubic(t: number): number {
-  return 1 - Math.pow(1 - t, 3)
-}
-
-function useCountUp(value: number, durationMs: number, resetKey: string, enabled: boolean): number {
-  const [shown, setShown] = useState(value)
-
-  useEffect(() => {
-    if (!enabled || !Number.isFinite(value)) {
-      setShown(value)
-      return
-    }
-    let raf = 0
-    const start = performance.now()
-    const tick = (now: number) => {
-      const progress = Math.min(1, (now - start) / durationMs)
-      setShown(value * easeOutCubic(progress))
-      if (progress < 1) raf = requestAnimationFrame(tick)
-    }
-    setShown(0)
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [value, resetKey, durationMs, enabled])
-
-  return shown
+function formatUsd2dp(value: number): string {
+  if (!Number.isFinite(value)) return '0.00'
+  return value.toFixed(2)
 }
 
 function chartAnimationMs(pointCount: number): number {
@@ -137,7 +115,7 @@ function TrendTooltip({
     >
       <p className={`font-mono ${isDark ? 'text-cyan-100/80' : 'text-slate-500'}`}>{row.date}</p>
       <p className={`mt-1 text-base font-bold tabular-nums ${isDark ? 'text-white' : 'text-slate-900'}`}>
-        {formatUsdShort(row.value)} {currencyLabel}
+        {formatUsd2dp(row.value)} {currencyLabel}
       </p>
     </div>
   )
@@ -148,10 +126,15 @@ export function PettyCashTrendChart({
   loading = false,
   query,
   onQueryChange,
+  dashboardPeriodCashUsd,
+  dashboardDateFrom,
+  dashboardDateTo,
   title,
   subtitle,
   currencyLabel,
   emptyLabel,
+  todayLabel,
+  rangeTotalLabel,
   range7Label,
   range14Label,
   range30Label,
@@ -165,10 +148,15 @@ export function PettyCashTrendChart({
   loading?: boolean
   query: string
   onQueryChange: (query: string) => void
+  dashboardPeriodCashUsd?: string | null
+  dashboardDateFrom?: string
+  dashboardDateTo?: string
   title: string
   subtitle: string
   currencyLabel: string
   emptyLabel: string
+  todayLabel: string
+  rangeTotalLabel: string
   range7Label: string
   range14Label: string
   range30Label: string
@@ -224,11 +212,13 @@ export function PettyCashTrendChart({
   }, [customFrom, customTo, onQueryChange])
 
   const chartRows = useMemo((): ChartRow[] => {
-    return (data?.points ?? []).map((p) => ({
-      date: p.date,
-      label: formatDayLabel(p.date),
-      value: parseFloat(p.value_usd) || 0,
-    }))
+    return [...(data?.points ?? [])]
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((p) => ({
+        date: p.date,
+        label: formatDayLabel(p.date),
+        value: parseFloat(p.value_usd) || 0,
+      }))
   }, [data])
 
   const peakIndex = useMemo(() => {
@@ -240,10 +230,28 @@ export function PettyCashTrendChart({
     return best
   }, [chartRows])
 
-  const latestValue = chartRows.length ? chartRows[chartRows.length - 1].value : 0
+  const lastChartDate = chartRows.length ? chartRows[chartRows.length - 1].date : ''
+  const chartRangeTotal = useMemo(
+    () => chartRows.reduce((sum, row) => sum + row.value, 0),
+    [chartRows],
+  )
+  const todayValue = useMemo(() => {
+    const lastPointValue = chartRows.length ? chartRows[chartRows.length - 1].value : 0
+    const dashFrom = dashboardDateFrom?.trim() ?? ''
+    const dashTo = dashboardDateTo?.trim() ?? ''
+    const dashCash = parseFloat(dashboardPeriodCashUsd ?? '')
+    if (
+      dashFrom &&
+      dashFrom === dashTo &&
+      dashTo === lastChartDate &&
+      Number.isFinite(dashCash)
+    ) {
+      return dashCash
+    }
+    return lastPointValue
+  }, [chartRows, dashboardDateFrom, dashboardDateTo, dashboardPeriodCashUsd, lastChartDate])
   const seriesKey = data ? `${data.date_from}-${data.date_to}-${chartRows.length}` : 'empty'
   const lineAnimMs = chartAnimationMs(chartRows.length)
-  const animatedLatestValue = useCountUp(latestValue, lineAnimMs * 0.75, seriesKey, !loading && chartRows.length > 0)
 
   useEffect(() => {
     setAnimateKey((k) => k + 1)
@@ -438,19 +446,31 @@ export function PettyCashTrendChart({
         </div>
         <div className="text-end">
           <p
-            className={`text-[11px] uppercase tracking-wide ${
+            className={`text-[11px] font-semibold uppercase tracking-wide ${
               isDark ? 'text-cyan-300/70' : 'text-cyan-700/80'
             }`}
           >
-            {currencyLabel}
+            {todayLabel}
           </p>
           <p
             className={`text-2xl font-bold tabular-nums transition-opacity duration-300 ${
               isDark ? 'text-cyan-300' : 'text-cyan-600'
             } ${loading ? 'opacity-50' : 'opacity-100'}`}
           >
-            {formatUsdShort(animatedLatestValue)}
+            {formatUsd2dp(todayValue)}
+            <span
+              className={`ms-1.5 text-sm font-medium ${
+                isDark ? 'text-cyan-300/70' : 'text-cyan-700/80'
+              }`}
+            >
+              {currencyLabel}
+            </span>
           </p>
+          {chartRows.length > 1 ? (
+            <p className={`mt-1 text-xs tabular-nums ${isDark ? 'text-violet-200/65' : 'text-slate-500'}`}>
+              {rangeTotalLabel}: {formatUsd2dp(chartRangeTotal)} {currencyLabel}
+            </p>
+          ) : null}
         </div>
       </div>
       <FilterToolbar
