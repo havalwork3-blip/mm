@@ -8,9 +8,13 @@ import { PageAuthLoading } from '../components/PageAuthLoading'
 import { InventoryProductGrid } from '../components/inventory/InventoryProductGrid'
 import { useLocale } from '../context/LocaleContext'
 import { useSyncedSession } from '../hooks/useSyncedSession'
-import { apiJson, getGlobalView } from '../lib/api'
+import { apiJson, getGlobalView, resolveMediaUrl } from '../lib/api'
 import imageCompression from 'browser-image-compression'
 import { formatMoneyCompact } from '../lib/formatMoney'
+import {
+  formatProductsSummaryCell,
+  resolveInventoryHistoryProductName,
+} from '../lib/productNameDisplay'
 import { hasPerm } from '../lib/permissions'
 import { useInventoryProductsStore } from '../stores/inventoryProductsStore'
 import type { CurrencyRow, Paginated, ProductRow, ShopSettingsRow } from '../types/api'
@@ -23,6 +27,10 @@ type InventoryHistoryEntry = {
   occurred_at: string
   event_type: 'created' | 'stock_increase' | 'sale_return'
   quantity?: number
+  productId?: number
+  imageUrl?: string | null
+  sku?: string | null
+  barcode?: string | null
   /** Present for `stock_increase` rows from auto inventory purchases. */
   purchaseId?: number
 }
@@ -157,6 +165,9 @@ export function InventoryPage() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [exportingProducts, setExportingProducts] = useState(false)
   const [historyItems, setHistoryItems] = useState<InventoryHistoryEntry[]>([])
+  const [historyProductById, setHistoryProductById] = useState<Map<number, ProductRow>>(
+    () => new Map(),
+  )
   const [historyStockEditOpen, setHistoryStockEditOpen] = useState(false)
   const [historyStockEditPurchaseId, setHistoryStockEditPurchaseId] = useState<number | null>(null)
   const [historyStockEditLoading, setHistoryStockEditLoading] = useState(false)
@@ -271,7 +282,7 @@ export function InventoryPage() {
     while (nextPath) {
       const data: Paginated<ProductRow> | ProductRow[] = await apiJson<
         Paginated<ProductRow> | ProductRow[]
-      >(nextPath)
+      >(nextPath, { shopScoped: true })
       if (Array.isArray(data)) {
         all.push(...data)
         nextPath = null
@@ -283,7 +294,10 @@ export function InventoryPage() {
     return all
   }, [])
 
-  const loadAddHistoryItems = useCallback(async (): Promise<InventoryHistoryEntry[]> => {
+  const loadAddHistoryItems = useCallback(async (): Promise<{
+    items: InventoryHistoryEntry[]
+    productById: Map<number, ProductRow>
+  }> => {
     const [allProducts, purchasesData, returnsData] = await Promise.all([
       fetchAllProducts(),
       apiJson<
@@ -303,7 +317,7 @@ export function InventoryPage() {
               total_units?: number
             }>
           }
-      >('/api/purchases/'),
+      >('/api/purchases/', { shopScoped: true }),
       apiJson<
         | Array<{
             id: number
@@ -319,26 +333,34 @@ export function InventoryPage() {
               occurred_at?: string
             }>
           }
-      >('/api/sales/returns-history/'),
+      >('/api/sales/returns-history/', { shopScoped: true }),
     ])
+    const productById = new Map(allProducts.map((p) => [p.id, p]))
     const purchases = Array.isArray(purchasesData) ? purchasesData : purchasesData.results
     const returnsRows = Array.isArray(returnsData) ? returnsData : returnsData.results
     const createdEvents: InventoryHistoryEntry[] = allProducts.map((p) => ({
       id: `product-created-${p.id}`,
-      product_name: p.name,
+      productId: p.id,
+      product_name: String(p.name ?? '').trim(),
+      imageUrl: p.image_url,
+      sku: p.sku,
+      barcode: p.barcode,
       occurred_at: p.created_at,
       event_type: 'created',
     }))
     const stockIncreaseEvents: InventoryHistoryEntry[] = purchases
       .filter((row) => String(row.note ?? '').includes('[AUTO_STOCK_INCREASE]'))
-      .map((row) => ({
-        id: `purchase-adjust-${row.id}`,
-        purchaseId: row.id,
-        product_name: String(row.lines_product_names || '').trim() || t('inv.unknownProduct'),
-        occurred_at: row.occurred_at,
-        event_type: 'stock_increase',
-        quantity: typeof row.total_units === 'number' ? row.total_units : undefined,
-      }))
+      .map((row) => {
+        const raw = String(row.lines_product_names || '').trim()
+        return {
+          id: `purchase-adjust-${row.id}`,
+          purchaseId: row.id,
+          product_name: formatProductsSummaryCell(raw) || raw || t('inv.unknownProduct'),
+          occurred_at: row.occurred_at,
+          event_type: 'stock_increase' as const,
+          quantity: typeof row.total_units === 'number' ? row.total_units : undefined,
+        }
+      })
     const returnedEvents: InventoryHistoryEntry[] = returnsRows.map((row) => ({
       id: `sale-return-${row.id}`,
       product_name: String(row.product_name || '').trim() || t('inv.unknownProduct'),
@@ -349,9 +371,10 @@ export function InventoryPage() {
     const merged = [...createdEvents, ...stockIncreaseEvents].sort(
       (a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime(),
     )
-    return [...merged, ...returnedEvents].sort(
+    const items = [...merged, ...returnedEvents].sort(
       (a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime(),
     )
+    return { items, productById }
   }, [fetchAllProducts, t])
 
   const loadCreateDependencies = useCallback(async () => {
@@ -613,11 +636,13 @@ export function InventoryPage() {
     setHistoryLoading(true)
     setError(null)
     try {
-      const items = await loadAddHistoryItems()
+      const { items, productById } = await loadAddHistoryItems()
       setHistoryItems(items)
+      setHistoryProductById(productById)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
       setHistoryItems([])
+      setHistoryProductById(new Map())
     } finally {
       setHistoryLoading(false)
     }
@@ -689,8 +714,9 @@ export function InventoryPage() {
       setHistoryStockEditPurchaseId(null)
       setHistoryLoading(true)
       try {
-        const items = await loadAddHistoryItems()
+        const { items, productById } = await loadAddHistoryItems()
         setHistoryItems(items)
+        setHistoryProductById(productById)
       } finally {
         setHistoryLoading(false)
       }
@@ -1759,7 +1785,29 @@ export function InventoryPage() {
                               ? `${t('inv.historySaleReturn')}${item.quantity ? ` (+${item.quantity})` : ''}`
                             : t('inv.historyProductCreated')}
                         </td>
-                        <td className="px-3 py-2 text-slate-800">{item.product_name}</td>
+                        <td className="px-3 py-2 text-slate-800">
+                          <div className="flex min-w-0 items-center gap-2">
+                            {item.productId != null &&
+                            historyProductById.get(item.productId)?.image_url ? (
+                              <img
+                                src={
+                                  resolveMediaUrl(
+                                    historyProductById.get(item.productId)?.image_url,
+                                  ) ?? ''
+                                }
+                                alt=""
+                                className="h-8 w-8 shrink-0 rounded-md border border-slate-200 object-cover"
+                              />
+                            ) : null}
+                            <span dir="auto" className="min-w-0 break-words font-sans">
+                              {resolveInventoryHistoryProductName(
+                                item,
+                                historyProductById,
+                                t('inv.unknownProduct'),
+                              )}
+                            </span>
+                          </div>
+                        </td>
                         <td className="px-3 py-2 text-slate-600">
                           {new Date(item.occurred_at).toLocaleString()}
                         </td>

@@ -702,6 +702,16 @@ class ProductSerializer(serializers.ModelSerializer):
                         data[key] = "0"
         return super().run_validation(data)
 
+    def validate_name(self, value: str) -> str:
+        name = str(value or "").strip()
+        if not name:
+            raise serializers.ValidationError("Product name is required.")
+        if not any(ch.isalnum() for ch in name):
+            raise serializers.ValidationError(
+                "Product name must include at least one letter or number.",
+            )
+        return name
+
     def validate(self, attrs: dict) -> dict:
         # FormData sends "" for empty optional fields; empty string is not NULL and
         # breaks UniqueConstraint(shop, sku|barcode) — only one "" per shop allowed.
