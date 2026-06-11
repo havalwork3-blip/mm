@@ -1216,6 +1216,7 @@ export function CustomerDebtsPage() {
                           <li key={name}>
                             <button
                               type="button"
+                              onMouseDown={(e) => e.preventDefault()}
                               onClick={() => {
                                 setDebtFilterName(name)
                                 setDebtNameSuggestOpen(false)
@@ -1655,6 +1656,7 @@ export function CustomerDebtsPage() {
                         <li key={name}>
                           <button
                             type="button"
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={() => {
                               setHistoryCustomerQuery(name)
                               setHistoryCustomerOpen(false)
