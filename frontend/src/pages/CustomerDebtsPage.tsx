@@ -10,10 +10,14 @@ import { apiJson, type ApiFetchOptions } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
 import {
   buildDebtPaymentReceiptHtml,
+  buildOutstandingDebtReceiptHtml,
+  computeReceiptSummaryFromSale,
   printReceiptHtml,
   type DebtPaymentReceiptData,
+  type OutstandingDebtReceiptData,
 } from '../lib/receiptHtml'
 import { withReceiptPrefs } from '../lib/receiptPrefs'
+import { formatSaleReceiptNumber } from '../lib/shopReceiptNumbers'
 import type {
   CustomerCollectPaymentResponse,
   CustomerDebtPaymentRow,
@@ -21,6 +25,7 @@ import type {
   CustomerDebtRow,
   CustomerDebtSummaryResponse,
   CustomerRow,
+  Paginated,
   ReceiptSettingsRow,
   SaleListRow,
 } from '../types/api'
@@ -1033,6 +1038,50 @@ export function CustomerDebtsPage() {
     }
   }
 
+  async function printOutstandingDebt(row: CustomerDebtRow) {
+    setError(null)
+    try {
+      const params = new URLSearchParams({
+        customer: String(row.id),
+        payment_status: 'debt',
+        page_size: '200',
+      })
+      const data = await apiJson<Paginated<SaleListRow> | SaleListRow[]>(
+        `/api/sales/?${params.toString()}`,
+        SHOP_SCOPED,
+      )
+      const sales = Array.isArray(data) ? data : data.results
+      const rateRaw = summary?.exchange_rate_usd_to_iqd
+      const rate = rateRaw != null ? parseFloat(rateRaw) : 0
+      const receiptData: OutstandingDebtReceiptData = {
+        customerName: row.name,
+        customerPhone: debtRowPhonesDisplay(row),
+        customerAddress: row.address || '',
+        customerId: row.id,
+        outstandingUsd: parseDec(row.outstanding_balance_usd),
+        outstandingIqd:
+          row.outstanding_balance_iqd != null && row.outstanding_balance_iqd !== ''
+            ? Number(String(row.outstanding_balance_iqd).replace(/,/g, ''))
+            : null,
+        exchangeRate: Number.isFinite(rate) && rate > 0 ? rate : 0,
+        sales: sales
+          .map((sale) => ({
+            receiptNumber: formatSaleReceiptNumber(sale.receipt_number),
+            occurredAt: sale.occurred_at,
+            balanceUsd: computeReceiptSummaryFromSale(sale).balanceUsd,
+          }))
+          .filter((line) => line.balanceUsd > 0.00005),
+      }
+      const html = await buildOutstandingDebtReceiptHtml({
+        data: receiptData,
+        receiptSettings: receiptSettings ? withReceiptPrefs(receiptSettings) : null,
+      })
+      printReceiptHtml(html)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('common.error'))
+    }
+  }
+
   const rateForHint = summary?.exchange_rate_usd_to_iqd
   const iqdPerUsdRounded =
     rateForHint !== null && rateForHint !== undefined
@@ -1281,8 +1330,8 @@ export function CustomerDebtsPage() {
                           <th className="px-3 py-3 text-end font-medium text-slate-700 dark:text-slate-200">
                             {stripAnyParens(t('customerDebts.colIqd'))} IQD
                           </th>
-                          <th className="w-28 px-2 py-3 text-center font-medium text-slate-700 dark:text-slate-200">
-                            <span className="sr-only">{t('customerDebts.collectPayment')}</span>
+                          <th className="w-36 px-2 py-3 text-center font-medium text-slate-700 dark:text-slate-200">
+                            <span className="sr-only">{t('purchasePage.colActions')}</span>
                           </th>
                         </tr>
                       </thead>
@@ -1310,30 +1359,42 @@ export function CustomerDebtsPage() {
                                 : '—'}
                             </td>
                             <td className="px-2 py-2 text-center">
-                              {canRecordPayment ? (
-                                <div className="inline-flex items-center justify-center gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => openCollect(row)}
-                                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 text-amber-800 transition hover:bg-amber-100 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-900/50"
-                                    title={t('customerDebts.collectPayment')}
-                                    aria-label={t('customerDebts.collectPayment')}
-                                  >
-                                    <Wallet className="h-4 w-4" aria-hidden />
-                                  </button>
-                                  {debtRowCanWriteOffAsDiscount(row) ? (
+                              <div className="inline-flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => void printOutstandingDebt(row)}
+                                  disabled={!receiptSettings}
+                                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                                  title={t('customerDebts.printOutstandingReceipt')}
+                                  aria-label={t('customerDebts.printOutstandingReceipt')}
+                                >
+                                  <Printer className="h-4 w-4" aria-hidden />
+                                </button>
+                                {canRecordPayment ? (
+                                  <>
                                     <button
                                       type="button"
-                                      onClick={() => openWriteoffConfirm(row)}
-                                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-800 transition hover:bg-violet-100 dark:border-violet-800/60 dark:bg-violet-950/40 dark:text-violet-200 dark:hover:bg-violet-900/50"
-                                      title={t('customerDebts.writeoffRemainderHint')}
-                                      aria-label={t('customerDebts.writeoffRemainderBtn')}
+                                      onClick={() => openCollect(row)}
+                                      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 text-amber-800 transition hover:bg-amber-100 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-900/50"
+                                      title={t('customerDebts.collectPayment')}
+                                      aria-label={t('customerDebts.collectPayment')}
                                     >
-                                      <Tag className="h-4 w-4" aria-hidden />
+                                      <Wallet className="h-4 w-4" aria-hidden />
                                     </button>
-                                  ) : null}
-                                </div>
-                              ) : null}
+                                    {debtRowCanWriteOffAsDiscount(row) ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => openWriteoffConfirm(row)}
+                                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-800 transition hover:bg-violet-100 dark:border-violet-800/60 dark:bg-violet-950/40 dark:text-violet-200 dark:hover:bg-violet-900/50"
+                                        title={t('customerDebts.writeoffRemainderHint')}
+                                        aria-label={t('customerDebts.writeoffRemainderBtn')}
+                                      >
+                                        <Tag className="h-4 w-4" aria-hidden />
+                                      </button>
+                                    ) : null}
+                                  </>
+                                ) : null}
+                              </div>
                             </td>
                           </tr>
                         ))}
