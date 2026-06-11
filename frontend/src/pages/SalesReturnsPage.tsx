@@ -3,6 +3,7 @@ import { useLocale } from '../context/LocaleContext'
 import { useSession } from '../context/SessionContext'
 import { apiJson } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
+import { formatMoneyCompact } from '../lib/formatMoney'
 import { formatSaleReceiptNumber } from '../lib/shopReceiptNumbers'
 import type { Paginated, SaleListRow, SaleReturnResponse } from '../types/api'
 
@@ -337,9 +338,10 @@ export function SalesReturnsPage() {
 
           <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-600">
             <div className="mb-2 hidden grid-cols-12 gap-2 px-1 text-[11px] font-semibold text-slate-900 sm:grid dark:text-slate-100">
-              <span className="sm:col-span-6">{t('jard.product')}</span>
-              <span className="sm:col-span-3">{t('purchaseReturns.maxReturnQty')}</span>
+              <span className="sm:col-span-4">{t('jard.product')}</span>
+              <span className="sm:col-span-2">{t('purchaseReturns.maxReturnQty')}</span>
               <span className="sm:col-span-3">{t('pos.returnQty')}</span>
+              <span className="sm:col-span-3">{t('salesReturns.soldUnitPrice')}</span>
             </div>
             <div className="space-y-3">
               {!selectedSale ? (
@@ -358,7 +360,7 @@ export function SalesReturnsPage() {
                       key={ln.id}
                       className="grid gap-2 rounded-lg border border-slate-100 p-2 sm:grid-cols-12 dark:border-slate-700"
                     >
-                      <div className="sm:col-span-6">
+                      <div className="sm:col-span-4">
                         <input
                           value={ln.product_name || ln.manual_name || `#${ln.id}`}
                           readOnly
@@ -366,7 +368,7 @@ export function SalesReturnsPage() {
                         />
                       </div>
                       <input
-                        className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm tabular-nums sm:col-span-3 dark:border-slate-600 dark:bg-slate-950/60 dark:text-slate-100"
+                        className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm tabular-nums sm:col-span-2 dark:border-slate-600 dark:bg-slate-950/60 dark:text-slate-100"
                         value={String(maxQty)}
                         readOnly
                       />
@@ -381,6 +383,12 @@ export function SalesReturnsPage() {
                         }
                         inputMode="numeric"
                         placeholder="0"
+                      />
+                      <input
+                        className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm tabular-nums sm:col-span-3 dark:border-slate-600 dark:bg-slate-950/60 dark:text-slate-100"
+                        value={formatMoneyCompact(ln.unit_price_usd)}
+                        readOnly
+                        aria-label={t('salesReturns.soldUnitPrice')}
                       />
                     </div>
                   ))
