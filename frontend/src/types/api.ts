@@ -543,16 +543,24 @@ export type ProfitReportResponse = {
   totals: {
     sum_sale_line_prices_usd: string
     sum_sale_line_buy_prices_usd: string
+    /** Sale revenue minus COGS (before discounts & expenses). */
+    gross_margin_usd?: string
+    /** Sum of per-product line net profits; should match gross_margin_usd. */
+    lines_gross_total_usd?: string
     total_customer_discounts_usd: string
     total_expenses_usd: string
+    /** Expenses excluding inventory write-offs. */
+    total_operating_expenses_usd?: string
     /** Inventory loss / write-off (USD), included in total_expenses_usd. */
     total_inventory_loss_usd?: string
     total_company_discounts_received_usd: string
     net_profit_usd: string
   }
   lines: {
-    product_id: number
+    product_id: number | null
     product_name: string
+    category_id?: number | null
+    category_name?: string
     quantity_sold: string
     quantity_sold_at_zero?: string
     has_loss_sales?: boolean

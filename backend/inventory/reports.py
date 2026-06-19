@@ -31,6 +31,16 @@ INVENTORY_LOSS_NOTE_MARKERS = (
     "[AUTO_DISCONTINUE_LOSS]",
 )
 
+_MONEY_Q = Decimal("0.0001")
+
+
+def _money_q(value) -> Decimal:
+    return Decimal(str(value or 0)).quantize(_MONEY_Q)
+
+
+def _money_fmt(value) -> str:
+    return format(_money_q(value), "f")
+
 
 def expense_is_inventory_loss(expense: Expense) -> bool:
     note = (expense.note or "").strip()
@@ -104,7 +114,7 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
     sum_sale = Decimal("0")
     sum_buy = Decimal("0")
     per_product: dict[tuple[int | None, str], dict[str, Decimal | int | str | None]] = {}
-    for ln in line_qs.select_related("product").prefetch_related("return_lines"):
+    for ln in line_qs.select_related("product", "product__category").prefetch_related("return_lines"):
         returned_qty = sum(int(row.quantity) for row in ln.return_lines.all())
         net_qty = max(0, int(ln.quantity) - returned_qty)
         if net_qty <= 0:
@@ -115,12 +125,20 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
         sum_buy += line_buy
         product_id = ln.product_id
         display_name = (ln.product.name if ln.product_id and ln.product is not None else ln.manual_name or "Manual line")
+        category_id = None
+        category_name = ""
+        if ln.product_id and ln.product is not None and ln.product.category_id:
+            category_id = ln.product.category_id
+            cat = ln.product.category
+            category_name = cat.display_name("ku") if hasattr(cat, "display_name") else (cat.name_ku or cat.name)
         key = (product_id, display_name)
         flags = sale_line_flags(ln.unit_price_usd, ln.unit_buy_price_usd, net_qty)
         if key not in per_product:
             per_product[key] = {
                 "product_id": product_id,
                 "product_name": display_name,
+                "category_id": category_id,
+                "category_name": category_name,
                 "quantity_sold": 0,
                 "quantity_sold_at_zero": 0,
                 "total_buy": Decimal("0"),
@@ -186,7 +204,17 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
         s=Sum("discount_received_usd", output_field=dec),
     )["s"] or Decimal("0")
 
-    net_profit = sum_sale - sum_buy - total_expense_usd - cust_disc + company_disc
+    sum_sale_q = _money_q(sum_sale)
+    sum_buy_q = _money_q(sum_buy)
+    cust_disc_q = _money_q(cust_disc)
+    total_expense_q = _money_q(total_expense_usd)
+    inventory_loss_q = _money_q(total_inventory_loss_usd)
+    operating_expense_q = _money_q(total_expense_q - inventory_loss_q)
+    company_disc_q = _money_q(company_disc)
+    gross_margin_q = _money_q(sum_sale_q - sum_buy_q)
+    net_profit_q = _money_q(
+        gross_margin_q - total_expense_q - cust_disc_q + company_disc_q,
+    )
 
     shareholders = Shareholder.objects.filter(shop_id=shop_id).order_by("name")
     sh_ids = [sh.id for sh in shareholders]
@@ -195,7 +223,7 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
     profit_distribution = []
     for sh in shareholders:
         pct = (sh.share_percentage / Decimal("100")).quantize(Decimal("0.0001"))
-        share_amt = (net_profit * pct).quantize(Decimal("0.0001"))
+        share_amt = (net_profit_q * pct).quantize(_MONEY_Q)
         cap = (sh.capital_contribution_usd or Decimal("0")).quantize(Decimal("0.0001"))
         after = (cap + share_amt).quantize(Decimal("0.0001"))
         paid = paid_by_sh.get(sh.id, Decimal("0")).quantize(Decimal("0.0001"))
@@ -225,24 +253,27 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
         else:
             ub = Decimal("0")
             us = Decimal("0")
+        tb_q = _money_q(tb)
+        ts_q = _money_q(ts)
         items.append(
             {
                 "product_id": r["product_id"],
                 "product_name": r["product_name"],
+                "category_id": r.get("category_id"),
+                "category_name": r.get("category_name") or "",
                 "quantity_sold": str(qty),
                 "quantity_sold_at_zero": str(int(r.get("quantity_sold_at_zero") or 0)),
                 "has_loss_sales": bool(r.get("has_loss_sales")),
-                "total_loss_usd": format(
-                    Decimal(r.get("total_loss_usd") or Decimal("0")).quantize(Decimal("0.0001")),
-                    "f",
-                ),
-                "unit_buy_price_usd": format(ub, "f"),
-                "total_buy_price_usd": format(tb, "f"),
-                "unit_sale_price_usd": format(us, "f"),
-                "total_sale_price_usd": format(ts, "f"),
-                "net_profit_usd": format((ts - tb).quantize(Decimal("0.0001")), "f"),
+                "total_loss_usd": _money_fmt(r.get("total_loss_usd")),
+                "unit_buy_price_usd": _money_fmt(ub),
+                "total_buy_price_usd": _money_fmt(tb_q),
+                "unit_sale_price_usd": _money_fmt(us),
+                "total_sale_price_usd": _money_fmt(ts_q),
+                "net_profit_usd": _money_fmt(ts_q - tb_q),
             },
         )
+
+    lines_gross_q = _money_q(sum(_money_q(row["net_profit_usd"]) for row in items))
 
     rate = latest_usd_to_iqd_for_shop(shop_id)
     return {
@@ -250,13 +281,16 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
         "date_to": d_to.isoformat(),
         "usd_to_iqd": format(rate, "f") if rate is not None else "",
         "totals": {
-            "sum_sale_line_prices_usd": format(sum_sale, "f"),
-            "sum_sale_line_buy_prices_usd": format(sum_buy, "f"),
-            "total_customer_discounts_usd": format(cust_disc, "f"),
-            "total_expenses_usd": format(total_expense_usd, "f"),
-            "total_inventory_loss_usd": format(total_inventory_loss_usd, "f"),
-            "total_company_discounts_received_usd": format(company_disc, "f"),
-            "net_profit_usd": format(net_profit.quantize(Decimal("0.0001")), "f"),
+            "sum_sale_line_prices_usd": _money_fmt(sum_sale_q),
+            "sum_sale_line_buy_prices_usd": _money_fmt(sum_buy_q),
+            "gross_margin_usd": _money_fmt(gross_margin_q),
+            "lines_gross_total_usd": _money_fmt(lines_gross_q),
+            "total_customer_discounts_usd": _money_fmt(cust_disc_q),
+            "total_expenses_usd": _money_fmt(total_expense_q),
+            "total_operating_expenses_usd": _money_fmt(operating_expense_q),
+            "total_inventory_loss_usd": _money_fmt(inventory_loss_q),
+            "total_company_discounts_received_usd": _money_fmt(company_disc_q),
+            "net_profit_usd": _money_fmt(net_profit_q),
         },
         "profit_distribution": profit_distribution,
         "lines": items,
@@ -268,25 +302,31 @@ def profit_report_global(d_from, d_to) -> dict:
     Aggregate profit report across all shops (superuser global scope).
     Lines include ``shop_id`` and ``shop_name``; shareholder distribution is omitted.
     """
-    sum_sale = Decimal("0")
-    sum_buy = Decimal("0")
-    cust_disc_t = Decimal("0")
-    expense_t = Decimal("0")
-    inventory_loss_t = Decimal("0")
-    company_disc_t = Decimal("0")
-    net_t = Decimal("0")
+    sum_sale_q = Decimal("0")
+    sum_buy_q = Decimal("0")
+    gross_margin_q = Decimal("0")
+    lines_gross_q = Decimal("0")
+    cust_disc_q = Decimal("0")
+    expense_q = Decimal("0")
+    operating_q = Decimal("0")
+    inventory_loss_q = Decimal("0")
+    company_disc_q = Decimal("0")
+    net_q = Decimal("0")
     all_lines: list[dict] = []
 
     for shop in Shop.objects.all().order_by("name"):
         r = profit_report_for_shop(shop.pk, d_from, d_to)
         t = r["totals"]
-        sum_sale += Decimal(t["sum_sale_line_prices_usd"])
-        sum_buy += Decimal(t["sum_sale_line_buy_prices_usd"])
-        cust_disc_t += Decimal(t["total_customer_discounts_usd"])
-        expense_t += Decimal(t["total_expenses_usd"])
-        inventory_loss_t += Decimal(t.get("total_inventory_loss_usd", "0"))
-        company_disc_t += Decimal(t["total_company_discounts_received_usd"])
-        net_t += Decimal(t["net_profit_usd"])
+        sum_sale_q += _money_q(t["sum_sale_line_prices_usd"])
+        sum_buy_q += _money_q(t["sum_sale_line_buy_prices_usd"])
+        gross_margin_q += _money_q(t.get("gross_margin_usd", "0"))
+        lines_gross_q += _money_q(t.get("lines_gross_total_usd", "0"))
+        cust_disc_q += _money_q(t["total_customer_discounts_usd"])
+        expense_q += _money_q(t["total_expenses_usd"])
+        operating_q += _money_q(t.get("total_operating_expenses_usd", "0"))
+        inventory_loss_q += _money_q(t.get("total_inventory_loss_usd", "0"))
+        company_disc_q += _money_q(t["total_company_discounts_received_usd"])
+        net_q += _money_q(t["net_profit_usd"])
         for line in r["lines"]:
             row = {**line, "shop_id": shop.pk, "shop_name": shop.name}
             all_lines.append(row)
@@ -297,13 +337,16 @@ def profit_report_global(d_from, d_to) -> dict:
         "global_multi_shop": True,
         "usd_to_iqd": "",
         "totals": {
-            "sum_sale_line_prices_usd": format(sum_sale, "f"),
-            "sum_sale_line_buy_prices_usd": format(sum_buy, "f"),
-            "total_customer_discounts_usd": format(cust_disc_t, "f"),
-            "total_expenses_usd": format(expense_t, "f"),
-            "total_inventory_loss_usd": format(inventory_loss_t, "f"),
-            "total_company_discounts_received_usd": format(company_disc_t, "f"),
-            "net_profit_usd": format(net_t.quantize(Decimal("0.0001")), "f"),
+            "sum_sale_line_prices_usd": _money_fmt(sum_sale_q),
+            "sum_sale_line_buy_prices_usd": _money_fmt(sum_buy_q),
+            "gross_margin_usd": _money_fmt(gross_margin_q),
+            "lines_gross_total_usd": _money_fmt(lines_gross_q),
+            "total_customer_discounts_usd": _money_fmt(cust_disc_q),
+            "total_expenses_usd": _money_fmt(expense_q),
+            "total_operating_expenses_usd": _money_fmt(operating_q),
+            "total_inventory_loss_usd": _money_fmt(inventory_loss_q),
+            "total_company_discounts_received_usd": _money_fmt(company_disc_q),
+            "net_profit_usd": _money_fmt(net_q),
         },
         "profit_distribution": [],
         "lines": all_lines,

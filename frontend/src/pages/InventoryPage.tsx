@@ -478,13 +478,19 @@ export function InventoryPage() {
     }
   }
 
+  function handleCreateProductSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    void createProduct()
+  }
+
   async function createProduct() {
-    if (!createForm.category) return
+    const trimmedName = createForm.name.trim()
+    if (trimmedName.length < 2 || !createForm.category) return
     setCreatingProduct(true)
     setError(null)
     try {
       const form = new FormData()
-      form.append('name', createForm.name.trim())
+      form.append('name', trimmedName)
       form.append('category', String(Number(createForm.category)))
       form.append('sku', createForm.sku.trim())
       form.append('barcode', createForm.barcode.trim())
@@ -1352,6 +1358,7 @@ export function InventoryPage() {
             <p className="mt-1 text-sm text-slate-600">
               {t('inv.addProductHint')} ({t('admin.permModel.company')}: {companies.length})
             </p>
+            <form onSubmit={handleCreateProductSubmit} noValidate>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block text-start">
                 <span className="mb-1 block text-xs font-medium text-slate-600">
@@ -1470,14 +1477,18 @@ export function InventoryPage() {
                 {t('inv.cancel')}
               </button>
               <button
-                type="button"
-                onClick={() => void createProduct()}
-                disabled={creatingProduct || !createForm.name.trim() || !createForm.category}
+                type="submit"
+                disabled={
+                  creatingProduct ||
+                  createForm.name.trim().length < 2 ||
+                  !createForm.category
+                }
                 className="min-h-11 rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-60"
               >
                 {creatingProduct ? t('inv.saving') : t('inv.addProduct')}
               </button>
             </div>
+            </form>
           </div>
         </div>
       )}
