@@ -565,8 +565,12 @@ export type ProfitReportResponse = {
   totals: {
     sum_sale_line_prices_usd: string
     sum_sale_line_buy_prices_usd: string
+    /** Net goods value on purchase invoices in period (cash or debt). */
+    total_purchases_goods_usd?: string
     /** Sale revenue minus COGS (before discounts & expenses). */
     gross_margin_usd?: string
+    /** Sale revenue minus total purchases in period. */
+    gross_margin_purchases_usd?: string
     /** Sum of per-product line net profits; should match gross_margin_usd. */
     lines_gross_total_usd?: string
     total_customer_discounts_usd: string

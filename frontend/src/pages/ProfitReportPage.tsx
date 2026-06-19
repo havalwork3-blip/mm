@@ -353,7 +353,7 @@ export function ProfitReportPage() {
         id: 'cogs',
         shortLabel: t('profit.chartLabel.cogs'),
         fullLabel: t('profit.lineBuyCogs'),
-        value: parseReportNumber(totals.sum_sale_line_buy_prices_usd),
+        value: parseReportNumber(totals.total_purchases_goods_usd ?? '0'),
         fill: PROFIT_COLORS.cogs,
       },
       {
@@ -474,13 +474,17 @@ export function ProfitReportPage() {
     report?.usd_to_iqd && totals
       ? iqdIntegerStringFromUsd(totals.net_profit_usd, report.usd_to_iqd)
       : null
+  const purchasesGoodsUsd = totals?.total_purchases_goods_usd ?? '0'
   const grossMargin =
-    totals?.gross_margin_usd ??
-    String(parseReportNumber(totals?.sum_sale_line_prices_usd ?? '0') - parseReportNumber(totals?.sum_sale_line_buy_prices_usd ?? '0'))
+    totals?.gross_margin_purchases_usd ??
+    String(
+      parseReportNumber(totals?.sum_sale_line_prices_usd ?? '0') -
+        parseReportNumber(purchasesGoodsUsd),
+    )
   const maxBreakdown = totals
     ? Math.max(
         parseReportNumber(totals.sum_sale_line_prices_usd),
-        parseReportNumber(totals.sum_sale_line_buy_prices_usd),
+        parseReportNumber(purchasesGoodsUsd),
         parseReportNumber(grossMargin),
         parseReportNumber(totals.net_profit_usd),
         1,
@@ -617,7 +621,7 @@ export function ProfitReportPage() {
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 { label: t('profit.saleLinePrices'), value: totals.sum_sale_line_prices_usd, icon: TrendingUp, color: PROFIT_COLORS.sales },
-                { label: t('profit.lineBuyCogs'), value: totals.sum_sale_line_buy_prices_usd, icon: TrendingDown, color: PROFIT_COLORS.cogs },
+                { label: t('profit.lineBuyCogs'), value: purchasesGoodsUsd, icon: TrendingDown, color: PROFIT_COLORS.cogs },
                 { label: t('profit.grossMargin'), value: grossMargin, icon: Wallet, color: PROFIT_COLORS.gross },
                 { label: t('profit.netProfit'), value: totals.net_profit_usd, icon: TrendingUp, color: PROFIT_COLORS.net },
               ].map((kpi) => (
@@ -750,7 +754,7 @@ export function ProfitReportPage() {
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('profit.summaryFormulaHint')}</p>
                 <div className="mt-4 space-y-2">
                   <BreakdownBar label={t('profit.saleLinePrices')} value={totals.sum_sale_line_prices_usd} maxValue={maxBreakdown} accent={PROFIT_COLORS.sales} />
-                  <BreakdownBar label={t('profit.lineBuyCogs')} value={totals.sum_sale_line_buy_prices_usd} maxValue={maxBreakdown} tone="negative" prefix="−" accent={PROFIT_COLORS.cogs} />
+                  <BreakdownBar label={t('profit.lineBuyCogs')} value={purchasesGoodsUsd} maxValue={maxBreakdown} tone="negative" prefix="−" accent={PROFIT_COLORS.cogs} />
                   <BreakdownBar label={t('profit.grossMargin')} value={grossMargin} maxValue={maxBreakdown} tone="emphasis" accent={PROFIT_COLORS.gross} />
                   <BreakdownBar label={t('profit.customerDiscounts')} value={totals.total_customer_discounts_usd} maxValue={maxBreakdown} tone="negative" prefix="−" accent={PROFIT_COLORS.discounts} />
                   <BreakdownBar label={t('profit.operatingExpenses')} value={operatingExpenses} maxValue={maxBreakdown} tone="negative" prefix="−" accent={PROFIT_COLORS.expenses} />

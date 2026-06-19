@@ -199,7 +199,16 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
         shop_id=shop_id,
         occurred_at__gte=start,
         occurred_at__lte=end,
-    )
+    ).prefetch_related("lines")
+    total_purchases_goods_usd = Decimal("0")
+    for pur in purchase_qs:
+        line_sum = Decimal("0")
+        for ln in pur.lines.all():
+            line_sum += Decimal(ln.quantity) * Decimal(ln.unit_cost_usd)
+        net_goods = line_sum - Decimal(pur.discount_received_usd)
+        if net_goods < 0:
+            net_goods = Decimal("0")
+        total_purchases_goods_usd += net_goods
     company_disc = purchase_qs.aggregate(
         s=Sum("discount_received_usd", output_field=dec),
     )["s"] or Decimal("0")
@@ -211,7 +220,9 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
     inventory_loss_q = _money_q(total_inventory_loss_usd)
     operating_expense_q = _money_q(total_expense_q - inventory_loss_q)
     company_disc_q = _money_q(company_disc)
+    total_purchases_goods_q = _money_q(total_purchases_goods_usd)
     gross_margin_q = _money_q(sum_sale_q - sum_buy_q)
+    gross_margin_purchases_q = _money_q(sum_sale_q - total_purchases_goods_q)
     net_profit_q = _money_q(
         gross_margin_q - total_expense_q - cust_disc_q + company_disc_q,
     )
@@ -283,7 +294,9 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
         "totals": {
             "sum_sale_line_prices_usd": _money_fmt(sum_sale_q),
             "sum_sale_line_buy_prices_usd": _money_fmt(sum_buy_q),
+            "total_purchases_goods_usd": _money_fmt(total_purchases_goods_q),
             "gross_margin_usd": _money_fmt(gross_margin_q),
+            "gross_margin_purchases_usd": _money_fmt(gross_margin_purchases_q),
             "lines_gross_total_usd": _money_fmt(lines_gross_q),
             "total_customer_discounts_usd": _money_fmt(cust_disc_q),
             "total_expenses_usd": _money_fmt(total_expense_q),
@@ -311,6 +324,8 @@ def profit_report_global(d_from, d_to) -> dict:
     operating_q = Decimal("0")
     inventory_loss_q = Decimal("0")
     company_disc_q = Decimal("0")
+    purchases_goods_q = Decimal("0")
+    gross_margin_purchases_q = Decimal("0")
     net_q = Decimal("0")
     all_lines: list[dict] = []
 
@@ -319,7 +334,9 @@ def profit_report_global(d_from, d_to) -> dict:
         t = r["totals"]
         sum_sale_q += _money_q(t["sum_sale_line_prices_usd"])
         sum_buy_q += _money_q(t["sum_sale_line_buy_prices_usd"])
+        purchases_goods_q += _money_q(t.get("total_purchases_goods_usd", "0"))
         gross_margin_q += _money_q(t.get("gross_margin_usd", "0"))
+        gross_margin_purchases_q += _money_q(t.get("gross_margin_purchases_usd", "0"))
         lines_gross_q += _money_q(t.get("lines_gross_total_usd", "0"))
         cust_disc_q += _money_q(t["total_customer_discounts_usd"])
         expense_q += _money_q(t["total_expenses_usd"])
@@ -339,7 +356,9 @@ def profit_report_global(d_from, d_to) -> dict:
         "totals": {
             "sum_sale_line_prices_usd": _money_fmt(sum_sale_q),
             "sum_sale_line_buy_prices_usd": _money_fmt(sum_buy_q),
+            "total_purchases_goods_usd": _money_fmt(purchases_goods_q),
             "gross_margin_usd": _money_fmt(gross_margin_q),
+            "gross_margin_purchases_usd": _money_fmt(gross_margin_purchases_q),
             "lines_gross_total_usd": _money_fmt(lines_gross_q),
             "total_customer_discounts_usd": _money_fmt(cust_disc_q),
             "total_expenses_usd": _money_fmt(expense_q),
