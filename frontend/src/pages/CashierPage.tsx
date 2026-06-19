@@ -502,7 +502,7 @@ function CashFlowBreakdownChart({
             <LabelList
               dataKey="value"
               position={labelSide}
-              formatter={(v: number) => `${formatUsdShort(Number(v))} $`}
+              formatter={(v) => `${formatUsdShort(Number(v ?? 0))} $`}
               className="font-mono text-[11px] font-semibold tabular-nums"
               fill={axisTick}
             />
@@ -722,7 +722,7 @@ export function CashierPage() {
       summary.customer_debt_receipts_usd,
       summary.sales_cash_in_usd,
     ]
-    return Math.max(...amounts.map(parseUsdAmount), 1)
+    return Math.max(...amounts.map((s) => parseUsdAmount(s ?? '0')), 1)
   }, [summary])
 
   const barChartData = useMemo((): FlowBarRow[] => {

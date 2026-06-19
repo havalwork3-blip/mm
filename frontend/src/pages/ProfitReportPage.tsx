@@ -198,7 +198,7 @@ function ProfitWaterfallChart({
             <LabelList
               dataKey="value"
               position={isRtl ? 'left' : 'right'}
-              formatter={(v: number) => `${formatUsdShort(Number(v))} $`}
+              formatter={(v) => `${formatUsdShort(Number(v ?? 0))} $`}
               fill={axisTick}
               fontSize={11}
             />
