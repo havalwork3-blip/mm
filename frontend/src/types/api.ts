@@ -107,6 +107,12 @@ export type ShareholderPaymentRow = {
 export type CashierSummaryResponse = {
   opening_cash_usd: string
   sales_cash_in_usd: string
+  /** Checkout payments on POS sales in period */
+  pos_sale_payments_usd?: string
+  /** Customer debt repayments collected in period */
+  customer_debt_receipts_usd?: string
+  /** Sale return refunds in period */
+  sale_returns_usd?: string
   expenses_usd: string
   employee_debt_cash_effect_usd: string
   current_cash_usd: string
@@ -227,6 +233,22 @@ export type Me = {
   last_login: string | null
   /** Effective permissions as app_label.codename (from auth backend). */
   user_permissions: string[]
+  display_name?: string
+  profile_picture_url?: string | null
+  effective_display_name?: string
+}
+
+export type UserActivityEntry = {
+  id: string
+  action: string
+  label: string
+  meta: Record<string, unknown>
+  created_at: string
+}
+
+export type UserDailyActivity = {
+  date: string
+  entries: UserActivityEntry[]
 }
 
 export type CurrencyRow = {

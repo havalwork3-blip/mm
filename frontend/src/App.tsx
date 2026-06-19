@@ -21,6 +21,7 @@ import { SalesListPage } from './pages/SalesListPage'
 import { SalesReturnsPage } from './pages/SalesReturnsPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { QrCodeSocialLandingPage } from './pages/QrCodeSocialLandingPage'
 import { AdminQrSocialPage } from './pages/admin/AdminQrSocialPage'
 import { MerchantOnlineOrdersPage } from './pages/merchant/MerchantOnlineOrdersPage'
@@ -73,6 +74,7 @@ function App() {
           <Route path="/online-orders" element={<MerchantOnlineOrdersPage />} />
           <Route path="/online-pricing" element={<MerchantOnlinePricingPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/cashier" element={<CashierPage />} />
           <Route path="/debts" element={<DebtsPage />} />

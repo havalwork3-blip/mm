@@ -52,6 +52,12 @@ class User(AbstractUser):
         choices=UserRole.choices,
         default=UserRole.EMPLOYEE,
     )
+    display_name = models.CharField(max_length=120, blank=True, default="")
+    profile_picture = models.ImageField(
+        upload_to="profile-pictures/%Y/%m/",
+        blank=True,
+        null=True,
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: list[str] = []
@@ -68,3 +74,38 @@ class User(AbstractUser):
 
     def __str__(self) -> str:
         return self.email
+
+    @property
+    def effective_display_name(self) -> str:
+        name = (self.display_name or "").strip()
+        if name:
+            return name
+        local = (self.email or "").split("@", 1)[0].strip()
+        return local or self.email
+
+
+class UserActivityLog(models.Model):
+    """Chronological work events for employee profile history."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="activity_logs",
+    )
+    shop = models.ForeignKey(
+        "shops.Shop",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="user_activity_logs",
+    )
+    action = models.CharField(max_length=40, db_index=True)
+    label = models.CharField(max_length=255)
+    meta = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self) -> str:
+        return f"{self.user_id} {self.action} @ {self.created_at:%Y-%m-%d %H:%M}"

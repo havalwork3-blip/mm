@@ -34,6 +34,8 @@ class UserSerializer(serializers.ModelSerializer):
     shop_name = serializers.SerializerMethodField()
     online_storefront_enabled = serializers.SerializerMethodField()
     user_permissions = serializers.SerializerMethodField()
+    profile_picture_url = serializers.SerializerMethodField()
+    effective_display_name = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -50,8 +52,23 @@ class UserSerializer(serializers.ModelSerializer):
             "date_joined",
             "last_login",
             "user_permissions",
+            "display_name",
+            "profile_picture_url",
+            "effective_display_name",
         ]
         read_only_fields = fields
+
+    def get_profile_picture_url(self, obj: User) -> str | None:
+        if not obj.profile_picture:
+            return None
+        request = self.context.get("request")
+        url = obj.profile_picture.url
+        if request is not None:
+            return request.build_absolute_uri(url)
+        return url
+
+    def get_effective_display_name(self, obj: User) -> str:
+        return obj.effective_display_name
 
     def _active_shop_for_user(self, obj: User) -> Shop | None:
         request = self.context.get("request")
@@ -316,3 +333,28 @@ class UserAdminCreateSerializer(serializers.ModelSerializer):
         if perm_ids:
             user.user_permissions.set(Permission.objects.filter(pk__in=perm_ids))
         return user
+
+
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    """Self-service profile updates (display name + avatar)."""
+
+    class Meta:
+        model = User
+        fields = ["display_name", "profile_picture"]
+
+    def validate_display_name(self, value: str) -> str:
+        return (value or "").strip()[:120]
+
+    def update(self, instance: User, validated_data: dict) -> User:
+        if "profile_picture" in validated_data and validated_data["profile_picture"] is None:
+            if instance.profile_picture:
+                instance.profile_picture.delete(save=False)
+        return super().update(instance, validated_data)
+
+
+class UserActivityEntrySerializer(serializers.Serializer):
+    id = serializers.CharField()
+    action = serializers.CharField()
+    label = serializers.CharField()
+    meta = serializers.DictField()
+    created_at = serializers.DateTimeField()

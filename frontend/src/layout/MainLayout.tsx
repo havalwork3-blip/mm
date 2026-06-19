@@ -27,6 +27,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { LangSwitcher } from '../components/LangSwitcher'
 import { OnlineOrderNotificationLayer } from '../components/OnlineOrderNotificationLayer'
+import { UserAvatar, userDisplayName } from '../components/UserAvatar'
 import { useLocale } from '../context/LocaleContext'
 import { ShopSwitchLoadingOverlay, ShopSwitchProvider, useShopSwitch } from '../context/ShopSwitchContext'
 import { useSession } from '../context/SessionContext'
@@ -630,6 +631,31 @@ function MainLayoutShell() {
                 </div>
               )}
             </div>
+
+            {me && (
+              <div className={`border-b border-slate-700/80 ${collapsed ? 'px-1 py-2' : 'px-2 py-2'}`}>
+                <NavLink
+                  to="/profile"
+                  className={({ isActive }) =>
+                    `flex min-h-11 items-center gap-2 rounded-xl px-2 py-2 transition-colors ${
+                      isActive
+                        ? 'bg-violet-600/25 text-white ring-1 ring-violet-500/40'
+                        : 'text-slate-200 hover:bg-slate-800/80 hover:text-white'
+                    } ${collapsed ? 'justify-center' : ''}`
+                  }
+                  title={collapsed ? userDisplayName(me) : t('profile.viewProfile')}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <UserAvatar user={me} size="sm" />
+                  {!collapsed && (
+                    <div className="min-w-0 flex-1 text-start">
+                      <p className="truncate text-sm font-medium text-white">{userDisplayName(me)}</p>
+                      <p className="truncate text-[10px] text-slate-400">{roleLabel(t, me)}</p>
+                    </div>
+                  )}
+                </NavLink>
+              </div>
+            )}
 
             <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-visible overscroll-y-contain py-3">
               <ul className="space-y-0.5 px-2">

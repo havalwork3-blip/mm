@@ -1109,18 +1109,20 @@ def cashier_snapshot(
     opening_cash_usd: Decimal | None = None,
 ) -> dict:
     """
-    Current cash (USD) ≈ opening + sales cash in - expenses - net employee debt taken
-    (employee debt models cash removed as Taken and added back as Returned).
+    Current cash (USD) ≈ opening + POS sales + customer debt collected − sale returns
+    − expenses − supplier (purchase) payments − net employee debt taken.
     """
-    start, end = _bounds(d_from, d_to)
-
     if opening_cash_usd is None:
         opening_cash_usd = resolve_opening_cash_for_period(shop_id, d_from, d_to)
     else:
         opening_cash_usd = Decimal(str(opening_cash_usd))
 
+    pos_sales = sales_checkout_received_usd_in_range(shop_id, d_from, d_to)
+    cust_debt_rcpt = customer_debt_payments_usd_in_range(shop_id, d_from, d_to)
+    sale_returns = total_returned_products_usd_in_range(shop_id, d_from, d_to)
     sales_in = sales_cash_in_usd_range(shop_id, d_from, d_to)
     exp = total_expenses_usd_in_range(shop_id, d_from, d_to)
+    sup_pay = supplier_payments_usd_in_range(shop_id, d_from, d_to)
 
     debt_qs = EmployeeDebt.objects.filter(
         shop_id=shop_id,
@@ -1136,11 +1138,18 @@ def cashier_snapshot(
         )
         debt_effect += sign * Decimal(row.amount)
 
-    current_cash = opening_cash_usd + sales_in - exp - debt_effect
+    current_cash = (
+        opening_cash_usd
+        + pos_sales
+        + cust_debt_rcpt
+        - sale_returns
+        - exp
+        - sup_pay
+        - debt_effect
+    )
     stock = total_stock_value_usd(shop_id)
     recv = total_receivables_usd(shop_id)
     pay = total_payables_usd(shop_id)
-    sup_pay = supplier_payments_usd_in_range(shop_id, d_from, d_to)
     capital = (current_cash + stock).quantize(Decimal("0.0001"))
     debt_exposure = (recv + pay).quantize(Decimal("0.0001"))
     pinv = purchases_goods_value_usd_range(shop_id, d_from, d_to)
@@ -1163,6 +1172,9 @@ def cashier_snapshot(
     return {
         "opening_cash_usd": format(opening_cash_usd, "f"),
         "sales_cash_in_usd": format(sales_in, "f"),
+        "pos_sale_payments_usd": format(pos_sales, "f"),
+        "customer_debt_receipts_usd": format(cust_debt_rcpt, "f"),
+        "sale_returns_usd": format(sale_returns, "f"),
         "expenses_usd": format(exp, "f"),
         "employee_debt_cash_effect_usd": format(debt_effect, "f"),
         "current_cash_usd": format(current_cash.quantize(Decimal("0.0001")), "f"),

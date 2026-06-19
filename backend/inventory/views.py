@@ -22,6 +22,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import User
+from accounts.activity import log_user_activity
 
 from shops.scoping import get_shop_id_for_request, require_shop_id
 
@@ -449,6 +450,17 @@ class ExpenseViewSet(OwnerScopedViewSet):
             qs = qs.filter(occurred_on__lte=date_to)
         return qs.order_by("-occurred_on", "-id")
 
+    def perform_create(self, serializer):
+        shop_id = require_shop_id(self.request)
+        expense = serializer.save(shop_id=shop_id)
+        log_user_activity(
+            self.request.user,
+            shop_id=shop_id,
+            action="expense_created",
+            label="expense_created",
+            meta={"expense_id": expense.id, "amount": str(expense.amount), "currency": expense.currency},
+        )
+
 
 class PurchaseViewSet(OwnerScopedViewSet):
     queryset = (
@@ -509,6 +521,20 @@ class PurchaseViewSet(OwnerScopedViewSet):
             qs = qs.filter(lines__product__name__icontains=product_name).distinct()
 
         return qs.order_by("-occurred_at", "-id")
+
+    def perform_create(self, serializer):
+        shop_id = require_shop_id(self.request)
+        purchase = serializer.save(shop_id=shop_id)
+        log_user_activity(
+            self.request.user,
+            shop_id=shop_id,
+            action="purchase_created",
+            label="purchase_created",
+            meta={
+                "purchase_id": purchase.id,
+                "invoice_number": purchase.invoice_number or "",
+            },
+        )
 
     @action(detail=False, methods=["get"], url_path="company-outstanding")
     def company_outstanding(self, request):
@@ -838,12 +864,38 @@ class SaleViewSet(ShopScopedViewSet):
             qs = qs.filter(customer_id=cust_id)
         return qs.order_by("-occurred_at", "-id")
 
+    def perform_create(self, serializer):
+        shop_id = require_shop_id(self.request)
+        sale = serializer.save(shop_id=shop_id)
+        log_user_activity(
+            self.request.user,
+            shop_id=shop_id,
+            action="sale_created",
+            label="sale_created",
+            meta={
+                "sale_id": sale.id,
+                "receipt_number": sale.receipt_number,
+            },
+        )
+
     @action(detail=False, methods=["post"], url_path="return-products")
     def return_products(self, request):
         """Return sold products back to stock using original sale line prices."""
         ser = SaleReturnCreateSerializer(data=request.data, context={"request": request})
         ser.is_valid(raise_exception=True)
         out = ser.save()
+        shop_id = require_shop_id(request)
+        log_user_activity(
+            request.user,
+            shop_id=shop_id,
+            action="sale_return",
+            label="sale_return",
+            meta={
+                "sale_return_id": out.get("id"),
+                "sale_id": out.get("sale_id"),
+                "total_refund_usd": out.get("total_refund_usd"),
+            },
+        )
         return Response(out, status=201)
 
     @action(detail=False, methods=["get"], url_path="returns-history")
@@ -1552,6 +1604,22 @@ class EmployeeDebtViewSet(OwnerScopedViewSet):
             else:
                 serializer.fields["employee"].queryset = User.objects.none()
         return serializer
+
+    def perform_create(self, serializer):
+        shop_id = require_shop_id(self.request)
+        debt = serializer.save(shop_id=shop_id)
+        log_user_activity(
+            self.request.user,
+            shop_id=shop_id,
+            action="employee_debt_recorded",
+            label="employee_debt_recorded",
+            meta={
+                "employee_debt_id": debt.id,
+                "employee_id": debt.employee_id,
+                "amount_usd": str(debt.amount),
+                "debt_type": debt.debt_type,
+            },
+        )
 
     @action(detail=False, methods=["get"], url_path="summary")
     def summary(self, request):
