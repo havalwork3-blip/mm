@@ -1,52 +1,17 @@
-import { History, Wallet } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, ExternalLink } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageAuthLoading } from '../components/PageAuthLoading'
 import { useLocale } from '../context/LocaleContext'
 import { useSyncedSession } from '../hooks/useSyncedSession'
 import { apiJson } from '../lib/api'
-import { formatDecimalTrim, formatMoneyCompact } from '../lib/formatMoney'
-import { iqdIntegerStringFromUsd } from '../lib/usdIqdDisplay'
+import { formatMoneyCompact } from '../lib/formatMoney'
 import { hasPerm } from '../lib/permissions'
-import type {
-  CashierLedgerEntry,
-  CashierLedgerResponse,
-  CashierSummaryResponse,
-  ProfitReportResponse,
-  ShareholderPaymentRow,
-} from '../types/api'
+import type { CashierLedgerEntry, CashierLedgerResponse, CashierSummaryResponse } from '../types/api'
 
 function parseUsdAmount(s: string): number {
   const n = parseFloat(s.replace(/[\s,،\u066C]/g, ''))
   return Number.isFinite(n) ? n : 0
-}
-
-/** Parse API decimal string (RTL trailing minus). */
-function parseReportNumber(s: string): number {
-  let t = s.replace(/[\s,،\u066C]/g, '').trim()
-  if (t.endsWith('-')) {
-    t = `-${t.slice(0, -1)}`
-  }
-  const n = parseFloat(t)
-  return Number.isFinite(n) ? n : 0
-}
-
-function netProfitCellClass(usd: string) {
-  const n = parseReportNumber(usd)
-  if (n < 0) return 'text-rose-700 dark:text-rose-400'
-  if (n > 0) return 'text-emerald-700 dark:text-emerald-400'
-  return 'text-slate-800 dark:text-slate-200'
-}
-
-function shareholderOutstandingUsd(
-  row: ProfitReportResponse['profit_distribution'][number],
-): string {
-  if (row.outstanding_usd != null && String(row.outstanding_usd).trim() !== '') {
-    return row.outstanding_usd
-  }
-  const share = parseReportNumber(row.profit_share_usd)
-  const paid = parseReportNumber(row.total_paid_usd ?? '0')
-  return String(share - paid)
 }
 
 function formatIqdApprox(usdStr: string, usdToIqd: string): string | null {
@@ -56,272 +21,58 @@ function formatIqdApprox(usdStr: string, usdToIqd: string): string | null {
   return iq.toLocaleString('en-US')
 }
 
-function MoneyCard({
-  label,
-  usd,
-  usdToIqd,
-  emphasize,
-}: {
-  label: string
-  usd: string
-  usdToIqd: string
-  emphasize?: boolean
-}) {
-  const iqd = formatIqdApprox(usd, usdToIqd)
-  return (
-    <div
-      className={`rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-800 ${
-        emphasize ? 'ring-2 ring-emerald-500/25 ring-offset-2 ring-offset-white dark:ring-offset-slate-900' : ''
-      }`}
-    >
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-        {label}
-      </div>
-      <div
-        className={`mt-1 font-mono text-lg tabular-nums ${
-          emphasize ? 'font-semibold text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'
-        }`}
-      >
-        {formatMoneyCompact(usd)}{' '}
-        <span className="text-xs font-normal text-slate-500 dark:text-slate-400">USD</span>
-      </div>
-      {iqd != null && (
-        <div className="mt-0.5 font-mono text-sm tabular-nums text-slate-600 dark:text-slate-400">
-          ≈ {iqd} IQD
-        </div>
-      )}
-    </div>
-  )
-}
-
-function MoneyDlRow({
+function CashLine({
   label,
   caption,
   usd,
   usdToIqd,
-  strong,
+  emphasize,
+  negative,
 }: {
   label: string
   caption?: string
   usd: string
   usdToIqd: string
-  strong?: boolean
+  emphasize?: boolean
+  negative?: boolean
 }) {
   const iqd = formatIqdApprox(usd, usdToIqd)
-  return (
-    <div className="flex justify-between gap-4 border-b border-slate-100 pb-2 dark:border-slate-700">
-      <dt className="min-w-0 text-slate-700 dark:text-slate-300">
-        <span className="block font-medium">{label}</span>
-        {caption ? (
-          <span className="mt-1 block text-xs font-normal leading-snug text-slate-500 dark:text-slate-400">
-            {caption}
-          </span>
-        ) : null}
-      </dt>
-      <dd className="shrink-0 text-end">
-        <div
-          className={`font-mono tabular-nums text-slate-900 dark:text-slate-100 ${
-            strong ? 'text-base font-semibold text-emerald-700 dark:text-emerald-400' : ''
-          }`}
-        >
-          {formatMoneyCompact(usd)} USD
-        </div>
-        {iqd != null && (
-          <div className="mt-0.5 font-mono text-xs tabular-nums text-slate-500 dark:text-slate-400">
-            ≈ {iqd} IQD
-          </div>
-        )}
-      </dd>
-    </div>
-  )
-}
-
-/** One accent per card in «کورتەی ماوە — پارە و قازانج» (eight cards). */
-const KPI_ACCENTS = {
-  capital:
-    'border-l-cyan-500 bg-gradient-to-br from-cyan-50/90 via-white to-white dark:from-cyan-950/25 dark:via-slate-800 dark:to-slate-800/90',
-  debts:
-    'border-l-slate-600 bg-gradient-to-br from-slate-100/90 via-white to-white dark:from-slate-800/40 dark:via-slate-800 dark:to-slate-800/90',
-  flowsOut:
-    'border-l-blue-500 bg-gradient-to-br from-blue-50/90 via-white to-white dark:from-blue-950/25 dark:via-slate-800 dark:to-slate-800/90',
-  flowsIn:
-    'border-l-teal-500 bg-gradient-to-br from-teal-50/90 via-white to-white dark:from-teal-950/25 dark:via-slate-800 dark:to-slate-800/90',
-  expense:
-    'border-l-amber-500 bg-gradient-to-br from-amber-50/80 via-white to-white dark:from-amber-950/20 dark:via-slate-800 dark:to-slate-800/90',
-  payable:
-    'border-l-orange-500 bg-gradient-to-br from-orange-50/80 via-white to-white dark:from-orange-950/20 dark:via-slate-800 dark:to-slate-800/90',
-  receivable:
-    'border-l-rose-500 bg-gradient-to-br from-rose-50/80 via-white to-white dark:from-rose-950/20 dark:via-slate-800 dark:to-slate-800/90',
-  net: 'border-l-violet-600 bg-gradient-to-br from-violet-50/90 via-white to-white dark:from-violet-950/30 dark:via-slate-800 dark:to-slate-800/90',
-} as const
-
-function PeriodKpiCard({
-  label,
-  hint,
-  usd,
-  usdToIqd,
-  accent,
-  footer,
-  signed,
-}: {
-  label: string
-  hint?: string
-  usd: string
-  usdToIqd: string
-  accent: keyof typeof KPI_ACCENTS
-  footer?: string
-  signed?: boolean
-}) {
-  const iqd = formatIqdApprox(usd, usdToIqd)
-  const n = parseUsdAmount(usd)
-  const tone =
-    signed && n < 0
-      ? 'text-rose-700 dark:text-rose-400'
-      : signed && n > 0
-        ? 'text-emerald-700 dark:text-emerald-400'
-        : 'text-slate-900 dark:text-slate-100'
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl border border-slate-200/80 p-5 shadow-sm dark:border-slate-600/80 ${KPI_ACCENTS[accent]} border-l-4`}
+      className={`flex items-start justify-between gap-4 py-3 ${
+        emphasize ? '' : 'border-b border-slate-100 last:border-0 dark:border-slate-700/80'
+      }`}
     >
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-        {label}
-      </div>
-      {hint ? (
-        <p className="mt-1 text-xs leading-snug text-slate-500 dark:text-slate-400">{hint}</p>
-      ) : null}
-      <div className={`mt-3 font-mono text-2xl font-semibold tabular-nums tracking-tight ${tone}`}>
-        {formatMoneyCompact(usd)}{' '}
-        <span className="text-sm font-normal text-slate-500 dark:text-slate-400">USD</span>
-      </div>
-      {iqd != null && (
-        <div className="mt-1 font-mono text-sm tabular-nums text-slate-600 dark:text-slate-400">
-          ≈ {iqd} IQD
-        </div>
-      )}
-      {footer ? (
-        <p className="mt-3 border-t border-slate-200/80 pt-2 text-xs text-slate-600 dark:border-slate-600 dark:text-slate-400">
-          {footer}
+      <div className="min-w-0">
+        <p
+          className={`text-sm ${emphasize ? 'font-semibold text-slate-900 dark:text-slate-100' : 'text-slate-700 dark:text-slate-300'}`}
+        >
+          {label}
         </p>
-      ) : null}
-    </div>
-  )
-}
-
-type VaultRowDef = {
-  categoryKey: string
-  labelKey: string
-  usd: string
-  signed?: boolean
-}
-
-function VaultOverviewTable({
-  summary,
-  t,
-}: {
-  summary: CashierSummaryResponse
-  t: (key: string) => string
-}) {
-  const rate = summary.usd_to_iqd
-  const iqdCell = (usd: string) => {
-    const v = formatIqdApprox(usd, rate)
-    return v != null ? v : '—'
-  }
-
-  /** Eight rows, each with its own category label (first column). */
-  const rows: VaultRowDef[] = [
-    { categoryKey: 'cashier.vaultCat.capital', labelKey: 'cashier.totalCapital', usd: summary.total_capital_usd },
-    {
-      categoryKey: 'cashier.vaultCat.debtsTotal',
-      labelKey: 'cashier.totalDebtsExposure',
-      usd: summary.total_debts_exposure_usd,
-    },
-    {
-      categoryKey: 'cashier.vaultCat.supplierPayments',
-      labelKey: 'cashier.companyPayments',
-      usd: summary.company_payments_usd,
-    },
-    {
-      categoryKey: 'cashier.vaultCat.customerReceipts',
-      labelKey: 'cashier.customerReceipts',
-      usd: summary.customer_receipts_usd,
-    },
-    { categoryKey: 'cashier.vaultCat.expenses', labelKey: 'cashier.expenses', usd: summary.expenses_usd },
-    {
-      categoryKey: 'cashier.vaultCat.supplierDebt',
-      labelKey: 'cashier.supplierDebt',
-      usd: summary.supplier_debt_usd,
-    },
-    {
-      categoryKey: 'cashier.vaultCat.customerDebt',
-      labelKey: 'cashier.customerDebt',
-      usd: summary.customer_debt_usd,
-    },
-    {
-      categoryKey: 'cashier.vaultCat.netProfit',
-      labelKey: 'cashier.rowNetProfit',
-      usd: summary.period_net_profit_usd,
-      signed: true,
-    },
-  ]
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200/90 border-t-4 border-t-violet-500 bg-white shadow-md dark:border-slate-600 dark:border-t-violet-400 dark:bg-slate-800/80">
-      <table className="w-full min-w-[640px] border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-slate-200 bg-slate-100 text-start text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-600 dark:bg-slate-900/90 dark:text-slate-300">
-            <th className="px-3 py-3 text-start font-semibold sm:px-4">{t('cashier.vaultColCategory')}</th>
-            <th className="px-3 py-3 text-start font-semibold sm:px-4">{t('cashier.vaultColLabel')}</th>
-            <th className="px-3 py-3 text-end font-semibold sm:px-4">{t('cashier.colUsd')}</th>
-            <th className="px-3 py-3 text-end font-semibold sm:px-4">{t('cashier.colIqdApprox')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => {
-            const n = row.signed ? parseUsdAmount(row.usd) : 0
-            const numTone =
-              row.signed && n < 0
-                ? 'text-rose-700 dark:text-rose-400'
-                : row.signed && n > 0
-                  ? 'text-emerald-700 dark:text-emerald-400'
-                  : 'text-slate-900 dark:text-slate-50'
-            return (
-              <tr
-                key={row.labelKey}
-                className="border-b border-slate-100 transition-colors hover:bg-slate-50/80 dark:border-slate-700/90 dark:hover:bg-slate-800/60"
-              >
-                <td className="whitespace-nowrap px-3 py-3 align-middle text-xs font-semibold text-violet-700 dark:text-violet-300 sm:px-4 sm:text-sm">
-                  {t(row.categoryKey)}
-                </td>
-                <td className="max-w-[14rem] px-3 py-3 align-middle text-slate-800 dark:text-slate-100 sm:max-w-[20rem] sm:px-4">
-                  <span className="font-medium leading-snug">{t(row.labelKey)}</span>
-                </td>
-                <td className={`whitespace-nowrap px-3 py-3 text-end font-mono tabular-nums font-medium sm:px-4 ${numTone}`}>
-                  {formatMoneyCompact(row.usd)}
-                </td>
-                <td
-                  className={`whitespace-nowrap px-3 py-3 text-end font-mono tabular-nums sm:px-4 ${row.signed ? numTone : 'text-slate-600 dark:text-slate-300'}`}
-                >
-                  {iqdCell(row.usd)}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-        <tfoot>
-          <tr className="bg-emerald-50/95 text-emerald-950 dark:bg-emerald-950/45 dark:text-emerald-50">
-            <td className="px-3 py-3.5 font-semibold leading-snug sm:px-4" colSpan={2}>
-              {t('cashier.vaultFooterCash')}
-            </td>
-            <td className="px-3 py-3.5 text-end font-mono text-base font-bold tabular-nums sm:px-4">
-              {formatMoneyCompact(summary.current_cash_usd)}
-            </td>
-            <td className="px-3 py-3.5 text-end font-mono text-base font-bold tabular-nums sm:px-4">
-              {iqdCell(summary.current_cash_usd)}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
+        {caption ? (
+          <p className="mt-0.5 text-xs leading-snug text-slate-500 dark:text-slate-400">{caption}</p>
+        ) : null}
+      </div>
+      <div className="shrink-0 text-end">
+        <p
+          className={`font-mono tabular-nums ${
+            emphasize
+              ? 'text-lg font-bold text-emerald-700 dark:text-emerald-400'
+              : negative
+                ? 'text-sm text-rose-700 dark:text-rose-400'
+                : 'text-sm text-slate-900 dark:text-slate-100'
+          }`}
+          dir="ltr"
+        >
+          {negative ? '−' : ''}
+          {formatMoneyCompact(usd)} USD
+        </p>
+        {iqd != null ? (
+          <p className="mt-0.5 font-mono text-xs tabular-nums text-slate-500 dark:text-slate-400" dir="ltr">
+            ≈ {iqd} IQD
+          </p>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -336,24 +87,8 @@ export function CashierPage() {
   const [dTo, setDTo] = useState(() => new Date().toISOString().slice(0, 10))
   const [summary, setSummary] = useState<CashierSummaryResponse | null>(null)
   const [ledger, setLedger] = useState<CashierLedgerEntry[]>([])
-  const [profitReport, setProfitReport] = useState<ProfitReportResponse | null>(null)
-  const [profitReportError, setProfitReportError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [contentOpen, setContentOpen] = useState(false)
-  const [payOpen, setPayOpen] = useState(false)
-  const [payShareholderId, setPayShareholderId] = useState<number | null>(null)
-  const [payShareholderName, setPayShareholderName] = useState('')
-  const [payAmountUsd, setPayAmountUsd] = useState('')
-  const [payNote, setPayNote] = useState('')
-  const [paySaving, setPaySaving] = useState(false)
-  const [payError, setPayError] = useState<string | null>(null)
-  const [paySuccess, setPaySuccess] = useState<string | null>(null)
-  const [shPayHistoryOpen, setShPayHistoryOpen] = useState(false)
-  const [shPayHistoryRows, setShPayHistoryRows] = useState<ShareholderPaymentRow[]>([])
-  const [shPayHistoryLoading, setShPayHistoryLoading] = useState(false)
-  const [shPayHistoryFrom, setShPayHistoryFrom] = useState('')
-  const [shPayHistoryTo, setShPayHistoryTo] = useState('')
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -366,16 +101,11 @@ export function CashierPage() {
   }
 
   const canUseCashier = Boolean(me && hasPerm(me, 'view_cashier'))
-  const canViewProfitTables = Boolean(me && hasPerm(me, 'view_profitreport'))
-  const canPayShareholders = Boolean(
-    me && (hasPerm(me, 'change_shareholder') || hasPerm(me, 'view_profitreport')),
+  const canViewProfitReport = Boolean(me && hasPerm(me, 'view_profitreport'))
+  const canEditOpening = Boolean(
+    me &&
+      hasPerm(me, 'add_openingcash', 'change_openingcash', 'add_shopdayopeningcash', 'change_shopdayopeningcash'),
   )
-
-  const shareholderProfitUsdToIqd = useMemo(() => {
-    const fromReport = profitReport?.usd_to_iqd && String(profitReport.usd_to_iqd).trim()
-    const fromSummary = summary?.usd_to_iqd && String(summary.usd_to_iqd).trim()
-    return fromReport || fromSummary || ''
-  }, [profitReport?.usd_to_iqd, summary?.usd_to_iqd])
 
   const buildQuery = useCallback(() => {
     return new URLSearchParams({
@@ -386,7 +116,6 @@ export function CashierPage() {
 
   const refresh = useCallback(async () => {
     setError(null)
-    setProfitReportError(null)
     setLoading(true)
     try {
       const q = buildQuery()
@@ -396,113 +125,20 @@ export function CashierPage() {
       ])
       setSummary(sum)
       setLedger(led.entries)
-      if (canViewProfitTables) {
-        try {
-          const prof = await apiJson<ProfitReportResponse>(`/api/reports/profit/?${q.toString()}`)
-          setProfitReport(prof)
-        } catch (pe) {
-          setProfitReport(null)
-          setProfitReportError(pe instanceof Error ? pe.message : t('profit.loadFailed'))
-        }
-      } else {
-        setProfitReport(null)
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
       setLoading(false)
     }
-  }, [buildQuery, t, canViewProfitTables])
+  }, [buildQuery, t])
 
   useEffect(() => {
     if (!canUseCashier) return
     void refresh()
   }, [canUseCashier, refresh])
 
-  const canEditOpening = Boolean(me && hasPerm(me, 'add_openingcash', 'change_openingcash', 'add_shopdayopeningcash', 'change_shopdayopeningcash'))
-
-  function openShareholderPay(row: ProfitReportResponse['profit_distribution'][number]) {
-    const outstanding = shareholderOutstandingUsd(row)
-    setPayShareholderId(row.shareholder_id)
-    setPayShareholderName(row.name)
-    setPayAmountUsd(parseReportNumber(outstanding) > 0 ? outstanding : '')
-    setPayNote('')
-    setPayError(null)
-    setPayOpen(true)
-  }
-
-  function closeShareholderPay() {
-    setPayOpen(false)
-    setPayShareholderId(null)
-    setPayShareholderName('')
-    setPayAmountUsd('')
-    setPayNote('')
-    setPayError(null)
-  }
-
-  async function submitShareholderPay(e: React.FormEvent) {
-    e.preventDefault()
-    if (payShareholderId == null) return
-    const amt = parseUsdAmount(payAmountUsd)
-    if (!(amt > 0)) {
-      setPayError(t('debts.enterValidAmount'))
-      return
-    }
-    setPaySaving(true)
-    setPayError(null)
-    try {
-      await apiJson('/api/shareholder-payments/', {
-        method: 'POST',
-        body: JSON.stringify({
-          shareholder: payShareholderId,
-          amount_usd: amt.toFixed(4),
-          paid_on: new Date().toISOString().slice(0, 10),
-          period_from: dFrom,
-          period_to: dTo,
-          note: payNote.trim(),
-        }),
-      })
-      closeShareholderPay()
-      setPaySuccess(t('cashier.shareholderPaySuccess'))
-      await refresh()
-    } catch (err) {
-      setPayError(err instanceof Error ? err.message : t('common.error'))
-    } finally {
-      setPaySaving(false)
-    }
-  }
-
-  const loadShareholderPaymentHistory = useCallback(
-    async (from: string, to: string) => {
-      setShPayHistoryLoading(true)
-      try {
-        const q = new URLSearchParams()
-        if (from) q.set('from', from)
-        if (to) q.set('to', to)
-        const suffix = q.toString() ? `?${q.toString()}` : ''
-        const data = await apiJson<ShareholderPaymentRow[] | { results: ShareholderPaymentRow[] }>(
-          `/api/shareholder-payments/${suffix}`,
-        )
-        setShPayHistoryRows(Array.isArray(data) ? data : data.results)
-      } catch {
-        setShPayHistoryRows([])
-      } finally {
-        setShPayHistoryLoading(false)
-      }
-    },
-    [],
-  )
-
-  async function openShareholderPaymentHistory() {
-    setShPayHistoryFrom('')
-    setShPayHistoryTo('')
-    setShPayHistoryOpen(true)
-    await loadShareholderPaymentHistory('', '')
-  }
-
   function ledgerKindLabel(kind: CashierLedgerEntry['kind']) {
-    const key = `cashier.ledgerKind.${kind}` as const
-    return t(key)
+    return t(`cashier.ledgerKind.${kind}` as const)
   }
 
   function directionLabel(d: CashierLedgerEntry['direction']) {
@@ -574,244 +210,177 @@ export function CashierPage() {
     )
   }
 
+  const currentCashIqd =
+    summary?.usd_to_iqd != null ? formatIqdApprox(summary.current_cash_usd, summary.usd_to_iqd) : null
+
   return (
-    <div className="relative mx-auto max-w-6xl px-4 pb-14 pt-6 text-start text-slate-900 dark:text-slate-100">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 px-5 py-8 text-white shadow-2xl ring-1 ring-white/10 sm:px-8 sm:py-10">
-        <div
-          className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-violet-500/25 blur-3xl"
-          aria-hidden
-        />
-        <div className="relative">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{t('cashier.title')}</h1>
+    <div className="mx-auto max-w-3xl px-4 pb-12 pt-6 text-start text-slate-900 dark:text-slate-100">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            {t('cashier.title')}
+          </h1>
+          {summary?.date_from && summary?.date_to ? (
+            <p className="mt-1 font-mono text-xs text-slate-500 dark:text-slate-400">
+              {summary.date_from} → {summary.date_to}
+            </p>
+          ) : null}
         </div>
+        {canViewProfitReport ? (
+          <Link
+            to="/profit"
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-violet-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-violet-300 dark:hover:bg-slate-700"
+          >
+            <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+            {t('cashier.embeddedProfitFullLink')}
+          </Link>
+        ) : null}
       </div>
 
-      <div className="relative z-10 -mt-6 mx-auto max-w-5xl rounded-2xl border border-slate-200/90 bg-white/95 p-5 shadow-xl backdrop-blur-sm dark:border-slate-600 dark:bg-slate-900/95 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch lg:justify-between lg:gap-6">
-          <div className="flex flex-wrap items-end gap-3 sm:gap-4">
-            <label className="flex min-w-[10rem] flex-col gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">
-              <span>{t('dash.from')}</span>
-              <input
-                type="date"
-                value={dFrom}
-                onChange={(e) => setDFrom(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-slate-900 shadow-inner dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-              />
-            </label>
-            <label className="flex min-w-[10rem] flex-col gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">
-              <span>{t('dash.to')}</span>
-              <input
-                type="date"
-                value={dTo}
-                onChange={(e) => setDTo(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-slate-900 shadow-inner dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-              />
-            </label>
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => void refresh()}
-              className="min-h-11 shrink-0 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800 disabled:opacity-60 dark:bg-violet-600 dark:hover:bg-violet-500"
-            >
-              {loading ? t('common.loading') : t('cashier.calculate')}
-            </button>
-          </div>
-          <div
-            className={`flex min-h-[3.25rem] min-w-0 flex-1 items-center rounded-xl border px-4 py-3 text-sm leading-snug lg:max-w-md lg:self-stretch lg:justify-end ${
-              summary?.usd_to_iqd
-                ? 'border-emerald-200/90 bg-emerald-50/90 text-emerald-950 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/35 dark:text-emerald-50'
-                : 'border-slate-200/80 bg-slate-50/70 text-slate-600 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-300'
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+          <label className="flex min-w-[9.5rem] flex-1 flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+            <span>{t('dash.from')}</span>
+            <input
+              type="date"
+              value={dFrom}
+              onChange={(e) => setDFrom(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+            />
+          </label>
+          <label className="flex min-w-[9.5rem] flex-1 flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+            <span>{t('dash.to')}</span>
+            <input
+              type="date"
+              value={dTo}
+              onChange={(e) => setDTo(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => void refresh()}
+            className="min-h-10 shrink-0 rounded-lg bg-violet-600 px-5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-60"
+          >
+            {loading ? t('common.loading') : t('cashier.calculate')}
+          </button>
+        </div>
+        {summary ? (
+          <p
+            className={`mt-3 rounded-lg px-3 py-2 text-sm ${
+              summary.usd_to_iqd
+                ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100'
+                : 'bg-slate-50 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400'
             }`}
           >
-            <span className="w-full lg:text-end">
-              {summary
-                ? summary.usd_to_iqd
-                  ? t('cashier.rateBanner').replace(
-                      '{iqd}',
-                      Math.round(parseFloat(summary.usd_to_iqd) * 100).toLocaleString('en-US'),
-                    )
-                  : t('cashier.noExchangeRate')
-                : t('cashier.rateBoxBeforeCalc')}
-            </span>
-          </div>
-        </div>
+            {summary.usd_to_iqd
+              ? t('cashier.rateBanner').replace(
+                  '{iqd}',
+                  Math.round(parseFloat(summary.usd_to_iqd) * 100).toLocaleString('en-US'),
+                )
+              : t('cashier.noExchangeRate')}
+          </p>
+        ) : (
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">{t('cashier.rateBoxBeforeCalc')}</p>
+        )}
       </div>
 
-      {error && (
-        <p className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200">
+      {error ? (
+        <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200">
           {error}
         </p>
-      )}
+      ) : null}
 
-      {summary && (
+      {summary ? (
         <>
-          <section className="mt-10">
-            <div className="flex flex-col gap-1 border-b border-slate-200 pb-4 dark:border-slate-700 sm:flex-row sm:items-end sm:justify-between">
-              <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-                {t('cashier.sectionPeriodProfit')}
-              </h2>
-              {summary.date_from && summary.date_to ? (
-                <p className="font-mono text-xs text-slate-500 dark:text-slate-400">
-                  {summary.date_from} → {summary.date_to}
-                </p>
-              ) : null}
-            </div>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <PeriodKpiCard
-                accent="capital"
-                label={t('cashier.totalCapital')}
-                hint={t('cashier.kpiHintCapital')}
-                usd={summary.total_capital_usd}
-                usdToIqd={summary.usd_to_iqd}
-              />
-              <PeriodKpiCard
-                accent="debts"
-                label={t('cashier.totalDebtsExposure')}
-                hint={t('cashier.kpiHintDebtsExposure')}
-                usd={summary.total_debts_exposure_usd}
-                usdToIqd={summary.usd_to_iqd}
-              />
-              <PeriodKpiCard
-                accent="flowsOut"
-                label={t('cashier.companyPayments')}
-                hint={t('cashier.kpiHintCompanyPayments')}
-                usd={summary.company_payments_usd}
-                usdToIqd={summary.usd_to_iqd}
-              />
-              <PeriodKpiCard
-                accent="flowsIn"
-                label={t('cashier.customerReceipts')}
-                hint={t('cashier.kpiHintCustomerReceipts')}
-                usd={summary.customer_receipts_usd}
-                usdToIqd={summary.usd_to_iqd}
-              />
-              <PeriodKpiCard
-                accent="expense"
-                label={t('cashier.kpiExpensesSummary')}
-                hint={t('cashier.kpiExpensesSummaryHint')}
-                usd={summary.expenses_usd}
-                usdToIqd={summary.usd_to_iqd}
-              />
-              <PeriodKpiCard
-                accent="payable"
-                label={t('cashier.supplierDebt')}
-                hint={t('cashier.kpiHintSupplierDebt')}
-                usd={summary.supplier_debt_usd}
-                usdToIqd={summary.usd_to_iqd}
-              />
-              <PeriodKpiCard
-                accent="receivable"
-                label={t('cashier.customerDebt')}
-                hint={t('cashier.kpiHintCustomerDebt')}
-                usd={summary.customer_debt_usd}
-                usdToIqd={summary.usd_to_iqd}
-              />
-              <PeriodKpiCard
-                accent="net"
-                label={t('cashier.rowNetProfit')}
-                hint={t('cashier.kpiNetProfitHint')}
-                usd={summary.period_net_profit_usd}
-                usdToIqd={summary.usd_to_iqd}
-                signed
-              />
-            </div>
-          </section>
+          <div className="mt-6 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm dark:border-emerald-900/50 dark:from-emerald-950/30 dark:to-slate-900">
+            <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">{t('cashier.netCash')}</p>
+            <p className="mt-2 font-mono text-4xl font-bold tabular-nums tracking-tight text-emerald-800 dark:text-emerald-300" dir="ltr">
+              {formatMoneyCompact(summary.current_cash_usd)}{' '}
+              <span className="text-lg font-semibold text-emerald-700/80 dark:text-emerald-400/80">USD</span>
+            </p>
+            {currentCashIqd != null ? (
+              <p className="mt-1 font-mono text-base tabular-nums text-emerald-700 dark:text-emerald-400/90" dir="ltr">
+                ≈ {currentCashIqd} IQD
+              </p>
+            ) : null}
+          </div>
 
-          <section className="mt-12">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+          <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">
               {t('cashier.sectionCashReconciliation')}
             </h2>
-            <dl className="mt-4 space-y-3 rounded-2xl border border-slate-200 bg-white p-6 text-sm shadow-md dark:border-slate-700 dark:bg-slate-800">
-              <MoneyDlRow
+            <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{t('cashier.formula')}</p>
+            <div className="mt-4">
+              <CashLine
                 label={t('cashier.openingCash')}
                 usd={summary.opening_cash_usd}
                 usdToIqd={summary.usd_to_iqd}
               />
-              <MoneyDlRow
+              <CashLine
                 label={t('cashier.salesCashIn')}
                 usd={summary.sales_cash_in_usd}
                 usdToIqd={summary.usd_to_iqd}
               />
-              <MoneyDlRow
+              <CashLine
                 label={t('cashier.expenses')}
                 usd={summary.expenses_usd}
                 usdToIqd={summary.usd_to_iqd}
+                negative
               />
-              <MoneyDlRow
+              <CashLine
                 label={t('cashier.debtEffect')}
                 caption={t('cashier.debtEffectCaption')}
                 usd={summary.employee_debt_cash_effect_usd}
                 usdToIqd={summary.usd_to_iqd}
+                negative={parseUsdAmount(summary.employee_debt_cash_effect_usd) > 0}
               />
-              <MoneyDlRow
-                label={t('cashier.netCash')}
-                usd={summary.current_cash_usd}
-                usdToIqd={summary.usd_to_iqd}
-                strong
-              />
-            </dl>
+              <div className="mt-2 rounded-xl bg-slate-50 px-3 dark:bg-slate-800/60">
+                <CashLine
+                  label={t('cashier.netCash')}
+                  usd={summary.current_cash_usd}
+                  usdToIqd={summary.usd_to_iqd}
+                  emphasize
+                />
+              </div>
+            </div>
+            {canEditOpening ? (
+              <Link
+                to="/manage/opening-cash"
+                className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-violet-700 hover:underline dark:text-violet-400"
+              >
+                <ArrowLeft className="h-4 w-4 rtl:rotate-180" aria-hidden />
+                {t('cashier.openingManageLink')}
+              </Link>
+            ) : null}
           </section>
 
-          <section className="mt-10">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('cashier.accountsSummaryTitle')}</h2>
-            <p className="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-400">
-              {t('cashier.accountsTableIntro')}
-            </p>
-            <div className="mt-5 overflow-x-auto">
-              <VaultOverviewTable summary={summary} t={t} />
+          <section className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-700">
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">{t('cashier.ledgerTitle')}</h2>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('cashier.contentHint')}</p>
             </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <MoneyCard
-                label={t('cashier.purchasesGoods')}
-                usd={summary.purchases_goods_usd}
-                usdToIqd={summary.usd_to_iqd}
-              />
-              <MoneyCard
-                label={t('cashier.salesInvoiced')}
-                usd={summary.sales_invoiced_usd}
-                usdToIqd={summary.usd_to_iqd}
-              />
-            </div>
-          </section>
-        </>
-      )}
-
-      <section className="mt-10 rounded-2xl border border-slate-200 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-900/40">
-        <button
-          type="button"
-          className="flex w-full items-center justify-between gap-4 px-4 py-4 text-start"
-          onClick={() => setContentOpen((o) => !o)}
-          aria-expanded={contentOpen}
-        >
-          <span>
-            <span className="text-lg font-semibold text-slate-900 dark:text-white">{t('cashier.content')}</span>
-            <span className="mt-1 block text-sm text-slate-600 dark:text-slate-400">{t('cashier.contentHint')}</span>
-          </span>
-          <span className="text-slate-500 rtl:rotate-180" aria-hidden>
-            {contentOpen ? '▼' : '◀'}
-          </span>
-        </button>
-        {contentOpen && (
-          <div className="border-t border-slate-200 px-2 pb-4 dark:border-slate-700">
             {ledger.length === 0 ? (
-              <p className="px-2 py-4 text-sm text-slate-600 dark:text-slate-400">{t('cashier.noLedger')}</p>
+              <p className="px-5 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                {t('cashier.noLedger')}
+              </p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] border-collapse text-sm">
+                <table className="w-full min-w-[560px] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-start text-xs uppercase text-slate-500 dark:border-slate-600 dark:text-slate-400">
-                      <th className="px-2 py-2 font-medium">{t('cashier.ledgerColDate')}</th>
-                      <th className="px-2 py-2 font-medium">{t('cashier.ledgerColKind')}</th>
-                      <th className="px-2 py-2 font-medium">{t('cashier.ledgerColLabel')}</th>
-                      <th className="px-2 py-2 font-medium">{t('cashier.ledgerColAmount')}</th>
-                      <th className="px-2 py-2 font-medium">{t('cashier.ledgerColAction')}</th>
+                    <tr className="border-b border-slate-100 text-start text-xs font-medium uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                      <th className="px-4 py-2.5">{t('cashier.ledgerColDate')}</th>
+                      <th className="px-4 py-2.5">{t('cashier.ledgerColKind')}</th>
+                      <th className="px-4 py-2.5">{t('cashier.ledgerColLabel')}</th>
+                      <th className="px-4 py-2.5 text-end">{t('cashier.ledgerColAmount')}</th>
+                      <th className="px-4 py-2.5 w-0" />
                     </tr>
                   </thead>
                   <tbody>
                     {ledger.map((row) => {
                       const target = editTarget(row)
-                      const sign =
-                        row.direction === 'out' ? '−' : row.direction === 'in' ? '+' : ''
+                      const sign = row.direction === 'out' ? '−' : row.direction === 'in' ? '+' : ''
                       const amountClass =
                         row.direction === 'out'
                           ? 'text-rose-700 dark:text-rose-400'
@@ -821,30 +390,30 @@ export function CashierPage() {
                       return (
                         <tr
                           key={`${row.kind}-${row.id}-${row.occurred_on}`}
-                          className="border-b border-slate-100 dark:border-slate-700/80"
+                          className="border-b border-slate-50 last:border-0 dark:border-slate-800"
                         >
-                          <td className="px-2 py-2 font-mono text-xs text-slate-700 dark:text-slate-300">
+                          <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs text-slate-600 dark:text-slate-400">
                             {row.occurred_at ? new Date(row.occurred_at).toLocaleString() : row.occurred_on}
                           </td>
-                          <td className="px-2 py-2">
-                            <span className="rounded bg-slate-200 px-1.5 py-0.5 text-xs dark:bg-slate-700">
+                          <td className="px-4 py-2.5">
+                            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                               {ledgerKindLabel(row.kind)}
                             </span>
-                            <span className="ms-2 text-xs text-slate-500">({directionLabel(row.direction)})</span>
+                            <span className="ms-1.5 text-xs text-slate-400">({directionLabel(row.direction)})</span>
                           </td>
-                          <td className="max-w-[220px] truncate px-2 py-2 text-slate-700 dark:text-slate-300">
+                          <td className="max-w-[200px] truncate px-4 py-2.5 text-slate-700 dark:text-slate-300">
                             {row.label || '—'}
                           </td>
-                          <td className={`px-2 py-2 font-mono tabular-nums ${amountClass}`}>
+                          <td className={`px-4 py-2.5 text-end font-mono tabular-nums ${amountClass}`} dir="ltr">
                             {sign}
                             {formatMoneyCompact(row.amount_usd)}
                           </td>
-                          <td className="px-2 py-2">
-                            {target && (
-                              <Link to={target.to} className="text-violet-600 hover:underline">
+                          <td className="px-4 py-2.5">
+                            {target ? (
+                              <Link to={target.to} className="text-xs font-medium text-violet-600 hover:underline dark:text-violet-400">
                                 {target.label}
                               </Link>
-                            )}
+                            ) : null}
                           </td>
                         </tr>
                       )
@@ -853,390 +422,8 @@ export function CashierPage() {
                 </table>
               </div>
             )}
-          </div>
-        )}
-      </section>
-
-      {canViewProfitTables && (profitReport || profitReportError) && (
-        <div className="mt-12 space-y-10">
-          <div className="border-b border-slate-200 pb-3 dark:border-slate-700">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('cashier.embeddedProfitTitle')}</h2>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t('cashier.embeddedProfitIntro')}</p>
-            {profitReportError && (
-              <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
-                {profitReportError}
-              </p>
-            )}
-          </div>
-
-          {profitReport && !profitReport.global_multi_shop && (
-            <section className="rounded-2xl border border-violet-200 bg-violet-50/40 p-5 shadow-sm dark:border-violet-900/50 dark:bg-violet-950/25 sm:p-6">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-start text-sm font-semibold uppercase tracking-wide text-violet-900 dark:text-violet-200">
-                    {t('profit.dist')}
-                  </h3>
-                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{t('profit.distHint')}</p>
-                  <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-500">
-                    {t('profit.iqdRateFootnote')}
-                  </p>
-                </div>
-                {canPayShareholders ? (
-                  <button
-                    type="button"
-                    onClick={() => void openShareholderPaymentHistory()}
-                    className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-sm font-medium text-violet-800 shadow-sm hover:bg-violet-50 dark:border-violet-700 dark:bg-slate-900 dark:text-violet-200 dark:hover:bg-violet-950/50"
-                  >
-                    <History className="h-4 w-4" aria-hidden />
-                    {t('cashier.shareholderPaymentsHistory')}
-                  </button>
-                ) : null}
-              </div>
-              {paySuccess ? (
-                <p
-                  className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-100"
-                  role="status"
-                >
-                  {paySuccess}
-                </p>
-              ) : null}
-              <div className="mt-4 rounded-xl border border-violet-100 bg-white dark:border-violet-900/30 dark:bg-slate-900">
-                <ul className="divide-y divide-slate-100 dark:divide-slate-700/90">
-                  {profitReport.profit_distribution.map((row, idx) => {
-                    const outstandingUsd = shareholderOutstandingUsd(row)
-                    const iqdStr = iqdIntegerStringFromUsd(outstandingUsd, shareholderProfitUsdToIqd)
-                    const tone = netProfitCellClass(outstandingUsd)
-                    const paidUsd = row.total_paid_usd ?? '0'
-                    const paidNum = parseReportNumber(paidUsd)
-                    return (
-                      <li
-                        key={row.shareholder_id}
-                        className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5 ${
-                          idx % 2 === 1 ? 'bg-slate-50/70 dark:bg-slate-800/40' : ''
-                        }`}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-slate-900 dark:text-slate-100">{row.name}</p>
-                          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-                            {t('profit.shPct')}:{' '}
-                            <span className="tabular-nums font-medium text-slate-700 dark:text-slate-300">
-                              {row.share_percentage}%
-                            </span>
-                          </p>
-                          {paidNum > 0.0001 ? (
-                            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                              {t('cashier.shareholderPeriodPaid')}:{' '}
-                              <span className="font-mono tabular-nums" dir="ltr">
-                                {formatMoneyCompact(paidUsd)} USD
-                              </span>
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                          <div className="text-end" dir="ltr">
-                            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                              {t('cashier.shareholderOutstanding')}
-                            </p>
-                            <p className={`font-mono text-lg font-semibold tabular-nums ${tone}`}>
-                              {formatMoneyCompact(outstandingUsd)}{' '}
-                              <span className="text-sm font-normal text-slate-500 dark:text-slate-400">USD</span>
-                            </p>
-                            {iqdStr != null ? (
-                              <p className="mt-1 font-mono text-sm tabular-nums text-slate-600 dark:text-slate-300">
-                                ≈ {iqdStr}{' '}
-                                <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
-                                  {t('customerDebts.amountIqdShort')}
-                                </span>
-                              </p>
-                            ) : (
-                              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                                {t('profit.iqdNoRate')}
-                              </p>
-                            )}
-                          </div>
-                          {canPayShareholders ? (
-                            <button
-                              type="button"
-                              onClick={() => openShareholderPay(row)}
-                              className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500"
-                              title={t('cashier.shareholderPayBtn')}
-                            >
-                              <Wallet className="h-4 w-4" aria-hidden />
-                              <span className="hidden sm:inline">{t('cashier.shareholderPayBtn')}</span>
-                            </button>
-                          ) : null}
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
-                {profitReport.profit_distribution.length === 0 && (
-                  <p className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
-                    {t('profit.distEmpty')}
-                  </p>
-                )}
-              </div>
-            </section>
-          )}
-
-          {profitReport && (
-            <section className="overflow-x-auto overscroll-x-contain rounded-2xl border border-slate-200 bg-white shadow-sm [-webkit-overflow-scrolling:touch] dark:border-slate-600 dark:bg-slate-900/80">
-              <p className="border-b border-slate-100 px-4 py-3 text-start text-xs leading-relaxed text-slate-600 dark:border-slate-700 dark:text-slate-400">
-                {t('profit.perProductTableHint')}
-              </p>
-              <table className="w-full min-w-[720px] text-start text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-400">
-                  <tr>
-                    {profitReport.global_multi_shop ? (
-                      <th className="px-4 py-3 font-medium">{t('profit.thShop')}</th>
-                    ) : null}
-                    <th className="px-4 py-3 font-medium">{t('profit.thProductName')}</th>
-                    <th className="px-4 py-3 font-medium">{t('profit.thQty')}</th>
-                    <th className="px-4 py-3 font-medium">{t('profit.thUnitBuy')}</th>
-                    <th className="px-4 py-3 font-medium">{t('profit.thTotalBuy')}</th>
-                    <th className="px-4 py-3 font-medium">{t('profit.thUnitSale')}</th>
-                    <th className="px-4 py-3 font-medium">{t('profit.thTotalSale')}</th>
-                    <th className="px-4 py-3 font-medium">{t('profit.thLineNet')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {profitReport.lines.map((row, idx) => (
-                    <tr
-                      key={
-                        profitReport.global_multi_shop
-                          ? `${row.shop_id ?? 's'}-${row.product_id}-${idx}`
-                          : row.product_id
-                      }
-                      className={`border-b border-slate-100 dark:border-slate-700/80 ${
-                        idx % 2 === 1 ? 'bg-slate-50/70 dark:bg-slate-800/35' : ''
-                      }`}
-                    >
-                      {profitReport.global_multi_shop ? (
-                        <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
-                          {row.shop_name ?? '—'}
-                        </td>
-                      ) : null}
-                      <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
-                        {row.product_name}
-                      </td>
-                      <td className="px-4 py-3 tabular-nums" dir="ltr">
-                        {formatDecimalTrim(row.quantity_sold, 2)}
-                      </td>
-                      <td className="px-4 py-3 font-mono tabular-nums" dir="ltr">
-                        {formatMoneyCompact(row.unit_buy_price_usd)}
-                      </td>
-                      <td className="px-4 py-3 font-mono tabular-nums" dir="ltr">
-                        {formatMoneyCompact(row.total_buy_price_usd)}
-                      </td>
-                      <td className="px-4 py-3 font-mono tabular-nums" dir="ltr">
-                        {formatMoneyCompact(row.unit_sale_price_usd)}
-                      </td>
-                      <td className="px-4 py-3 font-mono tabular-nums" dir="ltr">
-                        {formatMoneyCompact(row.total_sale_price_usd)}
-                      </td>
-                      <td
-                        dir="ltr"
-                        className={`px-4 py-3 font-mono tabular-nums ${netProfitCellClass(row.net_profit_usd)}`}
-                      >
-                        {formatMoneyCompact(row.net_profit_usd)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {profitReport.lines.length === 0 && (
-                <p className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
-                  {t('profit.noSalesInRange')}
-                </p>
-              )}
-            </section>
-          )}
-
-          {profitReport && !profitReportError && (
-            <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-              <Link to="/profit" className="font-medium text-violet-600 hover:underline dark:text-violet-400">
-                {t('cashier.embeddedProfitFullLink')}
-              </Link>
-            </p>
-          )}
-        </div>
-      )}
-
-      {payOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          role="presentation"
-          onClick={() => !paySaving && closeShareholderPay()}
-        >
-          <div
-            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-600 dark:bg-slate-900"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="shareholder-pay-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2
-              id="shareholder-pay-title"
-              className="text-start text-lg font-semibold text-slate-900 dark:text-slate-100"
-            >
-              {t('cashier.shareholderPayTitle')}
-            </h2>
-            <p className="mt-1 text-start text-sm text-slate-600 dark:text-slate-400">{payShareholderName}</p>
-            <form onSubmit={(e) => void submitShareholderPay(e)} className="mt-4 space-y-3">
-              <label className="block text-start">
-                <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
-                  {t('cashier.shareholderPayAmount')}
-                </span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={payAmountUsd}
-                  onChange={(e) => setPayAmountUsd(e.target.value)}
-                  className="min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
-                  dir="ltr"
-                  required
-                  autoFocus
-                />
-              </label>
-              <label className="block text-start">
-                <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
-                  {t('cashier.shareholderPayNote')}
-                </span>
-                <input
-                  type="text"
-                  value={payNote}
-                  onChange={(e) => setPayNote(e.target.value)}
-                  className="min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
-                />
-              </label>
-              {payError ? <p className="text-start text-sm text-red-600 dark:text-red-400">{payError}</p> : null}
-              <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  disabled={paySaving}
-                  onClick={closeShareholderPay}
-                  className="min-h-9 rounded-lg border border-slate-200 px-4 py-2 text-sm dark:border-slate-600 dark:text-slate-200"
-                >
-                  {t('crud.cancel')}
-                </button>
-                <button
-                  type="submit"
-                  disabled={paySaving}
-                  className="min-h-9 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
-                >
-                  {paySaving ? t('pos.saving') : t('cashier.shareholderPayConfirm')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
-
-      {shPayHistoryOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          role="presentation"
-          onClick={() => setShPayHistoryOpen(false)}
-        >
-          <div
-            className="flex max-h-[min(90vh,720px)] w-full max-w-3xl flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-600 dark:bg-slate-900"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="shareholder-payments-history-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2
-                id="shareholder-payments-history-title"
-                className="text-start text-base font-semibold text-slate-900 dark:text-slate-100"
-              >
-                {t('cashier.shareholderPaymentsHistoryTitle')}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setShPayHistoryOpen(false)}
-                className="min-h-9 rounded-lg border border-slate-200 px-3 py-1.5 text-sm dark:border-slate-600 dark:text-slate-200"
-              >
-                {t('crud.cancel')}
-              </button>
-            </div>
-            <div className="mb-3 flex flex-wrap items-end gap-2">
-              <label>
-                <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
-                  {t('dash.from')}
-                </span>
-                <input
-                  type="date"
-                  value={shPayHistoryFrom}
-                  onChange={(e) => setShPayHistoryFrom(e.target.value)}
-                  className="min-h-9 rounded-lg border border-slate-200 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
-                />
-              </label>
-              <label>
-                <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
-                  {t('dash.to')}
-                </span>
-                <input
-                  type="date"
-                  value={shPayHistoryTo}
-                  onChange={(e) => setShPayHistoryTo(e.target.value)}
-                  className="min-h-9 rounded-lg border border-slate-200 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
-                />
-              </label>
-              <button
-                type="button"
-                disabled={shPayHistoryLoading}
-                onClick={() => void loadShareholderPaymentHistory(shPayHistoryFrom, shPayHistoryTo)}
-                className="min-h-9 rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
-              >
-                {t('dash.apply')}
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 overflow-auto">
-              {shPayHistoryLoading ? (
-                <p className="py-6 text-sm text-slate-500">{t('common.loading')}</p>
-              ) : shPayHistoryRows.length === 0 ? (
-                <p className="py-6 text-sm text-slate-500">{t('crud.noRows')}</p>
-              ) : (
-                <table className="w-full min-w-[520px] text-start text-sm">
-                  <thead className="border-b border-slate-200 text-xs font-medium uppercase text-slate-500 dark:border-slate-700">
-                    <tr>
-                      <th className="px-2 py-2">{t('cashier.ledgerColDate')}</th>
-                      <th className="px-2 py-2">{t('profit.shName')}</th>
-                      <th className="px-2 py-2 text-end">{t('cashier.ledgerColAmount')}</th>
-                      <th className="px-2 py-2">{t('dash.from')}</th>
-                      <th className="px-2 py-2">{t('dash.to')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {shPayHistoryRows.map((r) => (
-                      <tr
-                        key={r.id}
-                        className="border-b border-slate-100 dark:border-slate-700/80"
-                      >
-                        <td className="px-2 py-2 tabular-nums" dir="ltr">
-                          {r.paid_on}
-                        </td>
-                        <td className="px-2 py-2 font-medium text-slate-900 dark:text-slate-100">
-                          {r.shareholder_name}
-                        </td>
-                        <td className="px-2 py-2 text-end font-mono tabular-nums" dir="ltr">
-                          {formatMoneyCompact(r.amount_usd)} USD
-                        </td>
-                        <td className="px-2 py-2 tabular-nums text-slate-600 dark:text-slate-400" dir="ltr">
-                          {r.period_from}
-                        </td>
-                        <td className="px-2 py-2 tabular-nums text-slate-600 dark:text-slate-400" dir="ltr">
-                          {r.period_to}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </div>
+          </section>
+        </>
       ) : null}
     </div>
   )

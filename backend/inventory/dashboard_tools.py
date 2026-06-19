@@ -1070,6 +1070,38 @@ def total_employee_debt_outstanding_usd(shop_id: int) -> Decimal:
     return total.quantize(Decimal("0.0001"))
 
 
+def resolve_opening_cash_for_period(shop_id: int, d_from, d_to) -> Decimal:
+    """
+    Opening cash baseline for cashier reconciliation over [d_from, d_to].
+
+    Prefer the earliest opening recorded inside the range (including d_from).
+    If none, carry forward the latest opening before the range start.
+    """
+    in_range = (
+        ShopDayOpeningCash.objects.filter(
+            shop_id=shop_id,
+            for_date__gte=d_from,
+            for_date__lte=d_to,
+        )
+        .order_by("for_date")
+        .values_list("opening_cash_usd", flat=True)
+        .first()
+    )
+    if in_range is not None:
+        return Decimal(str(in_range)).quantize(Decimal("0.0001"))
+
+    prior = (
+        ShopDayOpeningCash.objects.filter(shop_id=shop_id, for_date__lt=d_from)
+        .order_by("-for_date")
+        .values_list("opening_cash_usd", flat=True)
+        .first()
+    )
+    if prior is not None:
+        return Decimal(str(prior)).quantize(Decimal("0.0001"))
+
+    return Decimal("0")
+
+
 def cashier_snapshot(
     shop_id: int,
     d_from,
@@ -1083,12 +1115,7 @@ def cashier_snapshot(
     start, end = _bounds(d_from, d_to)
 
     if opening_cash_usd is None:
-        row = (
-            ShopDayOpeningCash.objects.filter(shop_id=shop_id, for_date=d_from)
-            .values_list("opening_cash_usd", flat=True)
-            .first()
-        )
-        opening_cash_usd = Decimal(str(row)) if row is not None else Decimal("0")
+        opening_cash_usd = resolve_opening_cash_for_period(shop_id, d_from, d_to)
     else:
         opening_cash_usd = Decimal(str(opening_cash_usd))
 

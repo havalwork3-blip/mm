@@ -832,6 +832,7 @@ const en: Record<string, string> = {
   'cashier.customerDebt': 'Customer debt (outstanding)',
   'cashier.stockValue': 'Stock value',
   'cashier.content': 'Archive',
+  'cashier.ledgerTitle': 'Cash movements',
   'cashier.contentHint':
     'All vault-related movements in the selected date range. Edit opening amounts under Opening cash; other lines link to their screen.',
   'cashier.ledgerKind.opening_cash': 'Opening cash',
@@ -2382,6 +2383,7 @@ const ar: Record<string, string> = {
   'cashier.customerDebt': 'دين الزبائن (ذمم)',
   'cashier.stockValue': 'قيمة المخزون',
   'cashier.content': 'الأرشيف',
+  'cashier.ledgerTitle': 'حركات النقد',
   'cashier.contentHint':
     'جميع حركات الصندوق ضمن الفترة. تعديل النقد الافتتاحي من شاشة النقد الافتتاحي؛ الباقي يرتبط بشاشاته.',
   'cashier.ledgerKind.opening_cash': 'نقد افتتاحي',
@@ -3639,6 +3641,7 @@ const ku: Record<string, string> = {
   'cashier.customerDebt': 'کۆی قەرزی کڕیارەکان (ماوە)',
   'cashier.stockValue': 'نرخی کۆگا',
   'cashier.content': 'ناوەرۆک',
+  'cashier.ledgerTitle': 'جوڵەی پارە',
   'cashier.contentHint':
     'ئەرشیفی هەموو جوڵەی پەیوەندیدار بە قاسە لە ماوەی هەڵبژێردراو. دەستکاری پارەی سەرەتا لە لاپەڕەی پارەی سەرەتا؛ هێڵەکانی تر بەشی خۆیان دەگرنەوە.',
   'cashier.ledgerKind.opening_cash': 'پارەی سەرەتی قاسە',
