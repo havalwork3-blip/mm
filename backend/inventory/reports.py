@@ -42,6 +42,43 @@ def _money_fmt(value) -> str:
     return format(_money_q(value), "f")
 
 
+def _latest_purchase_unit_cost_by_product(shop_id: int) -> dict[int, Decimal]:
+    """Most recent purchase unit cost per product — COGS fallback when sale snapshot is 0."""
+    from .models import PurchaseLine
+
+    costs: dict[int, Decimal] = {}
+    for pl in (
+        PurchaseLine.objects.filter(
+            purchase__shop_id=shop_id,
+            product_id__isnull=False,
+        )
+        .select_related("purchase")
+        .order_by("product_id", "-purchase__occurred_at", "-id")
+    ):
+        pid = pl.product_id
+        if pid not in costs:
+            costs[pid] = _money_q(pl.unit_cost_usd)
+    return costs
+
+
+def _effective_line_buy_price_usd(
+    ln,
+    *,
+    purchase_costs: dict[int, Decimal],
+) -> Decimal:
+    snap = _money_q(ln.unit_buy_price_usd)
+    if snap > 0:
+        return snap
+    pid = ln.product_id
+    if not pid:
+        return Decimal("0")
+    if ln.product is not None:
+        catalog = _money_q(ln.product.buy_price)
+        if catalog > 0:
+            return catalog
+    return purchase_costs.get(pid, Decimal("0"))
+
+
 def expense_is_inventory_loss(expense: Expense) -> bool:
     note = (expense.note or "").strip()
     return any(note.startswith(marker) for marker in INVENTORY_LOSS_NOTE_MARKERS)
@@ -113,14 +150,16 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
     dec = DecimalField(max_digits=24, decimal_places=4)
     sum_sale = Decimal("0")
     sum_buy = Decimal("0")
+    purchase_costs = _latest_purchase_unit_cost_by_product(shop_id)
     per_product: dict[tuple[int | None, str], dict[str, Decimal | int | str | None]] = {}
     for ln in line_qs.select_related("product", "product__category").prefetch_related("return_lines"):
         returned_qty = sum(int(row.quantity) for row in ln.return_lines.all())
         net_qty = max(0, int(ln.quantity) - returned_qty)
         if net_qty <= 0:
             continue
+        unit_buy = _effective_line_buy_price_usd(ln, purchase_costs=purchase_costs)
         line_sale = Decimal(net_qty) * Decimal(ln.unit_price_usd)
-        line_buy = Decimal(net_qty) * Decimal(ln.unit_buy_price_usd)
+        line_buy = Decimal(net_qty) * unit_buy
         sum_sale += line_sale
         sum_buy += line_buy
         product_id = ln.product_id
@@ -132,7 +171,7 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
             cat = ln.product.category
             category_name = cat.display_name("ku") if hasattr(cat, "display_name") else (cat.name_ku or cat.name)
         key = (product_id, display_name)
-        flags = sale_line_flags(ln.unit_price_usd, ln.unit_buy_price_usd, net_qty)
+        flags = sale_line_flags(ln.unit_price_usd, unit_buy, net_qty)
         if key not in per_product:
             per_product[key] = {
                 "product_id": product_id,

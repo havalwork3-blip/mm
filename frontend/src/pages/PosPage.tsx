@@ -4,6 +4,7 @@ import {
   History,
   ImageOff,
   Lock,
+  PackagePlus,
   Printer,
   Trash2,
   Unlock,
@@ -136,6 +137,7 @@ export function PosPage() {
   const [customerPriorDebtLoading, setCustomerPriorDebtLoading] =
     useState(false)
   const [customerModalOpen, setCustomerModalOpen] = useState(false)
+  const [manualProductConfirmOpen, setManualProductConfirmOpen] = useState(false)
   const [newCustName, setNewCustName] = useState('')
   const [newCustWorkplace, setNewCustWorkplace] = useState('')
   const [newCustAddress, setNewCustAddress] = useState('')
@@ -646,46 +648,23 @@ export function PosPage() {
     const trimmed = name.trim()
     if (!trimmed) return
     const lineId = allocLineId()
-    try {
-      const p = await apiJson<ProductRow>('/api/products/ensure-by-name/', {
-        method: 'POST',
-        body: JSON.stringify({ name: trimmed }),
-        shopScoped: true,
-      })
-      setCart((prev) => [
-        ...prev,
-        {
-          lineId,
-          product: {
-            id: p.id,
-            name: p.name,
-            image_url: p.image_url,
-            current_stock_quantity: p.current_stock_quantity,
-          },
-          quantity: 1,
-          unitPriceUsd: '',
+    const manualId = manualLineSeedRef.current
+    manualLineSeedRef.current -= 1
+    setCart((prev) => [
+      ...prev,
+      {
+        lineId,
+        product: {
+          id: manualId,
+          name: trimmed,
+          image_url: null,
+          current_stock_quantity: 0,
+          manual_entry: true,
         },
-      ])
-      window.dispatchEvent(new Event('mm-inventory-refresh'))
-    } catch {
-      const manualId = manualLineSeedRef.current
-      manualLineSeedRef.current -= 1
-      setCart((prev) => [
-        ...prev,
-        {
-          lineId,
-          product: {
-            id: manualId,
-            name: trimmed,
-            image_url: null,
-            current_stock_quantity: 0,
-            manual_entry: true,
-          },
-          quantity: 1,
-          unitPriceUsd: '',
-        },
-      ])
-    }
+        quantity: 1,
+        unitPriceUsd: '',
+      },
+    ])
     setSearchOpen(false)
     setProductQuery('')
     window.setTimeout(() => {
@@ -822,15 +801,16 @@ export function PosPage() {
   )
 
   function updateLineQty(lineId: number, qty: number) {
-    if (qty < 1) {
-      setCart((c) => c.filter((l) => l.lineId !== lineId))
-      return
-    }
+    const safeQty = Number.isFinite(qty) ? Math.max(0, Math.floor(qty)) : 0
     setCart((c) =>
       c.map((l) =>
-        l.lineId === lineId ? { ...l, quantity: qty } : l,
+        l.lineId === lineId ? { ...l, quantity: safeQty } : l,
       ),
     )
+  }
+
+  function removeCartLine(lineId: number) {
+    setCart((c) => c.filter((l) => l.lineId !== lineId))
   }
 
   function updateLinePrice(lineId: number, price: string) {
@@ -1106,7 +1086,7 @@ export function PosPage() {
     setCustomerModalOpen(true)
   }
 
-  async function checkout() {
+  async function checkout(options?: { skipManualConfirm?: boolean }) {
     if (!rate || rate <= 0) {
       setError(t('pos.setRateBeforeCheckout'))
       return
@@ -1126,6 +1106,11 @@ export function PosPage() {
     if (showAddCustomer && selectedCustomerId === null) {
       setError(t('pos.registerUnknownCustomer'))
       openNewCustomerModal(customerQuery)
+      return
+    }
+    const manualLines = cart.filter((l) => l.product.manual_entry)
+    if (manualLines.length > 0 && !options?.skipManualConfirm) {
+      setManualProductConfirmOpen(true)
       return
     }
     if (me?.is_superuser) {
@@ -1440,6 +1425,17 @@ export function PosPage() {
       (c) => c.name.toLowerCase() === customerQuery.trim().toLowerCase(),
     )
 
+  const showAddManualProduct =
+    productQuery.trim().length > 0 &&
+    !searchHits.some(
+      (p) => p.name.trim().toLowerCase() === productQuery.trim().toLowerCase(),
+    )
+
+  const manualCartLines = useMemo(
+    () => cart.filter((l) => l.product.manual_entry),
+    [cart],
+  )
+
   if (authPending) {
     return (
       <div className="min-h-dvh bg-slate-50 dark:bg-slate-900">
@@ -1753,7 +1749,8 @@ export function PosPage() {
             <label className="sr-only" htmlFor="pos-product-search">
               {t('pos.searchProductAria')}
             </label>
-            {/* Enter does not advance focus here: cashiers add many lines from search. */}
+            <div className="flex items-stretch gap-2">
+            {/* Enter adds only exact catalog matches; new names use + or the manual row. */}
             <input
               id="pos-product-search"
               ref={productSearchRef}
@@ -1780,8 +1777,6 @@ export function PosPage() {
                   )
                   if (exactHit) {
                     addProduct(exactHit)
-                  } else {
-                    void addManualLine(query)
                   }
                   return
                 }
@@ -1800,8 +1795,21 @@ export function PosPage() {
                 focusProductSearch()
               }}
               placeholder={t('pos.searchPlaceholder')}
-              className="w-full rounded-xl border border-slate-200 bg-white py-3 ps-4 pe-3 text-start shadow-sm outline-none ring-violet-500/20 focus:ring-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white py-3 ps-4 pe-3 text-start shadow-sm outline-none ring-violet-500/20 focus:ring-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
+            {showAddManualProduct ? (
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => addManualLine(productQuery)}
+                className="inline-flex h-auto min-h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-700 shadow-sm transition hover:bg-violet-100 dark:border-violet-500/40 dark:bg-violet-950/50 dark:text-violet-300 dark:hover:bg-violet-900/50"
+                title={t('pos.addManualProduct').replace('{name}', productQuery.trim())}
+                aria-label={t('pos.addManualProduct').replace('{name}', productQuery.trim())}
+              >
+                <PackagePlus className="h-5 w-5" aria-hidden />
+              </button>
+            ) : null}
+            </div>
             {searchOpen && (
               <ul
                 className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800"
@@ -1812,7 +1820,7 @@ export function PosPage() {
                     <button
                       type="button"
                       ref={setProductSearchHitRef(MANUAL_SEARCH_OPTION_ID)}
-                      onClick={() => void addManualLine(productQuery)}
+                      onClick={() => addManualLine(productQuery)}
                       onKeyDown={(e) => {
                         if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
                           e.preventDefault()
@@ -2006,7 +2014,7 @@ export function PosPage() {
                         <button
                           type="button"
                           tabIndex={-1}
-                          onClick={() => updateLineQty(l.lineId, 0)}
+                          onClick={() => removeCartLine(l.lineId)}
                           className="ms-auto text-slate-400 hover:text-red-600"
                           aria-label={t('pos.remove')}
                         >
@@ -2711,6 +2719,58 @@ export function PosPage() {
           </div>
         </div>
       )}
+
+      {manualProductConfirmOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="manual-product-confirm-title"
+        >
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900">
+            <h2
+              id="manual-product-confirm-title"
+              className="text-lg font-semibold text-slate-900 dark:text-slate-100"
+            >
+              {t('pos.confirmManualProductsTitle')}
+            </h2>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              {t('pos.confirmManualProductsHint')}
+            </p>
+            <ul className="mt-3 max-h-48 space-y-1 overflow-y-auto rounded-lg border border-violet-200 bg-violet-50/80 px-3 py-2 text-sm dark:border-violet-800 dark:bg-violet-950/40">
+              {manualCartLines.map((l) => (
+                <li key={l.lineId} className="font-medium text-violet-950 dark:text-violet-100">
+                  {l.product.name}
+                  <span className="ms-2 font-mono text-xs tabular-nums text-violet-700 dark:text-violet-300">
+                    × {l.quantity}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setManualProductConfirmOpen(false)}
+                className="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                {t('pos.cancel')}
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => {
+                  setManualProductConfirmOpen(false)
+                  void checkout({ skipManualConfirm: true })
+                }}
+                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+              >
+                {submitting ? t('pos.saving') : t('pos.confirmManualProductsConfirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {saleSuccessOpen && (
         <div
           className="no-print fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4"

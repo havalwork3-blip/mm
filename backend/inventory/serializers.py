@@ -1188,6 +1188,9 @@ class PurchaseSerializer(serializers.ModelSerializer):
                             unit_cost_usd=line["unit_cost_usd"],
                             damaged_quantity=damaged,
                         )
+                        unit_cost = Decimal(str(line["unit_cost_usd"]))
+                        if unit_cost > 0:
+                            Product.objects.filter(pk=product.pk).update(buy_price=unit_cost)
                         if add_to_stock > 0:
                             Product.objects.filter(pk=product.pk).update(
                                 current_stock_quantity=F("current_stock_quantity") + add_to_stock,
@@ -1382,6 +1385,9 @@ class PurchaseSerializer(serializers.ModelSerializer):
                     unit_cost_usd=row["unit_cost_usd"],
                     damaged_quantity=int(row.get("damaged_quantity", 0) or 0),
                 )
+                unit_cost = Decimal(str(row["unit_cost_usd"]))
+                if unit_cost > 0:
+                    Product.objects.filter(pk=row["product"].pk).update(buy_price=unit_cost)
 
         return updated
 
