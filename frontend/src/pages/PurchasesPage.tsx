@@ -14,6 +14,15 @@ import {
 } from '../lib/shopReceiptNumbers'
 
 type CompanyRow = { id: number; name: string }
+type PurchaseHistoryLine = {
+  id?: number
+  product?: number
+  product_name?: string
+  quantity?: number
+  unit_cost_usd?: string
+  damaged_quantity?: number
+}
+
 type PurchaseHistoryRow = {
   id: number
   company: number | null
@@ -23,6 +32,7 @@ type PurchaseHistoryRow = {
   invoice_number?: string
   discount_received_usd: string
   amount_paid_usd: string
+  lines?: PurchaseHistoryLine[]
   lines_summary?: string
   lines_product_names?: string
   goods_total_usd?: string
@@ -31,7 +41,7 @@ type PurchaseHistoryRow = {
   has_returns?: boolean
 }
 
-type PurchaseHeaderApiDetail = {
+type PurchaseApiDetail = {
   id: number
   company: number | null
   occurred_at: string
@@ -42,6 +52,22 @@ type PurchaseHeaderApiDetail = {
   note?: string
   currency: string
   payment_type: string
+  lines: Array<{
+    id: number
+    product: number
+    product_name?: string
+    quantity: number
+    unit_cost_usd: string
+    damaged_quantity?: number
+  }>
+}
+
+type PurchaseEditLineForm = {
+  product: number
+  productName: string
+  quantity: string
+  unitCostUsd: string
+  damaged: string
 }
 type LineForm = {
   productId: string
@@ -147,16 +173,38 @@ function stripUsdParens(label: string): string {
   return label.replace(/\s*\(USD\)\s*/gi, ' ').replace(/\s+/g, ' ').trim()
 }
 
-/** Keep purchase product summary as product names only. */
-function formatProductsSummaryCell(raw: string | undefined | null): string {
-  const source = String(raw ?? '').trim()
-  if (!source) return '—'
-  const parts = source
-    .split('·')
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((p) => (p.split('@')[0] ?? p).replace(/\s*[x×]\s*\d+\s*$/i, '').trim())
-  return parts.length ? parts.join(' · ') : '—'
+function purchaseLineColumnValues(row: PurchaseHistoryRow): {
+  productNames: string
+  quantities: string
+} {
+  const lines = row.lines ?? []
+  if (lines.length > 0) {
+    return {
+      productNames: lines.map((ln) => ln.product_name ?? '?').join('\n'),
+      quantities: lines.map((ln) => String(ln.quantity ?? 0)).join('\n'),
+    }
+  }
+  const raw = String(row.lines_product_names ?? row.lines_summary ?? '').trim()
+  if (!raw) {
+    return { productNames: '—', quantities: '—' }
+  }
+  const parts = raw.split('·').map((p) => p.trim()).filter(Boolean)
+  const names: string[] = []
+  const qtys: string[] = []
+  for (const part of parts) {
+    const m = part.match(/^(.+?)\s*[x×]\s*(\d+)\s*$/i)
+    if (m) {
+      names.push(m[1].trim())
+      qtys.push(m[2])
+    } else {
+      names.push((part.split('@')[0] ?? part).trim())
+      qtys.push('—')
+    }
+  }
+  return {
+    productNames: names.join('\n'),
+    quantities: qtys.join('\n'),
+  }
 }
 
 function emptyLine(): LineForm {
@@ -208,6 +256,7 @@ export function PurchasesPage() {
   const [phEditCurrency, setPhEditCurrency] = useState<'USD' | 'IQD'>('USD')
   const [phEditPaymentType, setPhEditPaymentType] = useState<'cash' | 'debt'>('debt')
   const [phEditExchangeRate, setPhEditExchangeRate] = useState('')
+  const [phEditLines, setPhEditLines] = useState<PurchaseEditLineForm[]>([])
 
   const canView = Boolean(me && hasPerm(me, 'view_purchase'))
   const canAdd = Boolean(me && hasPerm(me, 'add_purchase'))
@@ -302,6 +351,7 @@ export function PurchasesPage() {
     setPhEditCurrency('USD')
     setPhEditPaymentType('debt')
     setPhEditExchangeRate('')
+    setPhEditLines([])
   }, [])
 
   const openPhEdit = useCallback(
@@ -317,7 +367,7 @@ export function PurchasesPage() {
           : String(p.company_name ?? '').trim() || '—',
       )
       try {
-        const data = await apiJson<PurchaseHeaderApiDetail>(`/api/purchases/${p.id}/`)
+        const data = await apiJson<PurchaseApiDetail>(`/api/purchases/${p.id}/`)
         setPhEditCompanyId(typeof data.company === 'number' ? data.company : null)
         const noteStr = String(data.note ?? '')
         setPhEditIsAutoStock(noteStr.includes('[AUTO_STOCK_INCREASE]'))
@@ -331,6 +381,15 @@ export function PurchasesPage() {
         setPhEditCurrency(cur)
         setPhEditPaymentType(data.payment_type === 'cash' ? 'cash' : 'debt')
         setPhEditExchangeRate(displayIqdPer100FromApiPerUsd(data.exchange_rate_usd_to_iqd))
+        setPhEditLines(
+          (data.lines ?? []).map((ln) => ({
+            product: ln.product,
+            productName: ln.product_name ?? `#${ln.product}`,
+            quantity: String(ln.quantity ?? ''),
+            unitCostUsd: formatUsdForInput(ln.unit_cost_usd),
+            damaged: String(ln.damaged_quantity ?? 0),
+          })),
+        )
       } catch (e) {
         setPhEditError(e instanceof Error ? e.message : t('common.error'))
       } finally {
@@ -359,6 +418,30 @@ export function PurchasesPage() {
       setPhEditError(t('purchasePage.needRate'))
       return
     }
+    if (phEditLines.length === 0) {
+      setPhEditError(t('purchasePage.needLines'))
+      return
+    }
+    const apiLines: Array<{
+      product: number
+      quantity: number
+      unit_cost_usd: string
+      damaged_quantity: number
+    }> = []
+    for (const ln of phEditLines) {
+      const q = Math.max(0, Math.floor(parseDec(ln.quantity)))
+      const damaged = Math.min(Math.max(0, Math.floor(parseDec(ln.damaged))), q)
+      if (q < 1) {
+        setPhEditError(t('purchasePage.needLines'))
+        return
+      }
+      apiLines.push({
+        product: ln.product,
+        quantity: q,
+        unit_cost_usd: parseDec(ln.unitCostUsd).toFixed(4),
+        damaged_quantity: damaged,
+      })
+    }
     setPhEditSaving(true)
     setPhEditError(null)
     try {
@@ -374,6 +457,7 @@ export function PurchasesPage() {
           note: phEditNote.trim(),
           currency: phEditCurrency,
           payment_type: phEditPaymentType,
+          lines: apiLines,
         }),
       })
       closePhEdit()
@@ -395,6 +479,7 @@ export function PurchasesPage() {
     phEditInvoice,
     phEditPaymentType,
     phEditCompanyId,
+    phEditLines,
     closePhEdit,
     loadPurchaseHistory,
     t,
@@ -483,16 +568,19 @@ export function PurchasesPage() {
     container.style.padding = '16px'
     container.setAttribute('dir', isRtl ? 'rtl' : 'ltr')
     const rowsHtml = historyRows
-      .map((p) => `<tr>
+      .map((p) => {
+        const cols = purchaseLineColumnValues(p)
+        return `<tr>
         <td>${escapeHtml(formatDateTimeCell(p.occurred_at))}</td>
         <td>${escapeHtml(p.company_name ?? '—')}</td>
-        <td>${escapeHtml(formatProductsSummaryCell(p.lines_product_names ?? p.lines_summary))}</td>
-        <td>${escapeHtml(typeof p.total_units === 'number' ? p.total_units : '—')}</td>
+        <td>${escapeHtml(cols.productNames)}</td>
+        <td>${escapeHtml(cols.quantities)}</td>
         <td>${escapeHtml(purchaseReceiptDisplay(p))}</td>
         <td>${escapeHtml(formatUsdCellString(p.goods_total_usd))}</td>
         <td>${escapeHtml(formatUsdCellString(p.amount_paid_usd))}</td>
         <td>${escapeHtml(formatUsdCellString(p.remaining_balance_usd))}</td>
-      </tr>`)
+      </tr>`
+      })
       .join('')
     container.innerHTML = `
       <style>
@@ -939,8 +1027,9 @@ export function PurchasesPage() {
                   ) : (
                     historyRows.map((p) => {
                       const editable = canChangePurchase && !p.has_returns
+                      const cols = purchaseLineColumnValues(p)
                       return (
-                        <tr key={p.id} className="border-t border-slate-100 dark:border-slate-700">
+                        <tr key={p.id} className="border-t border-slate-100 align-top dark:border-slate-700">
                           <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">
                             {formatDateTimeCell(p.occurred_at)}
                           </td>
@@ -949,11 +1038,11 @@ export function PurchasesPage() {
                               ? t('purchasePage.companyInventoryIncrease')
                               : (p.company_name ?? '—')}
                           </td>
-                          <td className="px-3 py-2 text-center text-xs font-medium leading-relaxed text-slate-900 dark:text-slate-100">
-                            {formatProductsSummaryCell(p.lines_product_names ?? p.lines_summary)}
+                          <td className="px-3 py-2 text-center text-xs font-medium leading-relaxed whitespace-pre-line text-slate-900 dark:text-slate-100">
+                            {cols.productNames}
                           </td>
-                          <td className="px-3 py-2 text-center font-mono text-xs tabular-nums">
-                            {typeof p.total_units === 'number' ? p.total_units : '—'}
+                          <td className="px-3 py-2 text-center font-mono text-xs tabular-nums whitespace-pre-line">
+                            {cols.quantities}
                           </td>
                           <td className="px-3 py-2 font-mono text-xs tabular-nums">{purchaseReceiptDisplay(p)}</td>
                           <td className="px-3 py-2 text-center font-mono tabular-nums">
@@ -1005,9 +1094,10 @@ export function PurchasesPage() {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="ph-edit-title"
-                className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-600 dark:bg-slate-900"
+                className="flex max-h-[90dvh] min-h-0 w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-600 dark:bg-slate-900"
                 onClick={(e) => e.stopPropagation()}
               >
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
                 <h3 id="ph-edit-title" className="text-start text-lg font-semibold text-slate-900 dark:text-slate-100">
                   {t('purchasePage.editHistoryTitle')}
                 </h3>
@@ -1127,8 +1217,67 @@ export function PurchasesPage() {
                           spellCheck={false}
                         />
                       </label>
+                      <div className="border-t border-slate-200 pt-3 dark:border-slate-600">
+                        <p className="mb-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                          {t('purchasePage.product')}
+                        </p>
+                        <div className="flex max-h-[min(40vh,20rem)] min-h-0 flex-col gap-2 overflow-y-auto sm:max-h-[50vh]">
+                          {phEditLines.map((ln, idx) => (
+                            <div
+                              key={`${ln.product}-${idx}`}
+                              className="rounded-lg border border-slate-100 bg-slate-50/80 p-2 text-xs dark:border-slate-700 dark:bg-slate-950/50"
+                            >
+                              <p className="mb-2 font-medium text-slate-800 dark:text-slate-100">{ln.productName}</p>
+                              <div className="grid grid-cols-3 gap-2">
+                                <label className="flex flex-col gap-0.5">
+                                  <span className="text-[10px] text-slate-500">{t('purchasePage.quantity')}</span>
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={ln.quantity}
+                                    onChange={(e) =>
+                                      setPhEditLines((rows) =>
+                                        rows.map((r, i) => (i === idx ? { ...r, quantity: e.target.value } : r)),
+                                      )
+                                    }
+                                    className="rounded border border-slate-200 px-1 py-1 dark:border-slate-600 dark:bg-slate-900"
+                                  />
+                                </label>
+                                <label className="flex flex-col gap-0.5">
+                                  <span className="text-[10px] text-slate-500">{t('purchasePage.unitPrice')} (USD)</span>
+                                  <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={ln.unitCostUsd}
+                                    onChange={(e) =>
+                                      setPhEditLines((rows) =>
+                                        rows.map((r, i) => (i === idx ? { ...r, unitCostUsd: e.target.value } : r)),
+                                      )
+                                    }
+                                    className="rounded border border-slate-200 px-1 py-1 dark:border-slate-600 dark:bg-slate-900"
+                                  />
+                                </label>
+                                <label className="flex flex-col gap-0.5">
+                                  <span className="text-[10px] text-slate-500">{t('purchasePage.damaged')}</span>
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={ln.damaged}
+                                    onChange={(e) =>
+                                      setPhEditLines((rows) =>
+                                        rows.map((r, i) => (i === idx ? { ...r, damaged: e.target.value } : r)),
+                                      )
+                                    }
+                                    className="rounded border border-slate-200 px-1 py-1 dark:border-slate-600 dark:bg-slate-900"
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <div className="mt-5 flex flex-wrap justify-end gap-2">
+                    <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-3 dark:border-slate-600">
                       <button
                         type="button"
                         onClick={closePhEdit}
@@ -1147,6 +1296,7 @@ export function PurchasesPage() {
                     </div>
                   </>
                 )}
+                </div>
               </div>
             </div>
           ) : null}

@@ -15,6 +15,10 @@ function categoryKey(r: JardRow): number {
   return r.category_id ?? UNCATEGORIZED_CATEGORY_KEY
 }
 
+function jardProcessedQty(r: JardRow): number {
+  return r.remaining_qty + (r.sold_qty ?? 0)
+}
+
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -165,12 +169,13 @@ export function JardPage() {
     return filtered.reduce(
       (acc, r) => {
         acc.remaining += r.remaining_qty
+        acc.processed += jardProcessedQty(r)
         acc.sold += r.sold_qty ?? 0
         acc.remainingValueUsd += Number(r.remaining_value_usd || 0)
         acc.soldValueUsd += Number(r.sold_value_usd || 0)
         return acc
       },
-      { remaining: 0, sold: 0, remainingValueUsd: 0, soldValueUsd: 0 },
+      { remaining: 0, processed: 0, sold: 0, remainingValueUsd: 0, soldValueUsd: 0 },
     )
   }, [filtered])
   const formatUsd = (amount: number) => amount.toLocaleString(undefined, { maximumFractionDigits: 2 })
@@ -186,6 +191,7 @@ export function JardPage() {
         t('jard.remainingQty'),
         ...(showFinancials
           ? [
+              t('jard.processedQty'),
               t('jard.unitBuyPriceUsd'),
               t('jard.remainingValueUsd'),
               t('jard.soldQty'),
@@ -206,6 +212,7 @@ export function JardPage() {
             pdfCell(r.remaining_qty),
             ...(showFinancials
               ? [
+                  pdfCell(jardProcessedQty(r)),
                   pdfCell(r.unit_buy_price_usd ?? '0'),
                   pdfCell(r.remaining_value_usd ?? '0'),
                   pdfCell(r.sold_qty ?? 0),
@@ -224,6 +231,7 @@ export function JardPage() {
         statCard(t('jard.remainingQty'), String(totals.remaining)),
         ...(showFinancials
           ? [
+              statCard(t('jard.processedQty'), String(totals.processed)),
               statCard(t('jard.remainingValueUsd'), `${formatUsd(totals.remainingValueUsd)} USD`),
               statCard(t('jard.soldQty'), String(totals.sold)),
               statCard(t('jard.soldValueUsd'), `${formatUsd(totals.soldValueUsd)} USD`),
@@ -241,13 +249,14 @@ export function JardPage() {
           : ''
       const colgroup = showFinancials
         ? `
-          <col style="width:22%">
-          <col style="width:14%">
-          <col style="width:10%">
-          <col style="width:12%">
-          <col style="width:14%">
-          <col style="width:10%">
           <col style="width:18%">
+          <col style="width:12%">
+          <col style="width:9%">
+          <col style="width:9%">
+          <col style="width:11%">
+          <col style="width:13%">
+          <col style="width:9%">
+          <col style="width:19%">
         `
         : `
           <col style="width:42%">
@@ -357,11 +366,11 @@ export function JardPage() {
     <div id="jard-print-root" className="min-h-dvh p-4 sm:p-6">
       {/*
         Summary order (LTR; RTL mirrors visually): 1) grand total units 2) remaining units
-        3) remaining value USD 4) sold units 5) sold value USD
+        3) processed units 4) remaining value USD 5) sold units 6) sold value USD
       */}
       <div
         className={`mb-4 grid grid-cols-1 gap-3 no-print sm:grid-cols-2 ${
-          showFinancials ? 'lg:grid-cols-5' : 'lg:grid-cols-2'
+          showFinancials ? 'lg:grid-cols-6' : 'lg:grid-cols-2'
         }`}
       >
         <div className="rounded-lg border border-slate-300 border-t-4 border-t-indigo-500 bg-white p-4 pt-3 dark:border-slate-700 dark:border-t-indigo-400 dark:bg-slate-900">
@@ -378,6 +387,12 @@ export function JardPage() {
         </div>
         {showFinancials ? (
           <>
+            <div className="rounded-lg border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{t('jard.processedQty')}</p>
+              <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-100">
+                {totals.processed}
+              </p>
+            </div>
             <div className="rounded-lg border border-slate-300 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
               <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
                 {t('jard.remainingValueUsd')}
@@ -711,11 +726,14 @@ export function JardPage() {
                   <th className="sticky top-0 z-10 border-b border-e border-slate-300 bg-slate-100 px-3 py-2 text-start text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
                     {t('jard.categoryColumn')}
                   </th>
-                  <th className="sticky top-0 z-10 border-b border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
+                  <th className="sticky top-0 z-10 border-b border-e border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
                     {t('jard.remainingQty')}
                   </th>
                   {showFinancials ? (
                     <>
+                      <th className="sticky top-0 z-10 border-b border-e border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
+                        {t('jard.processedQty')}
+                      </th>
                       <th className="sticky top-0 z-10 border-b border-e border-slate-300 bg-slate-100 px-3 py-2 text-end text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300">
                         {t('jard.unitBuyPriceUsd')}
                       </th>
@@ -754,11 +772,14 @@ export function JardPage() {
                     <td className="border-b border-e border-slate-200 px-3 py-2 text-slate-700 dark:border-slate-700 dark:text-slate-200">
                       {r.category_name || t('jard.noCategory')}
                     </td>
-                    <td className="border-b border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
+                    <td className="border-b border-e border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
                       {r.remaining_qty}
                     </td>
                     {showFinancials ? (
                       <>
+                        <td className="border-b border-e border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
+                          {jardProcessedQty(r)}
+                        </td>
                         <td className="border-b border-e border-slate-200 px-3 py-2 text-end font-mono tabular-nums text-slate-700 dark:border-slate-700 dark:text-slate-200">
                           {formatUsd(Number(r.unit_buy_price_usd || 0))}
                         </td>
