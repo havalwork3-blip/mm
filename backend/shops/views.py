@@ -242,6 +242,16 @@ class QrLandingAdminView(APIView):
             s.manager_telegram_send_minute = int(data["manager_telegram_send_minute"])
         if data.get("manager_telegram_clear_last_sent"):
             s.manager_telegram_last_sent_date = None
+            try:
+                from shops.manager_telegram_state import clear_attempt_state
+
+                clear_attempt_state()
+            except Exception:
+                import logging
+
+                logging.getLogger(__name__).exception(
+                    "Could not clear manager Telegram attempt state",
+                )
         s.save()
         try:
             from shops.manager_telegram_scheduler import refresh_manager_telegram_schedule

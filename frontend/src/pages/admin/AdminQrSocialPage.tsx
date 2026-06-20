@@ -789,6 +789,14 @@ export function AdminQrSocialPage() {
                         {t('qrAdmin.managerTelegramSentToday')}
                       </p>
                     ) : null}
+                    {cfg.manager_telegram_schedule?.last_delivery_error ? (
+                      <p className="mt-1 text-xs text-rose-700 dark:text-rose-300">
+                        {t('qrAdmin.managerTelegramDeliveryError')}:{' '}
+                        <span dir="ltr" className="font-mono">
+                          {cfg.manager_telegram_schedule.last_delivery_error}
+                        </span>
+                      </p>
+                    ) : null}
                     {cfg.manager_telegram_notify_enabled &&
                     cfg.manager_telegram_schedule?.schedule_ready === false ? (
                       <p className="mt-1 text-xs text-rose-700 dark:text-rose-300">

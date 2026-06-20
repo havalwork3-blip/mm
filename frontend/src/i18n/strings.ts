@@ -474,6 +474,7 @@ const en: Record<string, string> = {
   'qrAdmin.managerTelegramSchedulerOnWarn':
     'MANAGER_TELEGRAM_SCHEDULER=1 is on together with cron — disable one of them to avoid hundreds of duplicate messages per day.',
   'qrAdmin.managerTelegramSentToday': 'Scheduled report already sent today',
+  'qrAdmin.managerTelegramDeliveryError': 'Last automatic send failed',
   'qrAdmin.managerTelegramLastSent': 'Last sent',
   'qrAdmin.managerTelegramClearLock': 'Reset daily send lock',
   'qrAdmin.managerTelegramClearLockOk': 'Daily send lock cleared — report can be sent again today.',
@@ -1656,6 +1657,7 @@ const ar: Record<string, string> = {
   'qrAdmin.managerTelegramSchedulerOnWarn':
     'MANAGER_TELEGRAM_SCHEDULER=1 مفعّل مع cron — عطّل أحدهما لتجنب مئات الرسائل المكررة يومياً.',
   'qrAdmin.managerTelegramSentToday': 'تم إرسال تقرير اليوم المجدول',
+  'qrAdmin.managerTelegramDeliveryError': 'فشل آخر إرسال تلقائي',
   'qrAdmin.managerTelegramLastSent': 'آخر إرسال',
   'qrAdmin.managerTelegramClearLock': 'إعادة ضبط قفل الإرسال اليومي',
   'qrAdmin.managerTelegramClearLockOk': 'تم مسح قفل اليوم — يمكن الإرسال مرة أخرى اليوم.',
@@ -3036,6 +3038,7 @@ const ku: Record<string, string> = {
   'qrAdmin.managerTelegramSchedulerOnWarn':
     'MANAGER_TELEGRAM_SCHEDULER=1 لەگەڵ cron چالاکە — یەکێکیان بکوژێنەوە بۆ ئەوەی ڕۆژانە تەنها یەک نامە بێت.',
   'qrAdmin.managerTelegramSentToday': 'ڕاپۆرتی خۆکاری ئەمڕۆ پێشتر نێردراوە',
+  'qrAdmin.managerTelegramDeliveryError': 'دوایین ناردنی خۆکار سەرکەوتوو نەبوو',
   'qrAdmin.managerTelegramLastSent': 'دوایین ناردن',
   'qrAdmin.managerTelegramClearLock': 'سڕینەوەی قفڵی ناردنی ڕۆژانە',
   'qrAdmin.managerTelegramClearLockOk': 'قفڵی ئەمڕۆ سڕایەوە — دەتوانیت دووبارە ئەمڕۆ ڕاپۆرت بنێریت.',

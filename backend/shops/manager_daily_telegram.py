@@ -192,7 +192,7 @@ def send_manager_daily_digest(
     Returns {sent, shops, shop_ok, failed, messages}.
     """
     from shops.models import Shop
-    from shops.telegram_notify import send_message
+    from shops.telegram_notify import send_message_detail
 
     result: dict = {
         "sent": 0,
@@ -200,6 +200,8 @@ def send_manager_daily_digest(
         "shop_ok": 0,
         "failed": [],
         "messages": 0,
+        "complete": False,
+        "telegram_error": None,
     }
 
     if not settings.manager_telegram_notify_enabled and not force:
@@ -265,15 +267,29 @@ def send_manager_daily_digest(
     payloads = build_combined_digest_messages(d, blocks)
     result["messages"] = len(payloads)
     sent = 0
+    last_error: str | None = None
     for text in payloads:
-        if send_message(token, chat_id, text):
+        ok, err = send_message_detail(token, chat_id, text)
+        if ok:
             sent += 1
+        else:
+            last_error = err or "sendMessage failed"
+            logger.warning(
+                "Manager daily Telegram message %s/%s failed: %s",
+                sent + 1,
+                len(payloads),
+                last_error,
+            )
+            break
         time.sleep(TELEGRAM_SEND_DELAY_SEC)
 
     result["sent"] = sent
+    result["complete"] = sent == len(payloads) and len(payloads) > 0
+    if last_error:
+        result["telegram_error"] = last_error
     result["report_date"] = d.isoformat()
     # Manual "send now" (force) must not block the automatic daily send.
-    if sent > 0 and record_last_sent and not force:
+    if result["complete"] and record_last_sent and not force:
         settings.manager_telegram_last_sent_date = d
         settings.save(update_fields=["manager_telegram_last_sent_date", "updated_at"])
     elif sent == 0:
@@ -329,7 +345,13 @@ def should_run_scheduled_send(settings) -> bool:
     tz = _business_tz()
     now = timezone.now().astimezone(tz)
     # Cron/scheduler may tick every 5 min; send once local time is at or past the configured clock.
-    return now.time() >= configured_send_time(settings)
+    if now.time() < configured_send_time(settings):
+        return False
+    from shops.manager_telegram_state import recent_failed_attempt
+
+    if recent_failed_attempt(today):
+        return False
+    return True
 
 
 def next_scheduled_send_at(settings) -> datetime | None:

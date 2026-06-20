@@ -80,6 +80,8 @@ export type QrLandingAdminResponse = {
     sent_today?: boolean
     due_now?: boolean
     leader_worker?: boolean
+    last_delivery_error?: string
+    retry_after_cooldown?: boolean
   }
   updated_at: string | null
 }

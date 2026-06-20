@@ -12,6 +12,28 @@ _lock_file = None
 _started = False
 
 
+def _acquire_digest_send_lock():
+    """Only one cron tick / scheduler worker sends at a time."""
+    try:
+        import fcntl
+    except ImportError:
+        return object()
+
+    path = os.environ.get(
+        "MANAGER_TELEGRAM_SEND_LOCK_PATH",
+        "/tmp/mnm_manager_telegram_send.lock",
+    )
+    fh = open(path, "w", encoding="utf-8")
+    try:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        fh.close()
+        return None
+    fh.write(str(os.getpid()))
+    fh.flush()
+    return fh
+
+
 def scheduler_enabled() -> bool:
     """
     In-process APScheduler tick.
@@ -70,35 +92,54 @@ def run_scheduled_manager_digest() -> dict:
         send_manager_daily_digest,
         should_run_scheduled_send,
     )
+    from shops.manager_telegram_state import write_attempt_state
     from shops.models import QrLandingSettings
+
+    send_lock = _acquire_digest_send_lock()
+    if send_lock is None:
+        return {"skipped": True, "reason": "send_busy"}
 
     skipped = {"skipped": True, "reason": "not_due"}
     report_date = business_today()
-    with transaction.atomic():
-        try:
-            settings = QrLandingSettings.objects.select_for_update().get(pk=1)
-        except OperationalError:
-            return {"skipped": True, "reason": "lock_busy"}
-        if not should_run_scheduled_send(settings):
-            return skipped
-
-    settings = QrLandingSettings.load()
-    result = send_manager_daily_digest(
-        settings,
-        report_date=report_date,
-        force=True,
-        record_last_sent=False,
-    )
-    if int(result.get("sent") or 0) > 0:
+    try:
         with transaction.atomic():
             try:
-                locked = QrLandingSettings.objects.select_for_update().get(pk=1)
+                settings = QrLandingSettings.objects.select_for_update().get(pk=1)
             except OperationalError:
-                return result
-            if locked.manager_telegram_last_sent_date != report_date:
-                locked.manager_telegram_last_sent_date = report_date
-                locked.save(update_fields=["manager_telegram_last_sent_date", "updated_at"])
-    return result
+                return {"skipped": True, "reason": "lock_busy"}
+            if not should_run_scheduled_send(settings):
+                return skipped
+
+        settings = QrLandingSettings.load()
+        result = send_manager_daily_digest(
+            settings,
+            report_date=report_date,
+            force=True,
+            record_last_sent=False,
+        )
+        complete = bool(result.get("complete"))
+        if complete:
+            with transaction.atomic():
+                try:
+                    locked = QrLandingSettings.objects.select_for_update().get(pk=1)
+                except OperationalError:
+                    return result
+                if locked.manager_telegram_last_sent_date != report_date:
+                    locked.manager_telegram_last_sent_date = report_date
+                    locked.save(update_fields=["manager_telegram_last_sent_date", "updated_at"])
+            write_attempt_state(report_date=report_date, ok=True)
+        else:
+            err = result.get("telegram_error") or "delivery incomplete"
+            write_attempt_state(report_date=report_date, ok=False, error=str(err))
+            result["skipped"] = False
+            result["delivery_failed"] = True
+        return result
+    finally:
+        if send_lock is not None and hasattr(send_lock, "close"):
+            try:
+                send_lock.close()
+            except OSError:
+                pass
 
 
 def refresh_manager_telegram_schedule() -> None:
@@ -116,6 +157,7 @@ def schedule_status() -> dict:
         next_scheduled_send_at,
         schedule_ready,
     )
+    from shops.manager_telegram_state import read_attempt_state, recent_failed_attempt
     from shops.models import QrLandingSettings
 
     s = QrLandingSettings.load()
@@ -148,6 +190,18 @@ def schedule_status() -> dict:
         out["sent_today"] = True
     if enabled and ready and not out.get("next_run_at") and not out.get("sent_today"):
         out["due_now"] = True
+    attempt = read_attempt_state()
+    if attempt:
+        out["last_attempt"] = attempt
+        if (
+            enabled
+            and not out.get("sent_today")
+            and attempt.get("date") == business_today().isoformat()
+            and not attempt.get("ok")
+        ):
+            out["last_delivery_error"] = attempt.get("error") or "delivery failed"
+            if recent_failed_attempt(business_today()):
+                out["retry_after_cooldown"] = True
     return out
 
 

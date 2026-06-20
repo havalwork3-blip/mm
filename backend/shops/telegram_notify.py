@@ -68,6 +68,15 @@ def mask_bot_token(token: str) -> str:
 
 
 def _api_call(token: str, method: str, payload: dict | None = None) -> dict | None:
+    ok, _err = _api_call_detail(token, method, payload)
+    return ok
+
+
+def _api_call_detail(
+    token: str,
+    method: str,
+    payload: dict | None = None,
+) -> tuple[dict | None, str | None]:
     url = TELEGRAM_API.format(token=token.strip(), method=method)
     data = json.dumps(payload or {}).encode("utf-8")
     req = urllib.request.Request(
@@ -80,12 +89,13 @@ def _api_call(token: str, method: str, payload: dict | None = None) -> dict | No
         with urllib.request.urlopen(req, timeout=15) as resp:
             body = json.loads(resp.read().decode("utf-8"))
             if not body.get("ok"):
-                logger.warning("Telegram API %s failed: %s", method, body)
-                return None
-            return body.get("result")
+                err = str(body.get("description") or body)
+                logger.warning("Telegram API %s failed: %s", method, err)
+                return None, err
+            return body.get("result"), None
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
         logger.warning("Telegram API %s error: %s", method, exc)
-        return None
+        return None, str(exc)
 
 
 def register_webhook(token: str) -> bool:
@@ -95,7 +105,12 @@ def register_webhook(token: str) -> bool:
 
 
 def send_message(token: str, chat_id: str | int, text: str) -> bool:
-    result = _api_call(
+    ok, _err = send_message_detail(token, chat_id, text)
+    return ok
+
+
+def send_message_detail(token: str, chat_id: str | int, text: str) -> tuple[bool, str | None]:
+    result, err = _api_call_detail(
         token,
         "sendMessage",
         {
@@ -105,7 +120,7 @@ def send_message(token: str, chat_id: str | int, text: str) -> bool:
             "disable_web_page_preview": True,
         },
     )
-    return result is not None
+    return result is not None, err
 
 
 def format_order_message(order) -> str:
