@@ -10,6 +10,7 @@ import {
 } from '../../lib/receiptHtml'
 import { saleHasLossLines, saleLineFlagsFromRow } from '../../lib/saleLineFlags'
 import { salePaidUsdEquivalent } from '../../lib/salePayments'
+import { saleIsCredit } from '../../lib/saleReturnRefund'
 import { formatSaleReceiptNumber } from '../../lib/shopReceiptNumbers'
 import type { ReceiptSettingsRow, SaleListRow as SaleRow } from '../../types/api'
 import { formatMoney } from '../../utils/inventoryFormat'
@@ -101,6 +102,12 @@ export const SaleListRow = memo(function SaleListRowCard({
           {hasReturns ? (
             <p className="mt-1 inline-flex rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:border-emerald-700/40 dark:bg-emerald-900/30 dark:text-emerald-200">
               {t('sales.returnedTag')} {formatMoney(returnedTotalUsd)} USD
+            </p>
+          ) : null}
+          {saleIsCredit(sale) || balanceUsd > 0.0001 ? (
+            <p className="mt-1 inline-flex rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-900 dark:border-amber-700/40 dark:bg-amber-950/40 dark:text-amber-200">
+              {t('salesReturns.creditSaleBadge')}
+              {balanceUsd > 0.0001 ? ` · ${formatMoney(balanceUsd)} USD` : ''}
             </p>
           ) : null}
           {discount > 0.0001 ? (

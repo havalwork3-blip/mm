@@ -923,6 +923,7 @@ class SaleViewSet(ShopScopedViewSet):
                     "quantity": int(row.quantity),
                     "unit_price_usd": format(Decimal(row.unit_price_usd), "f"),
                     "occurred_at": row.sale_return.occurred_at.isoformat(),
+                    "refund_method": row.sale_return.refund_method,
                 },
             )
         return Response({"results": out})

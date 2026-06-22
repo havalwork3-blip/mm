@@ -27,6 +27,7 @@ from .models import (
     SaleLine,
     SaleReturn,
     SaleReturnLine,
+    SaleReturnRefundMethod,
     ShopDayOpeningCash,
 )
 from .reports import profit_report_for_shop
@@ -722,9 +723,12 @@ def total_debtor_customers_count(shop_id: int) -> int:
 
 
 def total_returned_products_qty_in_range(shop_id: int, d_from, d_to) -> int:
-    """Total quantity of returned sale products during the selected range."""
+    """Total quantity of cash-refunded sale returns during the selected range."""
     qs = _datetime_in_calendar_range(
-        SaleReturnLine.objects.filter(sale_return__shop_id=shop_id),
+        SaleReturnLine.objects.filter(
+            sale_return__shop_id=shop_id,
+            sale_return__refund_method=SaleReturnRefundMethod.CASH,
+        ),
         "sale_return__occurred_at",
         d_from,
         d_to,
@@ -734,10 +738,31 @@ def total_returned_products_qty_in_range(shop_id: int, d_from, d_to) -> int:
 
 
 def total_returned_products_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
-    """Total returned products value in USD during the selected range."""
+    """Total cash-refunded sale return value in USD during the selected range."""
     dec = DecimalField(max_digits=24, decimal_places=4)
     qs = _datetime_in_calendar_range(
-        SaleReturnLine.objects.filter(sale_return__shop_id=shop_id),
+        SaleReturnLine.objects.filter(
+            sale_return__shop_id=shop_id,
+            sale_return__refund_method=SaleReturnRefundMethod.CASH,
+        ),
+        "sale_return__occurred_at",
+        d_from,
+        d_to,
+    )
+    amount = qs.aggregate(
+        s=Sum(F("quantity") * F("unit_price_usd"), output_field=dec),
+    )["s"] or Decimal("0")
+    return money_usd_2dp(Decimal(str(amount)))
+
+
+def customer_debt_reduced_by_returns_usd_in_range(shop_id: int, d_from, d_to) -> Decimal:
+    """USD value of sale returns applied as customer debt reduction in the date range."""
+    dec = DecimalField(max_digits=24, decimal_places=4)
+    qs = _datetime_in_calendar_range(
+        SaleReturnLine.objects.filter(
+            sale_return__shop_id=shop_id,
+            sale_return__refund_method=SaleReturnRefundMethod.DEBT_REDUCTION,
+        ),
         "sale_return__occurred_at",
         d_from,
         d_to,
@@ -972,17 +997,30 @@ def cashier_ledger_entries(shop_id: int, d_from, d_to) -> list[dict]:
         cust_label = sr.customer.name if sr.customer_id else ""
         sale_bit = f"#{sr.sale_id}"
         label = " · ".join([p for p in (cust_label, sale_bit) if p]) or "Sale return"
-        rows.append(
-            {
-                "kind": "sale_return",
-                "id": sr.id,
-                "occurred_on": sr.occurred_at.date().isoformat(),
-                "occurred_at": sr.occurred_at.isoformat(),
-                "amount_usd": format(refund, "f"),
-                "direction": "out",
-                "label": label,
-            },
-        )
+        if sr.refund_method == SaleReturnRefundMethod.DEBT_REDUCTION:
+            rows.append(
+                {
+                    "kind": "sale_return_debt_reduction",
+                    "id": sr.id,
+                    "occurred_on": sr.occurred_at.date().isoformat(),
+                    "occurred_at": sr.occurred_at.isoformat(),
+                    "amount_usd": format(refund, "f"),
+                    "direction": "debt",
+                    "label": label,
+                },
+            )
+        else:
+            rows.append(
+                {
+                    "kind": "sale_return",
+                    "id": sr.id,
+                    "occurred_on": sr.occurred_at.date().isoformat(),
+                    "occurred_at": sr.occurred_at.isoformat(),
+                    "amount_usd": format(refund, "f"),
+                    "direction": "out",
+                    "label": label,
+                },
+            )
 
     pur_qs = (
         Purchase.objects.filter(

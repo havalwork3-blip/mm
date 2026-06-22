@@ -315,6 +315,11 @@ class SaleLine(models.Model):
     )
 
 
+class SaleReturnRefundMethod(models.TextChoices):
+    CASH = "cash", "Cash refund"
+    DEBT_REDUCTION = "debt_reduction", "Deduct from customer debt"
+
+
 class SaleReturn(ShopScopedModel):
     """Customer product returns linked to an original sale."""
 
@@ -332,6 +337,11 @@ class SaleReturn(ShopScopedModel):
     )
     occurred_at = models.DateTimeField(auto_now_add=True)
     note = models.TextField(blank=True, default="")
+    refund_method = models.CharField(
+        max_length=20,
+        choices=SaleReturnRefundMethod.choices,
+        default=SaleReturnRefundMethod.CASH,
+    )
 
     class Meta:
         ordering = ["-occurred_at", "-id"]

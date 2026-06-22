@@ -838,6 +838,7 @@ export function CashierPage() {
       case 'customer_debt_payment':
         return { to: '/customer-debts', label: t('cashier.ledgerColAction') }
       case 'sale_return':
+      case 'sale_return_debt_reduction':
         return { to: '/sales-returns', label: t('cashier.ledgerColAction') }
       case 'purchase_payment':
         return { to: '/manage/purchases', label: t('cashier.ledgerColAction') }
@@ -858,6 +859,8 @@ export function CashierPage() {
       case 'expense':
       case 'sale_return':
         return 'bg-rose-500/15 text-rose-700 dark:text-rose-300'
+      case 'sale_return_debt_reduction':
+        return 'bg-violet-500/15 text-violet-700 dark:text-violet-300'
       case 'employee_debt':
         return 'bg-amber-500/15 text-amber-800 dark:text-amber-300'
       default:

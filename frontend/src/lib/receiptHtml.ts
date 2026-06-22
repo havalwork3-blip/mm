@@ -6,7 +6,10 @@ import { formatSaleReceiptNumber } from './shopReceiptNumbers'
 import type { ReceiptSettingsRow, SaleListRow } from '../types/api'
 
 export type ReceiptSummary = {
+  /** Line subtotal after returns (net qty × price). */
   subtotalUsd: number
+  /** Total value of returned units on this invoice (USD). */
+  returnedTotalUsd: number
   discountUsd: number
   finalUsd: number
   finalIqd: number | null
@@ -86,12 +89,31 @@ function fmtIqd(n: number): string {
   return formatDecimalTrim(n, 0)
 }
 
-export function computeReceiptSummaryFromSale(sale: SaleListRow): ReceiptSummary {
-  const subtotalUsd = sale.lines.reduce((acc, ln) => {
-    const q = Number(ln.quantity)
+function saleLineNetQty(ln: {
+  quantity: number | string
+  returned_quantity?: number | string | null
+}): number {
+  const sold = Math.max(0, Number(ln.quantity) || 0)
+  const returned = Math.max(0, Number(ln.returned_quantity ?? 0) || 0)
+  return Math.max(0, sold - returned)
+}
+
+function saleReturnedTotalUsd(lines: SaleListRow['lines']): number {
+  return lines.reduce((acc, ln) => {
+    const returned = Math.max(0, Number(ln.returned_quantity ?? 0) || 0)
     const p = parseFloat(String(ln.unit_price_usd))
-    if (Number.isNaN(q) || Number.isNaN(p)) return acc
-    return acc + q * p
+    if (Number.isNaN(p) || returned <= 0) return acc
+    return acc + returned * p
+  }, 0)
+}
+
+export function computeReceiptSummaryFromSale(sale: SaleListRow): ReceiptSummary {
+  const returnedTotalUsd = saleReturnedTotalUsd(sale.lines)
+  const subtotalUsd = sale.lines.reduce((acc, ln) => {
+    const netQty = saleLineNetQty(ln)
+    const p = parseFloat(String(ln.unit_price_usd))
+    if (Number.isNaN(p)) return acc
+    return acc + netQty * p
   }, 0)
   const discountUsd = parseFloat(String(sale.invoice_discount_usd)) || 0
   const finalUsd = Math.max(0, subtotalUsd - discountUsd)
@@ -104,6 +126,7 @@ export function computeReceiptSummaryFromSale(sale: SaleListRow): ReceiptSummary
   const balanceUsd = finalUsd - paidUsdEq
   return {
     subtotalUsd,
+    returnedTotalUsd,
     discountUsd,
     finalUsd,
     finalIqd,
@@ -173,11 +196,12 @@ export async function buildReceiptHtml(args: {
               `#${String(ln.product ?? '')}`,
           ),
         )
-        const qty = Number(ln.quantity ?? 0)
+        const soldQty = Number(ln.quantity ?? 0)
+        const retQty = Math.max(0, Number(ln.returned_quantity ?? 0))
+        const netQty = Math.max(0, soldQty - retQty)
         const price = String(ln.unit_price_usd ?? '0')
         const priceDisplay = formatDecimalTrim(price, 4)
-        const total = fmtUsd(qty * parseDec(price))
-        const retQty = Number(ln.returned_quantity ?? 0)
+        const total = fmtUsd(netQty * parseDec(price))
         const returnedHint = retQty > 0 ? `<br/><small style="color:#047857;font-weight:700">گەڕاوە: ${retQty}</small>` : ''
         const row = ln as Record<string, unknown>
         const flags = blankMode
@@ -196,7 +220,7 @@ export async function buildReceiptHtml(args: {
         return `<tr>
         <td class="cell-idx"><span class="cell-pad">${idx + 1}</span></td>
         <td class="col-name"><span class="cell-pad cell-name-text">${name}${lossHint}${returnedHint}</span></td>
-        <td class="num cell-qty"><span class="cell-pad">${blankMode ? '' : qty}</span></td>
+        <td class="num cell-qty"><span class="cell-pad">${blankMode ? '' : netQty}</span></td>
         <td class="num cell-price"><span class="cell-pad">${blankMode ? '' : escapeHtml(priceDisplay)}</span></td>
         <td class="num cell-line-total"><span class="cell-pad">${blankMode ? '' : total}</span></td>
       </tr>`
@@ -939,6 +963,9 @@ export async function buildReceiptHtml(args: {
             : ''
         }
         <div class="receipt-totals">
+          ${!blankMode && (sum.returnedTotalUsd ?? 0) > 0.00005
+            ? `<div class="tot-row"><span>کۆی گەڕاوە (USD)</span><span class="num">−${fmtUsd(sum.returnedTotalUsd ?? 0)}</span></div>`
+            : ''}
           <div class="tot-row"><span>داشکاندن (USD)</span><span class="num">${blankMode ? '' : fmtUsd(sum.discountUsd)}</span></div>
           <div class="tot-row"><span>کۆی پارەی وەرگیراو (USD)</span><span class="num">${blankMode ? '' : fmtUsd(sum.paidUsdEq)}</span></div>
           ${showIqdOnPdf ? `<div class="tot-row tot-row--muted"><span>کۆی پارەی وەرگیراو (IQD)</span><span class="num">${blankMode ? '' : paidIqdText}</span></div>` : ''}

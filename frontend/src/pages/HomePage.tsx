@@ -673,7 +673,7 @@ export function HomePage() {
   /** Stock remaining + returns ratio, side by side (used above shops / compact rank). */
   const dashStockReturnsTwoColRow = useMemo(
     () => (
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
         <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-start text-sm font-semibold text-slate-800 dark:text-slate-100">
@@ -816,7 +816,7 @@ export function HomePage() {
             <span className="text-xs text-slate-500">{t('common.loading')}</span>
           ) : null}
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,11.5rem),1fr))]">
           <StatCard
             icon={<TrendingUp className="h-5 w-5" />}
             label={t('dash.onlineTotalSales')}
@@ -980,8 +980,8 @@ export function HomePage() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <div className="min-h-dvh w-full min-w-0 bg-slate-50 dark:bg-slate-900">
+      <div className="w-full min-w-0 px-3 py-6 sm:px-4 md:px-5 lg:px-6 xl:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
@@ -1095,7 +1095,7 @@ export function HomePage() {
 
         {globalAdminStats && (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,11.5rem),1fr))]">
               <StatCard
                 icon={<LayoutDashboard className="h-5 w-5" />}
                 label={t('admin.totalShops')}
@@ -1143,8 +1143,8 @@ export function HomePage() {
               />
             </div>
             {onlineStorefrontDashboardSection}
-            <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+              <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h2 className="flex items-center gap-2 text-start text-sm font-semibold text-slate-800 dark:text-slate-100">
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
@@ -1159,7 +1159,7 @@ export function HomePage() {
                   emptyLabel={t('common.noData')}
                 />
               </section>
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h2 className="flex items-center gap-2 text-start text-sm font-semibold text-slate-800 dark:text-slate-100">
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
@@ -1229,7 +1229,7 @@ export function HomePage() {
 
         {stats && !globalAdminStats && (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,11.5rem),1fr))]">
               {isEmployeeDashboard || isSuperuserDashboard ? (
                 <>
                   <StatCard
@@ -1257,6 +1257,13 @@ export function HomePage() {
                     icon={<Users className="h-5 w-5" />}
                     label={t('dash.customerDebtCollected')}
                     value={stats.period_customer_debt_collected_usd ?? '0'}
+                    tone="violet"
+                    currencyLabel={t('common.currencyUsd')}
+                  />
+                  <StatCard
+                    icon={<Users className="h-5 w-5" />}
+                    label={t('dash.customerDebtReducedByReturns')}
+                    value={stats.period_customer_debt_reduced_by_returns_usd ?? '0'}
                     tone="violet"
                     currencyLabel={t('common.currencyUsd')}
                   />
@@ -1317,7 +1324,7 @@ export function HomePage() {
               />
             ) : null}
             {canFetchShopDashboardExtras && (isEmployeeDashboard || isSuperuserDashboard) ? (
-              <div className="mt-4">
+              <div className="mt-4 w-full min-w-0">
                 <PettyCashTrendChart
                   data={pettyCashTrend}
                   loading={loadingPettyCashTrend}
@@ -1344,8 +1351,8 @@ export function HomePage() {
               </div>
             ) : null}
             {onlineStorefrontDashboardSection}
-            <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+              <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h2 className="flex items-center gap-2 text-start text-sm font-semibold text-slate-800 dark:text-slate-100">
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
@@ -1360,7 +1367,7 @@ export function HomePage() {
                   emptyLabel={t('common.noData')}
                 />
               </section>
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <h2 className="flex items-center gap-2 text-start text-sm font-semibold text-slate-800 dark:text-slate-100">
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">

@@ -32,6 +32,7 @@ from .models import (
     SaleLine,
     SaleReturn,
     SaleReturnLine,
+    SaleReturnRefundMethod,
     Shareholder,
     ShareholderPayment,
     ShopDayOpeningCash,
@@ -1482,6 +1483,9 @@ class SaleSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField(read_only=True)
     customer_address = serializers.SerializerMethodField(read_only=True)
     previous_debt_usd = serializers.SerializerMethodField(read_only=True)
+    unpaid_balance_usd = serializers.SerializerMethodField(read_only=True)
+    is_credit_sale = serializers.SerializerMethodField(read_only=True)
+    customer_outstanding_balance_usd = serializers.SerializerMethodField(read_only=True)
     has_returns = serializers.SerializerMethodField(read_only=True)
     returned_total_usd = serializers.SerializerMethodField(read_only=True)
     return_lines_summary = serializers.SerializerMethodField(read_only=True)
@@ -1503,6 +1507,9 @@ class SaleSerializer(serializers.ModelSerializer):
             "customer_name",
             "customer_address",
             "previous_debt_usd",
+            "unpaid_balance_usd",
+            "is_credit_sale",
+            "customer_outstanding_balance_usd",
             "has_returns",
             "returned_total_usd",
             "return_lines_summary",
@@ -1551,6 +1558,27 @@ class SaleSerializer(serializers.ModelSerializer):
             if bal > 0:
                 total += bal
         return format(total.quantize(Decimal("0.0001")), "f")
+
+    def get_unpaid_balance_usd(self, obj: Sale) -> str:
+        from .dashboard_tools import sale_unpaid_balance_usd
+
+        return format(sale_unpaid_balance_usd(obj), "f")
+
+    def get_is_credit_sale(self, obj: Sale) -> bool:
+        from .dashboard_tools import sale_unpaid_balance_usd
+
+        return sale_unpaid_balance_usd(obj) > Decimal("0.0001")
+
+    def get_customer_outstanding_balance_usd(self, obj: Sale) -> str:
+        from .dashboard_tools import customer_outstanding_balance_usd
+
+        c = obj.customer
+        if not c:
+            return format(Decimal("0"), "f")
+        cache: dict[int, Decimal] = self.context.setdefault("_customer_debt_cache", {})
+        if c.id not in cache:
+            cache[c.id] = customer_outstanding_balance_usd(obj.shop_id, c.id)
+        return format(cache[c.id], "f")
 
     def get_has_returns(self, obj: Sale) -> bool:
         return obj.returns.exists()
@@ -1924,11 +1952,18 @@ class SaleReturnLineInputSerializer(serializers.Serializer):
 class SaleReturnCreateSerializer(serializers.Serializer):
     sale_id = serializers.IntegerField(min_value=1)
     note = serializers.CharField(required=False, allow_blank=True, default="")
+    refund_method = serializers.ChoiceField(
+        choices=SaleReturnRefundMethod.choices,
+        default=SaleReturnRefundMethod.CASH,
+        required=False,
+    )
     lines = SaleReturnLineInputSerializer(many=True)
 
     def validate(self, attrs: dict) -> dict:
         if not attrs.get("lines"):
             raise serializers.ValidationError({"lines": "At least one return line is required."})
+        refund_method = attrs.get("refund_method") or SaleReturnRefundMethod.CASH
+        attrs["refund_method"] = refund_method
         return attrs
 
     def create(self, validated_data: dict) -> dict:
@@ -1936,15 +1971,43 @@ class SaleReturnCreateSerializer(serializers.Serializer):
         shop_id = require_shop_id(request)
         sale_id = int(validated_data["sale_id"])
         note = str(validated_data.get("note", "") or "").strip()
+        refund_method = validated_data.get("refund_method") or SaleReturnRefundMethod.CASH
         lines_data = validated_data["lines"]
 
         sale = (
             Sale.objects.filter(pk=sale_id, shop_id=shop_id)
             .select_related("customer")
+            .prefetch_related("lines__return_lines")
             .first()
         )
         if sale is None:
             raise serializers.ValidationError({"sale_id": "Sale not found for this shop."})
+
+        from .dashboard_tools import (
+            customer_outstanding_balance_usd,
+            sale_unpaid_balance_usd,
+        )
+
+        sale_unpaid = sale_unpaid_balance_usd(sale)
+        is_credit_sale = sale_unpaid > Decimal("0.0001")
+        customer_id = sale.customer_id
+        customer_debt = (
+            customer_outstanding_balance_usd(shop_id, int(customer_id))
+            if customer_id
+            else Decimal("0")
+        )
+
+        if refund_method == SaleReturnRefundMethod.DEBT_REDUCTION:
+            if not is_credit_sale:
+                raise serializers.ValidationError(
+                    {"refund_method": "This sale has no unpaid balance; use cash refund."},
+                )
+            if customer_debt <= Decimal("0.0001"):
+                raise serializers.ValidationError(
+                    {"refund_method": "Customer has no outstanding debt to reduce."},
+                )
+        elif is_credit_sale and refund_method != SaleReturnRefundMethod.CASH:
+            raise serializers.ValidationError({"refund_method": "Invalid refund method."})
 
         sale_lines_map: dict[int, SaleLine] = {
             ln.id: ln
@@ -1993,6 +2056,7 @@ class SaleReturnCreateSerializer(serializers.Serializer):
                 sale=sale,
                 customer=sale.customer,
                 note=note,
+                refund_method=refund_method,
             )
             total_refund = Decimal("0")
             for line_id, req_qty in requested_by_line.items():
@@ -2016,6 +2080,7 @@ class SaleReturnCreateSerializer(serializers.Serializer):
             "sale_id": sale.id,
             "occurred_at": sale_return.occurred_at.isoformat(),
             "total_refund_usd": format(total_refund.quantize(Decimal("0.0001")), "f"),
+            "refund_method": refund_method,
             "lines_count": len(requested_by_line),
         }
 

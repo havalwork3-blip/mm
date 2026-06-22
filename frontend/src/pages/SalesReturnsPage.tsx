@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { SaleReturnDebtInfo } from '../components/sales/SaleReturnDebtInfo'
+import { SaleReturnRefundDialog } from '../components/sales/SaleReturnRefundDialog'
 import { useLocale } from '../context/LocaleContext'
 import { useSession } from '../context/SessionContext'
 import { apiJson } from '../lib/api'
 import { hasPerm } from '../lib/permissions'
 import { formatMoneyCompact } from '../lib/formatMoney'
 import { formatSaleReceiptNumber } from '../lib/shopReceiptNumbers'
+import {
+  customerHasOutstandingDebt,
+  estimateReturnRefundUsd,
+  saleIsCredit,
+  type SaleReturnRefundMethod,
+} from '../lib/saleReturnRefund'
 import type { Paginated, SaleListRow, SaleReturnResponse } from '../types/api'
 
 export function SalesReturnsPage() {
@@ -25,6 +33,8 @@ export function SalesReturnsPage() {
   const [lockedReceiptId, setLockedReceiptId] = useState<number | null>(null)
   const [returnNote, setReturnNote] = useState('')
   const [returnQuantities, setReturnQuantities] = useState<Record<number, string>>({})
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false)
+  const [pendingRefundUsd, setPendingRefundUsd] = useState(0)
 
   const canUseReturns = useMemo(
     () => Boolean(me && hasPerm(me, 'view_sale', 'add_sale')),
@@ -94,7 +104,7 @@ export function SalesReturnsPage() {
     }
   }, [])
 
-  async function submitReturn() {
+  async function submitReturn(refundMethod: SaleReturnRefundMethod = 'cash') {
     if (!selectedSale) {
       setError(t('salesReturns.needSale'))
       return
@@ -120,16 +130,22 @@ export function SalesReturnsPage() {
     setSubmitting(true)
     setError(null)
     setSuccess(null)
+    setRefundDialogOpen(false)
     try {
       const res = await apiJson<SaleReturnResponse>('/api/sales/return-products/', {
         method: 'POST',
         body: JSON.stringify({
           sale_id: selectedSale.id,
           note: returnNote.trim(),
+          refund_method: refundMethod,
           lines: lines.map((x) => ({ sale_line_id: x.sale_line_id, quantity: x.quantity })),
         }),
       })
-      setSuccess(t('pos.returnSuccess').replace('{usd}', String(res.total_refund_usd)))
+      const successKey =
+        res.refund_method === 'debt_reduction'
+          ? 'salesReturns.successDebtReduction'
+          : 'pos.returnSuccess'
+      setSuccess(t(successKey).replace('{usd}', String(res.total_refund_usd)))
       setSelectedSale(null)
       setLockedReceiptId(null)
       setReturnNote('')
@@ -140,6 +156,36 @@ export function SalesReturnsPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function onConfirmReturnClick() {
+    if (!selectedSale) {
+      setError(t('salesReturns.needSale'))
+      return
+    }
+    const lines = selectedSale.lines
+      .map((ln) => {
+        const qty = Math.max(0, Math.floor(Number(returnQuantities[ln.id] ?? '0')))
+        const sold = Number(ln.quantity) || 0
+        const alreadyReturned = Number(ln.returned_quantity ?? 0) || 0
+        const maxQty = Math.max(0, sold - alreadyReturned)
+        return { quantity: qty, maxQty }
+      })
+      .filter((x) => x.quantity > 0)
+    if (lines.length === 0) {
+      setError(t('salesReturns.needLines'))
+      return
+    }
+    if (lines.some((x) => x.quantity > x.maxQty)) {
+      setError(t('salesReturns.qtyTooHigh'))
+      return
+    }
+    if (saleIsCredit(selectedSale)) {
+      setPendingRefundUsd(estimateReturnRefundUsd(selectedSale, returnQuantities))
+      setRefundDialogOpen(true)
+      return
+    }
+    void submitReturn('cash')
   }
 
   useEffect(() => {
@@ -272,7 +318,16 @@ export function SalesReturnsPage() {
                       </td>
                       <td className="px-3 py-2">{sale.customer_name || '—'}</td>
                       <td className="px-3 py-2">{new Date(sale.occurred_at).toLocaleDateString()}</td>
-                      <td className="px-3 py-2 text-end">{sale.lines.length}</td>
+                      <td className="px-3 py-2 text-end">
+                        <div className="inline-flex flex-col items-end gap-1">
+                          <span>{sale.lines.length}</span>
+                          {saleIsCredit(sale) ? (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+                              {t('salesReturns.creditSaleBadge')}
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
                       <td className="px-3 py-2 text-end">
                         <button
                           type="button"
@@ -335,6 +390,8 @@ export function SalesReturnsPage() {
               />
             </label>
           </div>
+
+          {selectedSale ? <SaleReturnDebtInfo sale={selectedSale} /> : null}
 
           <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-600">
             <div className="mb-2 hidden grid-cols-12 gap-2 px-1 text-[11px] font-semibold text-slate-900 sm:grid dark:text-slate-100">
@@ -400,7 +457,7 @@ export function SalesReturnsPage() {
             <button
               type="button"
               disabled={submitting || !selectedSale}
-              onClick={() => void submitReturn()}
+              onClick={() => onConfirmReturnClick()}
               className="min-h-11 rounded-lg bg-violet-600 px-4 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
             >
               {submitting ? t('inv.saving') : t('salesReturns.submit')}
@@ -420,6 +477,15 @@ export function SalesReturnsPage() {
           </div>
         </div>
       </div>
+
+      <SaleReturnRefundDialog
+        open={refundDialogOpen}
+        refundUsd={pendingRefundUsd}
+        canDeductDebt={selectedSale ? customerHasOutstandingDebt(selectedSale) : false}
+        submitting={submitting}
+        onChoose={(method) => void submitReturn(method)}
+        onCancel={() => setRefundDialogOpen(false)}
+      />
     </div>
   )
 }

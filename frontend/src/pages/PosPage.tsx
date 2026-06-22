@@ -15,6 +15,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageAuthLoading } from '../components/PageAuthLoading'
 import { SaleLossBadge } from '../components/sales/SaleLossBadge'
+import { SaleReturnDebtInfo } from '../components/sales/SaleReturnDebtInfo'
+import { SaleReturnRefundDialog } from '../components/sales/SaleReturnRefundDialog'
 import { useLocale } from '../context/LocaleContext'
 import { useSubmitLock } from '../hooks/useSubmitLock'
 import { useSyncedSession } from '../hooks/useSyncedSession'
@@ -38,6 +40,12 @@ import { withReceiptPrefs } from '../lib/receiptPrefs'
 import { hasPerm } from '../lib/permissions'
 import { saleHasLossLines, saleLineFlagsFromRow } from '../lib/saleLineFlags'
 import { formatSaleReceiptNumber } from '../lib/shopReceiptNumbers'
+import {
+  customerHasOutstandingDebt,
+  estimateReturnRefundUsd,
+  saleIsCredit,
+  type SaleReturnRefundMethod,
+} from '../lib/saleReturnRefund'
 import type {
   CurrencyRow,
   CustomerRow,
@@ -166,6 +174,13 @@ export function PosPage() {
   const [returnQuantities, setReturnQuantities] = useState<Record<number, string>>({})
   const [loadingReturnSale, setLoadingReturnSale] = useState(false)
   const [submittingReturn, setSubmittingReturn] = useState(false)
+  const [returnRefundDialogOpen, setReturnRefundDialogOpen] = useState(false)
+  const [pendingReturnRefundUsd, setPendingReturnRefundUsd] = useState(0)
+  const [pendingReturnPayload, setPendingReturnPayload] = useState<{
+    saleId: number
+    noteValue: string
+    payloadLines: Array<{ sale_line_id: number; quantity: number }>
+  } | null>(null)
   const { isSubmitting: creatingCustomer, runLocked: runCreateCustomer } = useSubmitLock()
   const [saleSuccessOpen, setSaleSuccessOpen] = useState(false)
   const [receiptSettings, setReceiptSettings] = useState<ReceiptSettingsRow | null>(null)
@@ -173,6 +188,7 @@ export function PosPage() {
   const [lastReceipt, setLastReceipt] = useState<SaleListRow | null>(null)
   const [receiptSummary, setReceiptSummary] = useState<{
     subtotalUsd: number
+    returnedTotalUsd: number
     discountUsd: number
     finalUsd: number
     finalIqd: number | null
@@ -1155,6 +1171,7 @@ export function PosPage() {
       )
       setReceiptSummary({
         subtotalUsd,
+        returnedTotalUsd: 0,
         discountUsd: discountAmt,
         finalUsd,
         finalIqd,
@@ -1245,7 +1262,68 @@ export function PosPage() {
     }
   }, [t])
 
-  async function submitReturn() {
+  async function submitReturn(
+    refundMethod: SaleReturnRefundMethod = 'cash',
+    payloadOverride?: {
+      saleId: number
+      noteValue: string
+      payloadLines: Array<{ sale_line_id: number; quantity: number }>
+    },
+  ) {
+    const payload = payloadOverride ?? pendingReturnPayload
+    if (!returnSale && !payload) {
+      setError(t('pos.returnSaleNotFound'))
+      return
+    }
+    const saleId = payload?.saleId ?? returnSale?.id
+    const noteValue = payload?.noteValue ?? returnNote.trim()
+    const payloadLines =
+      payload?.payloadLines ??
+      returnSale!.lines
+        .map((ln) => ({
+          sale_line_id: ln.id,
+          quantity: Math.max(0, Math.floor(parseDec(returnQuantities[ln.id] ?? '0'))),
+        }))
+        .filter((x) => x.quantity > 0)
+
+    if (!saleId || payloadLines.length === 0) {
+      setError(t('pos.returnNoLines'))
+      return
+    }
+
+    setReturnModalOpen(false)
+    setReturnRefundDialogOpen(false)
+    setReturnSale(null)
+    setReturnQuantities({})
+    setReturnReceiptNumber('')
+    setReturnNote('')
+    setPendingReturnPayload(null)
+
+    setSubmittingReturn(true)
+    setError(null)
+    try {
+      const res = await apiJson<SaleReturnResponse>('/api/sales/return-products/', {
+        method: 'POST',
+        body: JSON.stringify({
+          sale_id: saleId,
+          note: noteValue,
+          refund_method: refundMethod,
+          lines: payloadLines,
+        }),
+      })
+      const successKey =
+        res.refund_method === 'debt_reduction'
+          ? 'salesReturns.successDebtReduction'
+          : 'pos.returnSuccess'
+      setError(t(successKey).replace('{usd}', formatMoneyCompact(res.total_refund_usd)))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('common.error'))
+    } finally {
+      setSubmittingReturn(false)
+    }
+  }
+
+  function onConfirmReturnClick() {
     if (!returnSale) {
       setError(t('pos.returnSaleNotFound'))
       return
@@ -1268,33 +1346,20 @@ export function PosPage() {
       return
     }
 
-    // UX request: close the return modal immediately on confirm click.
-    setReturnModalOpen(false)
-    const saleId = returnSale.id
-    const noteValue = returnNote.trim()
-    const payloadLines = lines.map(({ sale_line_id, quantity }) => ({ sale_line_id, quantity }))
-    setReturnSale(null)
-    setReturnQuantities({})
-    setReturnReceiptNumber('')
-    setReturnNote('')
-
-    setSubmittingReturn(true)
-    setError(null)
-    try {
-      const res = await apiJson<SaleReturnResponse>('/api/sales/return-products/', {
-        method: 'POST',
-        body: JSON.stringify({
-          sale_id: saleId,
-          note: noteValue,
-          lines: payloadLines,
-        }),
-      })
-      setError(t('pos.returnSuccess').replace('{usd}', formatMoneyCompact(res.total_refund_usd)))
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'))
-    } finally {
-      setSubmittingReturn(false)
+    const payload = {
+      saleId: returnSale.id,
+      noteValue: returnNote.trim(),
+      payloadLines: lines.map(({ sale_line_id, quantity }) => ({ sale_line_id, quantity })),
     }
+
+    if (saleIsCredit(returnSale)) {
+      setPendingReturnPayload(payload)
+      setPendingReturnRefundUsd(estimateReturnRefundUsd(returnSale, returnQuantities))
+      setReturnRefundDialogOpen(true)
+      return
+    }
+
+    void submitReturn('cash', payload)
   }
 
   function normalizeShortcut(shortcut: string): string {
@@ -2533,6 +2598,7 @@ export function PosPage() {
                   #{formatSaleReceiptNumber(returnSale.receipt_number) || '—'} ·{' '}
                   {returnSale.customer_name || '—'}
                 </p>
+                <SaleReturnDebtInfo sale={returnSale} />
                 <div className="max-h-72 overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
                   <table className="min-w-full text-sm">
                     <thead className="bg-slate-50 dark:bg-slate-800">
@@ -2578,7 +2644,7 @@ export function PosPage() {
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    onClick={() => void submitReturn()}
+                    onClick={() => onConfirmReturnClick()}
                     disabled={submittingReturn}
                     className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
                   >
@@ -2590,6 +2656,18 @@ export function PosPage() {
           </div>
         </div>
       )}
+
+      <SaleReturnRefundDialog
+        open={returnRefundDialogOpen}
+        refundUsd={pendingReturnRefundUsd}
+        canDeductDebt={returnSale ? customerHasOutstandingDebt(returnSale) : false}
+        submitting={submittingReturn}
+        onChoose={(method) => void submitReturn(method, pendingReturnPayload ?? undefined)}
+        onCancel={() => {
+          setReturnRefundDialogOpen(false)
+          setPendingReturnPayload(null)
+        }}
+      />
 
       {customerModalOpen && (
         <div

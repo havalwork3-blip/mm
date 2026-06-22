@@ -12,6 +12,7 @@ from .dashboard_tools import (
     cashier_ledger_entries,
     cashier_snapshot,
     customer_debt_payments_usd_in_range,
+    customer_debt_reduced_by_returns_usd_in_range,
     net_profit_in_range,
     period_dashboard_petty_cash_usd_in_range,
     petty_cash_trend_points,
@@ -70,6 +71,11 @@ class DashboardStatsView(APIView):
             d_from,
             d_to,
         )
+        period_debt_reduced_by_returns_usd = customer_debt_reduced_by_returns_usd_in_range(
+            shop_id,
+            d_from,
+            d_to,
+        )
         from .dashboard_tools import money_usd_2dp
 
         exp_2dp = money_usd_2dp(exp)
@@ -105,6 +111,10 @@ class DashboardStatsView(APIView):
                 "period_receivables_usd": format(period_recv, "f"),
                 "period_cash_drawer_usd": format(period_cash_drawer_usd, "f"),
                 "period_customer_debt_collected_usd": format(period_debt_collected_usd, "f"),
+                "period_customer_debt_reduced_by_returns_usd": format(
+                    period_debt_reduced_by_returns_usd,
+                    "f",
+                ),
                 "period_cash_in_usd": format(period_cash_in_usd, "f"),
                 "period_cash_out_usd": format(period_cash_out_usd, "f"),
                 "current_cash_usd": cash_snapshot["current_cash_usd"],

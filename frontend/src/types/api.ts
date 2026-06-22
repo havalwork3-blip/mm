@@ -151,6 +151,7 @@ export type CashierLedgerEntryKind =
   | 'sale_payment'
   | 'customer_debt_payment'
   | 'sale_return'
+  | 'sale_return_debt_reduction'
   | 'purchase_payment'
 
 export type CashierLedgerEntry = {
@@ -159,7 +160,7 @@ export type CashierLedgerEntry = {
   occurred_on: string
   occurred_at: string | null
   amount_usd: string
-  direction: 'in' | 'out' | 'balance'
+  direction: 'in' | 'out' | 'balance' | 'debt'
   label: string
   debt_type?: string
 }
@@ -457,6 +458,9 @@ export type SaleListRow = {
   customer_name: string
   customer_address: string
   previous_debt_usd: string
+  unpaid_balance_usd?: string
+  is_credit_sale?: boolean
+  customer_outstanding_balance_usd?: string
   has_returns?: boolean
   returned_total_usd?: string
   return_lines_summary?: string
@@ -470,6 +474,7 @@ export type SaleReturnResponse = {
   sale_id: number
   occurred_at: string
   total_refund_usd: string
+  refund_method?: 'cash' | 'debt_reduction'
   lines_count: number
 }
 
@@ -492,6 +497,8 @@ export type DashboardStats = {
   period_cash_drawer_usd: string
   /** Cash collected from customer debt repayments in the selected period. */
   period_customer_debt_collected_usd?: string
+  /** Customer debt reduced by sale returns (not cash) in the selected period. */
+  period_customer_debt_reduced_by_returns_usd?: string
   period_cash_in_usd?: string
   period_cash_out_usd?: string
   current_cash_usd: string
