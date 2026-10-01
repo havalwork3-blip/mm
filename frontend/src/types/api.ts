@@ -610,6 +610,33 @@ export type ProfitReportResponse = {
   }[]
 }
 
+export type ProductPurchaseCostsResponse = {
+  product_id: number
+  product_name: string
+  catalog_buy_price_usd: string
+  price_changed: boolean
+  distinct_unit_costs_usd: string[]
+  purchases: {
+    purchase_id: number
+    purchase_line_id: number
+    occurred_at: string | null
+    invoice_number: string
+    company_name: string
+    quantity: number
+    damaged_quantity: number
+    stocked_quantity: number
+    unit_cost_usd: string
+  }[]
+  batches: {
+    batch_id: number
+    received_at: string | null
+    quantity: number
+    remaining_quantity: number
+    unit_cost_usd: string
+    purchase_line_id: number | null
+  }[]
+}
+
 export type JardRow = {
   product_id: number
   product_name: string

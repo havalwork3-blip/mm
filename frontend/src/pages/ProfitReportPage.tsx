@@ -1,11 +1,13 @@
 import {
   CalendarRange,
+  History,
   RefreshCw,
   Search,
   TrendingDown,
   TrendingUp,
   Users,
   Wallet,
+  X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
@@ -39,7 +41,7 @@ import {
   type ProfitLineSort,
 } from '../lib/profitReportFormat'
 import { iqdIntegerStringFromUsd } from '../lib/usdIqdDisplay'
-import type { ProfitReportResponse } from '../types/api'
+import type { ProductPurchaseCostsResponse, ProfitReportResponse } from '../types/api'
 
 const PROFIT_COLORS = {
   sales: '#10b981',
@@ -243,6 +245,13 @@ export function ProfitReportPage() {
   const [categoryId, setCategoryId] = useState('')
   const [sort, setSort] = useState<ProfitLineSort>('profit_desc')
   const [lossOnly, setLossOnly] = useState(false)
+  const [costModal, setCostModal] = useState<{
+    productId: number
+    productName: string
+  } | null>(null)
+  const [costData, setCostData] = useState<ProductPurchaseCostsResponse | null>(null)
+  const [costLoading, setCostLoading] = useState(false)
+  const [costError, setCostError] = useState<string | null>(null)
 
   const canViewProfit = Boolean(me && hasPerm(me, 'view_profitreport'))
 
@@ -278,6 +287,36 @@ export function ProfitReportPage() {
   useEffect(() => {
     if (canViewProfit) void fetchReport()
   }, [canViewProfit, fetchReport])
+
+  useEffect(() => {
+    if (!costModal) {
+      setCostData(null)
+      setCostError(null)
+      setCostLoading(false)
+      return
+    }
+    let cancelled = false
+    setCostLoading(true)
+    setCostError(null)
+    setCostData(null)
+    void (async () => {
+      try {
+        const data = await apiJson<ProductPurchaseCostsResponse>(
+          `/api/products/${costModal.productId}/purchase-costs/`,
+        )
+        if (!cancelled) setCostData(data)
+      } catch (e) {
+        if (!cancelled) {
+          setCostError(e instanceof Error ? e.message : t('profit.costHistoryLoadFailed'))
+        }
+      } finally {
+        if (!cancelled) setCostLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [costModal, t])
 
   const applyPreset = useCallback((preset: DatePreset) => {
     const { start, end } = resolveDatePresetRange(preset)
@@ -897,6 +936,9 @@ export function ProfitReportPage() {
                       <th className="px-4 py-3 font-medium">{t('profit.thUnitSale')}</th>
                       <th className="px-4 py-3 font-medium">{t('profit.thTotalSale')}</th>
                       <th className="px-4 py-3 font-medium">{t('profit.thLineNet')}</th>
+                      <th className="px-4 py-3 font-medium">
+                        <span className="sr-only">{t('profit.costHistoryBtn')}</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -954,6 +996,24 @@ export function ProfitReportPage() {
                         >
                           {formatMoneyCompact(row.net_profit_usd)}
                         </td>
+                        <td className="px-3 py-3">
+                          {row.product_id != null ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCostModal({
+                                  productId: row.product_id as number,
+                                  productName: row.product_name,
+                                })
+                              }
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-xs font-semibold text-violet-800 transition hover:border-violet-300 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-200 dark:hover:bg-violet-900/50"
+                              title={t('profit.costHistoryBtn')}
+                            >
+                              <History className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                              <span className="hidden sm:inline">{t('profit.costHistoryBtn')}</span>
+                            </button>
+                          ) : null}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -968,6 +1028,223 @@ export function ProfitReportPage() {
           </>
         )}
       </main>
+
+      {costModal ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/45 p-0 sm:items-center sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="profit-cost-history-title"
+          onClick={() => setCostModal(null)}
+        >
+          <div
+            className="flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-slate-700 sm:px-5">
+              <div className="min-w-0">
+                <h2
+                  id="profit-cost-history-title"
+                  className="text-base font-semibold text-slate-900 dark:text-white"
+                >
+                  {t('profit.costHistoryTitle')}
+                </h2>
+                <p className="mt-0.5 truncate text-sm text-slate-600 dark:text-slate-300">
+                  {costModal.productName}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCostModal(null)}
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                aria-label={t('profit.costHistoryClose')}
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-4 py-4 sm:px-5">
+              <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                {t('profit.costHistoryHint')}
+              </p>
+
+              {costLoading ? (
+                <p className="mt-8 text-center text-sm text-slate-500">{t('common.loading')}</p>
+              ) : null}
+              {costError ? (
+                <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-200">
+                  {costError}
+                </p>
+              ) : null}
+
+              {costData ? (
+                <div className="mt-4 space-y-4">
+                  <div
+                    className={`rounded-xl border px-3 py-2.5 text-sm ${
+                      costData.price_changed
+                        ? 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-100'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200'
+                    }`}
+                  >
+                    <p className="font-semibold">
+                      {costData.price_changed
+                        ? t('profit.costHistoryChanged')
+                        : t('profit.costHistorySame')}
+                    </p>
+                    <p className="mt-1 text-xs">
+                      {t('profit.costHistoryCatalog')}:{' '}
+                      <span className="font-mono tabular-nums" dir="ltr">
+                        {formatMoneyCompact(costData.catalog_buy_price_usd)} USD
+                      </span>
+                    </p>
+                    {costData.distinct_unit_costs_usd.length > 0 ? (
+                      <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                        <span>{t('profit.costHistoryDistinct')}:</span>
+                        {costData.distinct_unit_costs_usd.map((c) => (
+                          <span
+                            key={c}
+                            className="rounded-md bg-white/80 px-1.5 py-0.5 font-mono tabular-nums dark:bg-slate-900/60"
+                            dir="ltr"
+                          >
+                            {formatMoneyCompact(c)}
+                          </span>
+                        ))}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                      {t('profit.costHistoryPurchases')}
+                    </h3>
+                    {costData.purchases.length === 0 ? (
+                      <p className="mt-2 text-sm text-slate-500">{t('profit.costHistoryEmpty')}</p>
+                    ) : (
+                      <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                        <table className="w-full min-w-[520px] text-start text-sm">
+                          <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800/80 dark:text-slate-400">
+                            <tr>
+                              <th className="px-3 py-2 font-medium">{t('profit.costHistoryDate')}</th>
+                              <th className="px-3 py-2 font-medium">{t('profit.costHistorySupplier')}</th>
+                              <th className="px-3 py-2 font-medium">{t('profit.costHistoryInvoice')}</th>
+                              <th className="px-3 py-2 font-medium">{t('profit.costHistoryQty')}</th>
+                              <th className="px-3 py-2 font-medium">{t('profit.costHistoryUnitCost')}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {costData.purchases.map((p, i) => {
+                              const prevCost =
+                                i > 0 ? costData.purchases[i - 1]?.unit_cost_usd : null
+                              const changed =
+                                prevCost != null && prevCost !== p.unit_cost_usd
+                              const dateLabel = p.occurred_at
+                                ? p.occurred_at.slice(0, 10)
+                                : '—'
+                              return (
+                                <tr
+                                  key={p.purchase_line_id}
+                                  className={`border-t border-slate-100 dark:border-slate-700/80 ${
+                                    changed
+                                      ? 'bg-amber-50/70 dark:bg-amber-950/20'
+                                      : ''
+                                  }`}
+                                >
+                                  <td className="px-3 py-2 font-mono text-xs tabular-nums" dir="ltr">
+                                    {dateLabel}
+                                  </td>
+                                  <td className="px-3 py-2 text-slate-700 dark:text-slate-300">
+                                    {p.company_name || '—'}
+                                  </td>
+                                  <td className="px-3 py-2 font-mono text-xs tabular-nums" dir="ltr">
+                                    {p.invoice_number || '—'}
+                                  </td>
+                                  <td className="px-3 py-2 tabular-nums" dir="ltr">
+                                    {p.stocked_quantity}
+                                    {p.damaged_quantity > 0 ? (
+                                      <span className="ms-1 text-[10px] text-slate-400">
+                                        (−{p.damaged_quantity})
+                                      </span>
+                                    ) : null}
+                                  </td>
+                                  <td
+                                    className={`px-3 py-2 font-mono font-semibold tabular-nums ${
+                                      changed
+                                        ? 'text-amber-800 dark:text-amber-300'
+                                        : 'text-slate-900 dark:text-slate-100'
+                                    }`}
+                                    dir="ltr"
+                                  >
+                                    {formatMoneyCompact(p.unit_cost_usd)}
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {costData.batches.some((b) => b.remaining_quantity > 0) ? (
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {t('profit.costHistoryBatches')}
+                      </h3>
+                      <div className="mt-2 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                        <table className="w-full min-w-[420px] text-start text-sm">
+                          <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800/80 dark:text-slate-400">
+                            <tr>
+                              <th className="px-3 py-2 font-medium">{t('profit.costHistoryDate')}</th>
+                              <th className="px-3 py-2 font-medium">{t('profit.costHistoryRemaining')}</th>
+                              <th className="px-3 py-2 font-medium">{t('profit.costHistoryUnitCost')}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {costData.batches
+                              .filter((b) => b.remaining_quantity > 0)
+                              .map((b) => (
+                                <tr
+                                  key={b.batch_id}
+                                  className="border-t border-slate-100 dark:border-slate-700/80"
+                                >
+                                  <td className="px-3 py-2 font-mono text-xs tabular-nums" dir="ltr">
+                                    {b.received_at ? b.received_at.slice(0, 10) : '—'}
+                                  </td>
+                                  <td className="px-3 py-2 tabular-nums" dir="ltr">
+                                    {b.remaining_quantity}
+                                    <span className="ms-1 text-[10px] text-slate-400">
+                                      / {b.quantity}
+                                    </span>
+                                  </td>
+                                  <td
+                                    className="px-3 py-2 font-mono font-semibold tabular-nums"
+                                    dir="ltr"
+                                  >
+                                    {formatMoneyCompact(b.unit_cost_usd)}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="border-t border-slate-100 px-4 py-3 dark:border-slate-700 sm:px-5">
+              <button
+                type="button"
+                onClick={() => setCostModal(null)}
+                className="w-full rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+              >
+                {t('profit.costHistoryClose')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

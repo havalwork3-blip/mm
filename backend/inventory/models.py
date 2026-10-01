@@ -216,6 +216,51 @@ class PurchaseLine(models.Model):
     damaged_quantity = models.PositiveIntegerField(default=0)
 
 
+class ProductBatch(models.Model):
+    """
+    FIFO cost layer for a product. Created when stock is received (purchase,
+    inventory adjustment, or opening balance). Sales consume oldest layers first.
+    """
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="batches",
+    )
+    purchase_line = models.ForeignKey(
+        PurchaseLine,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="batches",
+    )
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(0)])
+    remaining_quantity = models.IntegerField(default=0)
+    cost_price = models.DecimalField(max_digits=18, decimal_places=4)
+    """When stock entered inventory — used for FIFO ordering (ASC)."""
+    received_at = models.DateTimeField(db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["received_at", "id"]
+        indexes = [
+            models.Index(
+                fields=["product", "received_at", "id"],
+                name="inv_batch_fifo_idx",
+            ),
+            models.Index(
+                fields=["product", "remaining_quantity"],
+                name="inv_batch_remaining_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"Batch(product={self.product_id}, remain={self.remaining_quantity}, "
+            f"cost={self.cost_price})"
+        )
+
+
 class PurchaseReturn(ShopScopedModel):
     """Supplier returns linked to an original purchase."""
 
@@ -307,12 +352,36 @@ class SaleLine(models.Model):
     manual_name = models.CharField(max_length=255, blank=True, default="")
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     unit_price_usd = models.DecimalField(max_digits=18, decimal_places=4)
-    """Product buy price (USD) at sale time — used for profit and reporting."""
+    """Weighted-average FIFO unit cost (USD) at sale time — used for profit and reporting."""
     unit_buy_price_usd = models.DecimalField(
         max_digits=18,
         decimal_places=4,
         default=Decimal("0"),
     )
+
+
+class SaleLineBatchDeduction(models.Model):
+    """Exact FIFO batch consumption for one sale line (audit + return restore)."""
+
+    sale_line = models.ForeignKey(
+        SaleLine,
+        on_delete=models.CASCADE,
+        related_name="batch_deductions",
+    )
+    batch = models.ForeignKey(
+        ProductBatch,
+        on_delete=models.PROTECT,
+        related_name="sale_deductions",
+    )
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    unit_cost_usd = models.DecimalField(max_digits=18, decimal_places=4)
+
+    class Meta:
+        ordering = ["id"]
+        indexes = [
+            models.Index(fields=["sale_line"], name="inv_slbd_sale_line_idx"),
+            models.Index(fields=["batch"], name="inv_slbd_batch_idx"),
+        ]
 
 
 class SaleReturnRefundMethod(models.TextChoices):
@@ -657,3 +726,23 @@ class StorefrontOrderItem(models.Model):
     )
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     unit_price = models.DecimalField(max_digits=18, decimal_places=4)
+
+
+class StorefrontOrderItemBatchDeduction(models.Model):
+    """FIFO batch consumption for a storefront order item (restored on cancel)."""
+
+    order_item = models.ForeignKey(
+        StorefrontOrderItem,
+        on_delete=models.CASCADE,
+        related_name="batch_deductions",
+    )
+    batch = models.ForeignKey(
+        ProductBatch,
+        on_delete=models.PROTECT,
+        related_name="storefront_deductions",
+    )
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    unit_cost_usd = models.DecimalField(max_digits=18, decimal_places=4)
+
+    class Meta:
+        ordering = ["id"]

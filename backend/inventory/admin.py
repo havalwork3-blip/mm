@@ -7,6 +7,7 @@ from .models import (
     EmployeeDebt,
     Expense,
     Product,
+    ProductBatch,
     Purchase,
     PurchaseLine,
     Sale,
@@ -21,6 +22,20 @@ from .models import (
 class PurchaseLineInline(admin.TabularInline):
     model = PurchaseLine
     extra = 0
+
+
+class ProductBatchInline(admin.TabularInline):
+    model = ProductBatch
+    extra = 0
+    readonly_fields = (
+        "purchase_line",
+        "quantity",
+        "remaining_quantity",
+        "cost_price",
+        "received_at",
+        "created_at",
+    )
+    can_delete = False
 
 
 @admin.register(Expense)
@@ -96,6 +111,23 @@ class ProductAdmin(admin.ModelAdmin):
     )
     list_filter = ("shop", "category", "is_discontinued")
     search_fields = ("name", "sku", "barcode")
+    inlines = [ProductBatchInline]
+
+
+@admin.register(ProductBatch)
+class ProductBatchAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "product",
+        "remaining_quantity",
+        "quantity",
+        "cost_price",
+        "received_at",
+        "purchase_line",
+    )
+    list_filter = ("product__shop",)
+    search_fields = ("product__name",)
+    readonly_fields = ("created_at",)
 
 
 @admin.register(Company)

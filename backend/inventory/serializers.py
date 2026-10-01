@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import F, Max, Sum
 from django.utils import timezone
@@ -13,6 +14,17 @@ from shops.scoping import require_shop_id
 
 from shops.models import Shop
 
+from .fifo import (
+    create_product_batch,
+    deduct_fifo_stock,
+    deduct_from_purchase_line_batch,
+    delete_unconsumed_purchase_line_batches,
+    record_sale_line_deductions,
+    record_storefront_item_deductions,
+    restore_sale_line_batches,
+    restore_sale_line_batches_partial,
+    restore_storefront_item_batches,
+)
 from .sale_line_flags import sale_line_flags
 
 from .models import (
@@ -41,6 +53,14 @@ from .models import (
     StorefrontOrderStatus,
     StorefrontProductGalleryImage,
 )
+
+
+def _drf_validation_error(exc: DjangoValidationError) -> serializers.ValidationError:
+    if hasattr(exc, "message_dict"):
+        return serializers.ValidationError(exc.message_dict)
+    if hasattr(exc, "messages"):
+        return serializers.ValidationError({"detail": list(exc.messages)})
+    return serializers.ValidationError({"detail": str(exc)})
 
 
 def _usd_compact(value: Decimal | str | None) -> str:
@@ -364,8 +384,27 @@ class StorefrontOrderSerializer(serializers.ModelSerializer):
                 status=StorefrontOrderStatus.PENDING,
             )
             for block in line_blocks:
-                StorefrontOrderItem.objects.create(order=order, **block)
-                Product.objects.filter(pk=block["product"].pk).update(
+                product = (
+                    Product.objects.select_for_update()
+                    .filter(pk=block["product"].pk, shop_id=shop_id)
+                    .first()
+                )
+                if product is None:
+                    raise serializers.ValidationError(
+                        {"items": "Product not found for this shop."},
+                    )
+                try:
+                    fifo = deduct_fifo_stock(product, block["quantity"], allow_negative=False)
+                except DjangoValidationError as exc:
+                    raise _drf_validation_error(exc) from exc
+                item = StorefrontOrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    quantity=block["quantity"],
+                    unit_price=block["unit_price"],
+                )
+                record_storefront_item_deductions(item, fifo)
+                Product.objects.filter(pk=product.pk).update(
                     current_stock_quantity=F("current_stock_quantity") - block["quantity"],
                 )
 
@@ -437,6 +476,7 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
                 and new_status == StorefrontOrderStatus.CANCELLED
             ):
                 for item in order.items.select_related("product"):
+                    restore_storefront_item_batches(item)
                     Product.objects.filter(pk=item.product_id).update(
                         current_stock_quantity=F("current_stock_quantity") + item.quantity,
                     )
@@ -445,7 +485,15 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
                 and new_status != StorefrontOrderStatus.CANCELLED
             ):
                 for item in order.items.select_related("product"):
-                    prod = item.product
+                    prod = (
+                        Product.objects.select_for_update()
+                        .filter(pk=item.product_id)
+                        .first()
+                    )
+                    if prod is None:
+                        raise serializers.ValidationError(
+                            {"status": "Product missing for an order item."},
+                        )
                     if int(item.quantity) > int(prod.current_stock_quantity or 0):
                         raise serializers.ValidationError(
                             {
@@ -454,6 +502,11 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
                                 ),
                             },
                         )
+                    try:
+                        fifo = deduct_fifo_stock(prod, int(item.quantity), allow_negative=False)
+                    except DjangoValidationError as exc:
+                        raise _drf_validation_error(exc) from exc
+                    record_storefront_item_deductions(item, fifo)
                     Product.objects.filter(pk=item.product_id).update(
                         current_stock_quantity=F("current_stock_quantity") - item.quantity,
                     )
@@ -819,19 +872,33 @@ class ProductSerializer(serializers.ModelSerializer):
                     currency=Purchase.PurchaseCurrency.USD,
                     payment_type=Purchase.PurchasePaymentType.CASH,
                 )
-                PurchaseLine.objects.create(
+                purchase_line = PurchaseLine.objects.create(
                     purchase=purchase,
                     product=updated,
                     quantity=delta,
                     unit_cost_usd=updated.buy_price,
                     damaged_quantity=0,
                 )
+                create_product_batch(
+                    product=updated,
+                    quantity=delta,
+                    cost_price=updated.buy_price,
+                    purchase_line=purchase_line,
+                    received_at=purchase.occurred_at,
+                )
             # Manual stock decrease / stop-carrying write-off → inventory loss (expense).
             elif delta < 0 and not restored_from_discontinued:
                 loss_qty = abs(delta)
-                loss_amount = (Decimal(loss_qty) * Decimal(updated.buy_price or 0)).quantize(
-                    Decimal("0.0001"),
-                )
+                try:
+                    fifo = deduct_fifo_stock(
+                        updated,
+                        loss_qty,
+                        allow_negative=True,
+                        fallback_unit_cost=Decimal(updated.buy_price or 0),
+                    )
+                    loss_amount = fifo.total_cost_usd
+                except DjangoValidationError as exc:
+                    raise _drf_validation_error(exc) from exc
                 note = _inventory_loss_note(
                     discontinued=discontinued_now,
                     qty=loss_qty,
@@ -1182,7 +1249,7 @@ class PurchaseSerializer(serializers.ModelSerializer):
                                 },
                             )
                         add_to_stock = qty - damaged
-                        PurchaseLine.objects.create(
+                        purchase_line = PurchaseLine.objects.create(
                             purchase=purchase,
                             product=product,
                             quantity=qty,
@@ -1193,6 +1260,13 @@ class PurchaseSerializer(serializers.ModelSerializer):
                         if unit_cost > 0:
                             Product.objects.filter(pk=product.pk).update(buy_price=unit_cost)
                         if add_to_stock > 0:
+                            create_product_batch(
+                                product=product,
+                                quantity=add_to_stock,
+                                cost_price=unit_cost,
+                                purchase_line=purchase_line,
+                                received_at=purchase.occurred_at,
+                            )
                             Product.objects.filter(pk=product.pk).update(
                                 current_stock_quantity=F("current_stock_quantity") + add_to_stock,
                             )
@@ -1377,9 +1451,14 @@ class PurchaseSerializer(serializers.ModelSerializer):
                         current_stock_quantity=F("current_stock_quantity") + delta,
                     )
 
+            try:
+                delete_unconsumed_purchase_line_batches(old_lines)
+            except DjangoValidationError as exc:
+                raise _drf_validation_error(exc) from exc
+
             PurchaseLine.objects.filter(purchase_id=updated.pk).delete()
             for row in resolved_lines:
-                PurchaseLine.objects.create(
+                purchase_line = PurchaseLine.objects.create(
                     purchase=updated,
                     product=row["product"],
                     quantity=int(row["quantity"]),
@@ -1389,6 +1468,14 @@ class PurchaseSerializer(serializers.ModelSerializer):
                 unit_cost = Decimal(str(row["unit_cost_usd"]))
                 if unit_cost > 0:
                     Product.objects.filter(pk=row["product"].pk).update(buy_price=unit_cost)
+                add_to_stock = int(row["quantity"]) - int(row.get("damaged_quantity", 0) or 0)
+                create_product_batch(
+                    product=row["product"],
+                    quantity=add_to_stock,
+                    cost_price=unit_cost,
+                    purchase_line=purchase_line,
+                    received_at=updated.occurred_at,
+                )
 
         return updated
 
@@ -1649,7 +1736,7 @@ class SaleSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError(
                         {"lines": f"Product not found: {product.name}."},
                     )
-                buy_snap = prod.buy_price
+                product = prod
             elif not manual_name:
                 raise serializers.ValidationError(
                     {"lines": "Each line must include a product or manual_name."},
@@ -1662,8 +1749,24 @@ class SaleSerializer(serializers.ModelSerializer):
                     unit_cost_usd=Decimal("0"),
                 )
                 manual_name = ""
-                buy_snap = product.buy_price
-            SaleLine.objects.create(
+                product = (
+                    Product.objects.select_for_update()
+                    .filter(pk=product.pk, shop_id=shop_id)
+                    .first()
+                )
+
+            try:
+                fifo = deduct_fifo_stock(
+                    product,
+                    int(qty),
+                    allow_negative=True,
+                    fallback_unit_cost=Decimal(product.buy_price or 0),
+                )
+            except DjangoValidationError as exc:
+                raise _drf_validation_error(exc) from exc
+            buy_snap = fifo.weighted_unit_cost_usd
+
+            sale_line = SaleLine.objects.create(
                 sale=sale,
                 product=product,
                 manual_name=manual_name,
@@ -1671,10 +1774,10 @@ class SaleSerializer(serializers.ModelSerializer):
                 unit_price_usd=line["unit_price_usd"],
                 unit_buy_price_usd=buy_snap,
             )
-            if product is not None:
-                Product.objects.filter(pk=product.pk).update(
-                    current_stock_quantity=F("current_stock_quantity") - qty,
-                )
+            record_sale_line_deductions(sale_line, fifo)
+            Product.objects.filter(pk=product.pk).update(
+                current_stock_quantity=F("current_stock_quantity") - qty,
+            )
 
     def _next_receipt_number(self, shop_id: int) -> int:
         latest = (
@@ -1787,6 +1890,7 @@ class SaleSerializer(serializers.ModelSerializer):
                 SaleLine.objects.filter(sale_id=locked.pk).select_related("product"),
             )
             for ol in old_lines:
+                restore_sale_line_batches(ol)
                 if ol.product_id:
                     Product.objects.filter(pk=ol.product_id).update(
                         current_stock_quantity=F("current_stock_quantity") + ol.quantity,
@@ -2070,6 +2174,17 @@ class SaleReturnCreateSerializer(serializers.Serializer):
                     unit_price_usd=unit_price,
                 )
                 if src_line.product_id:
+                    restored = restore_sale_line_batches_partial(src_line, req_qty)
+                    shortfall = int(req_qty) - int(restored)
+                    if shortfall > 0:
+                        # Legacy sales without FIFO deduction rows: return as a new layer.
+                        create_product_batch(
+                            product=src_line.product,
+                            quantity=shortfall,
+                            cost_price=src_line.unit_buy_price_usd,
+                            purchase_line=None,
+                            received_at=timezone.now(),
+                        )
                     Product.objects.filter(pk=src_line.product_id).update(
                         current_stock_quantity=F("current_stock_quantity") + req_qty,
                     )
@@ -2174,6 +2289,7 @@ class PurchaseReturnCreateSerializer(serializers.Serializer):
                     unit_cost_usd=unit_cost,
                 )
                 if src_line.product_id:
+                    deduct_from_purchase_line_batch(src_line, req_qty)
                     Product.objects.filter(pk=src_line.product_id).update(
                         current_stock_quantity=F("current_stock_quantity") - req_qty,
                     )

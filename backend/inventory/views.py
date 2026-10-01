@@ -52,6 +52,7 @@ from .models import (
     EmployeeDebt,
     Expense,
     Product,
+    ProductBatch,
     Purchase,
     PurchaseLine,
     PurchaseReturn,
@@ -207,6 +208,77 @@ class ProductViewSet(ShopScopedViewSet):
         )
         serializer = ProductSerializer(product, context=self.get_serializer_context())
         return Response(serializer.data)
+
+    @action(detail=True, methods=["get"], url_path="purchase-costs")
+    def purchase_costs(self, request, pk=None):
+        """
+        Purchase unit-cost history for a product (FIFO layers + invoice lines).
+        Used by the profit report to explain COGS when buy price changed over time.
+        """
+        product = self.get_object()
+        purchases = (
+            PurchaseLine.objects.filter(product_id=product.pk)
+            .select_related("purchase", "purchase__company")
+            .order_by("purchase__occurred_at", "id")
+        )
+        purchase_rows = []
+        distinct_costs: list[str] = []
+        seen_costs: set[str] = set()
+        for ln in purchases:
+            cost = Decimal(ln.unit_cost_usd or 0).quantize(Decimal("0.0001"))
+            cost_s = format(cost, "f")
+            if cost_s not in seen_costs:
+                seen_costs.add(cost_s)
+                distinct_costs.append(cost_s)
+            stocked = int(ln.quantity) - int(ln.damaged_quantity or 0)
+            purchase_rows.append(
+                {
+                    "purchase_id": ln.purchase_id,
+                    "purchase_line_id": ln.id,
+                    "occurred_at": ln.purchase.occurred_at.isoformat() if ln.purchase else None,
+                    "invoice_number": (ln.purchase.invoice_number or "") if ln.purchase else "",
+                    "company_name": (
+                        ln.purchase.company.name
+                        if ln.purchase and ln.purchase.company_id
+                        else ""
+                    ),
+                    "quantity": int(ln.quantity),
+                    "damaged_quantity": int(ln.damaged_quantity or 0),
+                    "stocked_quantity": max(0, stocked),
+                    "unit_cost_usd": cost_s,
+                },
+            )
+
+        batch_rows = []
+        for b in ProductBatch.objects.filter(product_id=product.pk).order_by(
+            "received_at",
+            "id",
+        ):
+            batch_rows.append(
+                {
+                    "batch_id": b.id,
+                    "received_at": b.received_at.isoformat() if b.received_at else None,
+                    "quantity": int(b.quantity),
+                    "remaining_quantity": int(b.remaining_quantity),
+                    "unit_cost_usd": format(Decimal(b.cost_price or 0).quantize(Decimal("0.0001")), "f"),
+                    "purchase_line_id": b.purchase_line_id,
+                },
+            )
+
+        return Response(
+            {
+                "product_id": product.pk,
+                "product_name": product.name,
+                "catalog_buy_price_usd": format(
+                    Decimal(product.buy_price or 0).quantize(Decimal("0.0001")),
+                    "f",
+                ),
+                "price_changed": len(distinct_costs) > 1,
+                "distinct_unit_costs_usd": distinct_costs,
+                "purchases": purchase_rows,
+                "batches": batch_rows,
+            },
+        )
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
