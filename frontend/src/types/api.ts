@@ -116,6 +116,8 @@ export type CashierSummaryResponse = {
   /** Sale return refunds in period */
   sale_returns_usd?: string
   expenses_usd: string
+  /** Partner profit payouts taken from the drawer in the range. */
+  shareholder_payouts_usd?: string
   employee_debt_cash_effect_usd: string
   current_cash_usd: string
   total_stock_value_usd: string
@@ -153,6 +155,8 @@ export type CashierLedgerEntryKind =
   | 'sale_return'
   | 'sale_return_debt_reduction'
   | 'purchase_payment'
+  | 'shareholder_payment'
+  | 'supplier_payment'
 
 export type CashierLedgerEntry = {
   kind: CashierLedgerEntryKind
@@ -474,6 +478,9 @@ export type SaleReturnResponse = {
   sale_id: number
   occurred_at: string
   total_refund_usd: string
+  /** Cash to hand back; the rest of the return value reduced the sale's unpaid balance. */
+  cash_refund_usd?: string
+  debt_reduced_usd?: string
   refund_method?: 'cash' | 'debt_reduction'
   lines_count: number
 }
@@ -534,6 +541,11 @@ export type AdminGlobalStats = {
   global_stock_value_usd: string
   global_sales_usd?: string
   global_expenses_usd?: string
+  global_customer_debt_usd?: string
+  global_supplier_debt_usd?: string
+  global_customer_debt_collected_usd?: string
+  global_returned_products_usd?: string
+  global_cash_drawer_usd?: string
   top_shops?: Array<{
     shop_id: number
     shop_name: string
@@ -548,6 +560,8 @@ export type AdminGlobalStats = {
     period_cash_drawer_usd?: string
     period_customer_debt_collected_usd?: string
     stock_value_usd: string
+    customer_debt_usd?: string
+    supplier_debt_usd?: string
   }>
 }
 

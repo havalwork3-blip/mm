@@ -11,8 +11,10 @@ import {
   clearSessionAuth,
   isApiAuthFailure,
   persistSessionAuth,
+  requestLoginToken,
   restoreSessionAuth,
-  setBasicAuth,
+  revokeLoginToken,
+  setAuthSession,
   setSuperuserShopId,
 } from '../lib/api'
 import { syncSuperuserShopScope } from '../lib/activeShop'
@@ -61,7 +63,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       if (isApiAuthFailure(e)) {
         setMe(null)
         clearSessionAuth()
-        setBasicAuth(null, null)
+        setAuthSession(null, null)
         setSuperuserShopId(null)
       } else {
         try {
@@ -80,7 +82,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           if (isApiAuthFailure(retryErr)) {
             setMe(null)
             clearSessionAuth()
-            setBasicAuth(null, null)
+            setAuthSession(null, null)
             setSuperuserShopId(null)
           }
         }
@@ -120,9 +122,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         /* ignore */
       }
       setSuperuserShopId(null)
-      setBasicAuth(normalizedEmail, password)
-      persistSessionAuth(normalizedEmail, password)
       try {
+        const token = await requestLoginToken(normalizedEmail, password)
+        setAuthSession(normalizedEmail, token)
+        persistSessionAuth(normalizedEmail, token)
         const profile = await apiJson<Me>('/api/users/me/')
         if (profile.is_superuser) {
           await syncSuperuserShopScope()
@@ -132,7 +135,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         if (isApiAuthFailure(e)) {
           setMe(null)
           clearSessionAuth()
-          setBasicAuth(null, null)
+          setAuthSession(null, null)
           setSuperuserShopId(null)
         }
         throw e
@@ -145,7 +148,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     setMe(null)
-    setBasicAuth(null, null)
+    revokeLoginToken()
+    setAuthSession(null, null)
     clearSessionAuth()
     setSuperuserShopId(null)
   }, [])

@@ -894,7 +894,7 @@ export function HomePage() {
 
   if (!me) {
     return (
-      <div className="min-h-dvh bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-dvh">
         <div className="border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
           <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -947,7 +947,7 @@ export function HomePage() {
 
   if (!shouldFetchStats) {
     return (
-      <div className="min-h-dvh bg-slate-50 px-4 py-8 dark:bg-slate-900">
+      <div className="min-h-dvh px-4 py-8">
         <h1 className="mx-auto mb-8 max-w-3xl text-lg font-semibold text-slate-900 dark:text-white">
           {t('dash.welcome')}
         </h1>
@@ -980,7 +980,7 @@ export function HomePage() {
   }
 
   return (
-    <div className="min-h-dvh w-full min-w-0 bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-dvh w-full min-w-0">
       <div className="w-full min-w-0 px-3 py-6 sm:px-4 md:px-5 lg:px-6 xl:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
@@ -1138,6 +1138,27 @@ export function HomePage() {
                 icon={<Banknote className="h-5 w-5" />}
                 label={t('dash.totalDiscounts')}
                 value={globalAdminStats.global_discounts_usd}
+                tone="rose"
+                currencyLabel={t('common.currencyUsd')}
+              />
+              <StatCard
+                icon={<Wallet className="h-5 w-5" />}
+                label={t('admin.globalCashDrawer')}
+                value={globalAdminStats.global_cash_drawer_usd ?? '0'}
+                tone="emerald"
+                currencyLabel={t('common.currencyUsd')}
+              />
+              <StatCard
+                icon={<Banknote className="h-5 w-5" />}
+                label={t('admin.globalCustomerDebt')}
+                value={globalAdminStats.global_customer_debt_usd ?? '0'}
+                tone="violet"
+                currencyLabel={t('common.currencyUsd')}
+              />
+              <StatCard
+                icon={<Banknote className="h-5 w-5" />}
+                label={t('admin.globalSupplierDebt')}
+                value={globalAdminStats.global_supplier_debt_usd ?? '0'}
                 tone="rose"
                 currencyLabel={t('common.currencyUsd')}
               />

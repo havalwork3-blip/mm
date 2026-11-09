@@ -7,3 +7,14 @@ backend/db.sqlite3
 backend/**/__pycache__/
 frontend/.env.local
 node_modules
+
+# Build output, virtualenvs, caches — regenerated locally, never commit
+**/__pycache__/
+*.pyc
+backend/venv/
+venv/
+.venv/
+frontend/dist/
+.vite/
+.DS_Store
+m&m/

@@ -1,3 +1,4 @@
+import { AppBackground } from '../../components/background/AppBackground'
 import {
   ExternalLink,
   LayoutDashboard,
@@ -82,7 +83,8 @@ export function MarketingCMSLayout() {
   }
 
   return (
-    <div className="flex min-h-dvh bg-[#0a0c10] text-slate-100" dir="rtl">
+    <div className="flex min-h-dvh text-slate-100" dir="rtl">
+      <AppBackground dark bgColor="#0a0c10" />
       {sidebarOpen && (
         <button
           type="button"

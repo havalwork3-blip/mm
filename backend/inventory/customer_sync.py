@@ -26,9 +26,12 @@ def _find_peer_in_shop(shop_id: int, name: str, phone_1: str) -> Customer | None
         peer = qs.filter(phone_1=phone).first()
         if peer is not None:
             return peer
+        # Phone identifies the person; never fall back to a same-name customer who
+        # has a different number (that merged two different people).
+        return None
     name_clean = (name or "").strip()
     if name_clean:
-        return qs.filter(name__iexact=name_clean).first()
+        return qs.filter(name__iexact=name_clean, phone_1="").first()
     return None
 
 

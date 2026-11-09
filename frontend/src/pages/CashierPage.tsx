@@ -307,6 +307,14 @@ function CashierMetricsPanel({
       accent: FLOW_COLORS.purchase,
     },
     {
+      id: 'partners',
+      shortLabel: t('cashier.ledgerKind.shareholder_payment'),
+      fullLabel: t('cashier.ledgerKind.shareholder_payment'),
+      usd: summary.shareholder_payouts_usd ?? '0',
+      icon: TrendingDown,
+      accent: FLOW_COLORS.expenses,
+    },
+    {
       id: 'staff-debt',
       shortLabel: t('cashier.chartLabel.staffDebt'),
       fullLabel: t('cashier.debtEffect'),
@@ -696,6 +704,15 @@ export function CashierPage() {
         negative: true,
       })
     }
+    if (parseUsdAmount(summary.shareholder_payouts_usd ?? '0') > 0.0001) {
+      rows.push({
+        key: 'partners',
+        label: t('cashier.ledgerKind.shareholder_payment'),
+        usd: summary.shareholder_payouts_usd ?? '0',
+        color: FLOW_COLORS.expenses,
+        negative: true,
+      })
+    }
     if (debtAmt > 0.0001) {
       rows.push({
         key: 'debt-taken',
@@ -714,6 +731,7 @@ export function CashierPage() {
     const amounts = [
       summary.opening_cash_usd,
       summary.expenses_usd,
+      summary.shareholder_payouts_usd ?? '0',
       summary.current_cash_usd,
       summary.employee_debt_cash_effect_usd,
       summary.company_payments_usd,
@@ -771,6 +789,13 @@ export function CashierPage() {
         fill: FLOW_COLORS.saleReturn,
       },
       {
+        id: 'partners',
+        shortLabel: t('cashier.ledgerKind.shareholder_payment'),
+        fullLabel: t('cashier.ledgerKind.shareholder_payment'),
+        value: parseUsdAmount(summary.shareholder_payouts_usd ?? '0'),
+        fill: FLOW_COLORS.expenses,
+      },
+      {
         id: 'staff-debt',
         shortLabel: t('cashier.chartLabel.staffDebt'),
         fullLabel: t('cashier.debtEffect'),
@@ -791,6 +816,7 @@ export function CashierPage() {
       parseUsdAmount(summary.expenses_usd) +
       parseUsdAmount(breakdown.purchasePayments) +
       parseUsdAmount(breakdown.saleReturns) +
+      parseUsdAmount(summary.shareholder_payouts_usd ?? '0') +
       Math.max(0, parseUsdAmount(summary.employee_debt_cash_effect_usd))
     return [
       { name: t('cashier.chartInflows'), value: inTotal, fill: FLOW_COLORS.sales },
@@ -841,6 +867,7 @@ export function CashierPage() {
       case 'sale_return_debt_reduction':
         return { to: '/sales-returns', label: t('cashier.ledgerColAction') }
       case 'purchase_payment':
+      case 'supplier_payment':
         return { to: '/manage/purchases', label: t('cashier.ledgerColAction') }
       case 'opening_cash':
         return canEditOpening ? { to: '/manage/opening-cash', label: t('cashier.editOpening') } : null
@@ -855,9 +882,11 @@ export function CashierPage() {
       case 'customer_debt_payment':
         return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
       case 'purchase_payment':
+      case 'supplier_payment':
         return 'bg-sky-500/15 text-sky-700 dark:text-sky-300'
       case 'expense':
       case 'sale_return':
+      case 'shareholder_payment':
         return 'bg-rose-500/15 text-rose-700 dark:text-rose-300'
       case 'sale_return_debt_reduction':
         return 'bg-violet-500/15 text-violet-700 dark:text-violet-300'

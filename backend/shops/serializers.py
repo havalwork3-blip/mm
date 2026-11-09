@@ -109,6 +109,8 @@ class CurrencySerializer(serializers.ModelSerializer):
         model = Currency
         fields = ["id", "shop", "date", "usd_to_iqd", "created_at"]
         read_only_fields = ["id", "created_at"]
+        # A zero/negative rate would break every IQD conversion (division by the rate).
+        extra_kwargs = {"usd_to_iqd": {"min_value": Decimal("0.0001")}}
 
 
 class ReceiptSettingsSerializer(serializers.ModelSerializer):

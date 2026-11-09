@@ -109,3 +109,20 @@ class UserActivityLog(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user_id} {self.action} @ {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class ApiToken(models.Model):
+    """Dashboard login session. Only a SHA-256 hash of the token is stored."""
+
+    user = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="api_tokens",
+    )
+    key_hash = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(auto_now_add=True)
+    ip_address = models.CharField(max_length=64, blank=True, default="")
+
+    def __str__(self) -> str:
+        return f"Token for {self.user_id}"

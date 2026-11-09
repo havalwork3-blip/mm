@@ -20,7 +20,7 @@ import { SaleReturnRefundDialog } from '../components/sales/SaleReturnRefundDial
 import { useLocale } from '../context/LocaleContext'
 import { useSubmitLock } from '../hooks/useSubmitLock'
 import { useSyncedSession } from '../hooks/useSyncedSession'
-import { apiJson, getGlobalView, resolveMediaUrl } from '../lib/api'
+import { apiJson, getGlobalView, isOfflineQueuedError, resolveMediaUrl } from '../lib/api'
 import {
   apiRateFromIqdPer100Input,
   formatIqdInteger,
@@ -43,6 +43,7 @@ import { formatSaleReceiptNumber } from '../lib/shopReceiptNumbers'
 import {
   customerHasOutstandingDebt,
   estimateReturnRefundUsd,
+  saleReturnResultMessage,
   saleIsCredit,
   type SaleReturnRefundMethod,
 } from '../lib/saleReturnRefund'
@@ -204,6 +205,11 @@ export function PosPage() {
   const [editingSaleLoading, setEditingSaleLoading] = useState(false)
   const [saleSuccessMode, setSaleSuccessMode] = useState<'new' | 'edit'>('new')
   const loadedEditKeyRef = useRef('')
+  /**
+   * Blocks a second checkout (F12 repeat, double click) from the moment one starts until
+   * its success modal is closed — the cart is still filled then, so it would sell twice.
+   */
+  const checkoutLockRef = useRef(false)
   const productSearchRef = useRef<HTMLInputElement | null>(null)
   const productSearchHitRefsRef = useRef<Map<number, HTMLButtonElement>>(new Map())
   const customerSearchHitRefsRef = useRef<Map<number, HTMLButtonElement>>(new Map())
@@ -1103,6 +1109,7 @@ export function PosPage() {
   }
 
   async function checkout(options?: { skipManualConfirm?: boolean }) {
+    if (checkoutLockRef.current || saleSuccessOpen) return
     if (!rate || rate <= 0) {
       setError(t('pos.setRateBeforeCheckout'))
       return
@@ -1136,6 +1143,8 @@ export function PosPage() {
         return
       }
     }
+    checkoutLockRef.current = true
+    let succeeded = false
     setSubmitting(true)
     setError(null)
     try {
@@ -1194,6 +1203,7 @@ export function PosPage() {
         setEditingOccurredAt('')
         loadedEditKeyRef.current = ''
       }
+      succeeded = true
       setSaleSuccessOpen(true)
       window.dispatchEvent(new Event('mm-inventory-refresh'))
       if (activeDraftId) {
@@ -1205,11 +1215,25 @@ export function PosPage() {
         }, 180)
       }
     } catch (e) {
+      if (isOfflineQueuedError(e)) {
+        // The sale is saved on this device and will sync later: clear the cart so it
+        // cannot be submitted (and queued) a second time.
+        if (activeDraftId) removeDraftById(activeDraftId)
+        resetForNextSale()
+        setError(e instanceof Error ? e.message : t('pos.checkoutFailed'))
+        return
+      }
       setError(e instanceof Error ? e.message : t('pos.checkoutFailed'))
     } finally {
       setSubmitting(false)
+      // After a success the lock stays until the success modal closes (effect below).
+      if (!succeeded) checkoutLockRef.current = false
     }
   }
+
+  useEffect(() => {
+    if (!saleSuccessOpen) checkoutLockRef.current = false
+  }, [saleSuccessOpen])
 
   async function loadSaleForReturn() {
     const receipt = returnReceiptNumber.trim()
@@ -1311,11 +1335,7 @@ export function PosPage() {
           lines: payloadLines,
         }),
       })
-      const successKey =
-        res.refund_method === 'debt_reduction'
-          ? 'salesReturns.successDebtReduction'
-          : 'pos.returnSuccess'
-      setError(t(successKey).replace('{usd}', formatMoneyCompact(res.total_refund_usd)))
+      setError(saleReturnResultMessage(res, t, formatMoneyCompact))
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
@@ -1387,7 +1407,7 @@ export function PosPage() {
       const typingTarget =
         tag === 'input' || tag === 'textarea' || tag === 'select' || Boolean(target?.isContentEditable)
       if (typingTarget) return
-      if (submitting || editingSaleLoading || cart.length === 0) return
+      if (submitting || editingSaleLoading || saleSuccessOpen || cart.length === 0) return
       if (matchShortcut(event, shortcut)) {
         event.preventDefault()
         void checkout()
@@ -1395,7 +1415,7 @@ export function PosPage() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [shopSettings?.complete_sale_shortcut, submitting, editingSaleLoading, cart.length, checkout])
+  }, [shopSettings?.complete_sale_shortcut, submitting, editingSaleLoading, saleSuccessOpen, cart.length, checkout])
 
   useEffect(() => {
     if (!me || !canAccessShopData) return
@@ -1503,7 +1523,7 @@ export function PosPage() {
 
   if (authPending) {
     return (
-      <div className="min-h-dvh bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-dvh">
         <PageAuthLoading />
       </div>
     )
@@ -1511,7 +1531,7 @@ export function PosPage() {
 
   if (showLogin) {
     return (
-      <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
+      <div className="min-h-dvh dark:text-slate-100">
         <header className="border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
           <div className="mx-auto flex max-w-lg items-center justify-between">
             <Link
@@ -1578,7 +1598,7 @@ export function PosPage() {
 
   return (
     <>
-      <div className="no-print min-h-dvh bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+      <div className="no-print min-h-dvh text-slate-900 dark:text-slate-100">
       {needsShop && (
         <p className="mx-auto max-w-6xl px-4 pt-3 text-start text-sm text-amber-800">
           {t('pos.needsShopHint')}

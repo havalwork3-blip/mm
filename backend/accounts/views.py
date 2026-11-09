@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from shops.scoping import get_shop_id_for_request
 
@@ -156,3 +157,51 @@ class UserViewSet(
         user.set_password(password)
         user.save(update_fields=["password"])
         return Response({"detail": "Password updated."})
+
+
+
+class LoginView(APIView):
+    """POST {email, password} -> {token, user}. The browser keeps the token, never the password."""
+
+    permission_classes = [permissions.AllowAny]
+    authentication_classes: list = []
+
+    def post(self, request):
+        from django.contrib.auth import authenticate
+
+        from .authentication import (
+            check_login_allowed,
+            clear_login_failures,
+            issue_token,
+            record_login_failure,
+        )
+
+        email = str(request.data.get("email") or "").strip()
+        password = str(request.data.get("password") or "")
+        if not email or not password:
+            return Response({"detail": "Email and password are required."}, status=400)
+        check_login_allowed(email, request)
+        user = authenticate(request, username=email, password=password)
+        if user is None:
+            record_login_failure(email, request)
+            return Response({"detail": "Invalid email or password."}, status=401)
+        clear_login_failures(email, request)
+        token = issue_token(user, request)
+        request.user = user
+        return Response(
+            {"token": token, "user": UserSerializer(user, context={"request": request}).data},
+        )
+
+
+class LogoutView(APIView):
+    """POST with `Authorization: Token <key>` -> that session stops working."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        from .authentication import TOKEN_KEYWORD, revoke_token
+
+        parts = request.META.get("HTTP_AUTHORIZATION", "").split()
+        if len(parts) == 2 and parts[0] == TOKEN_KEYWORD:
+            revoke_token(parts[1])
+        return Response(status=204)

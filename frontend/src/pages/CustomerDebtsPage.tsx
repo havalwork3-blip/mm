@@ -1,7 +1,7 @@
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { ArrowLeft, Banknote, Download, Pencil, Printer, Tag, Wallet } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { PageAuthLoading } from '../components/PageAuthLoading'
 import { useLocale } from '../context/LocaleContext'
@@ -219,6 +219,8 @@ export function CustomerDebtsPage() {
   const [historyDateTo, setHistoryDateTo] = useState('')
 
   const [historyEditOpen, setHistoryEditOpen] = useState(false)
+  /** Amount shown when the edit dialog opened: a date-only edit must not resend (rounded) amounts. */
+  const historyEditAmountAtOpenRef = useRef('')
   const [historyEditLoading, setHistoryEditLoading] = useState(false)
   const [historyEditSaving, setHistoryEditSaving] = useState(false)
   const [historyEditError, setHistoryEditError] = useState<string | null>(null)
@@ -654,6 +656,12 @@ export function CustomerDebtsPage() {
     }
   }
 
+  useEffect(() => {
+    if (historyEditOpen) historyEditAmountAtOpenRef.current = historyEditAmountUsd
+    // Capture only at open time, not on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyEditOpen])
+
   async function saveHistoryEdit() {
     if (historyEditSaleId == null || historyEditBlocked || historyEditKind == null) return
     let occurred = historyEditOccurredAt.trim()
@@ -674,6 +682,10 @@ export function CustomerDebtsPage() {
       historyEditRate,
       newEq,
     )
+    const amountChanged = historyEditAmountUsd.trim() !== historyEditAmountAtOpenRef.current.trim()
+    const amountFields = amountChanged
+      ? { amount_paid_usd: usd.toFixed(4), amount_paid_iqd: iqd.toFixed(4) }
+      : {}
     setHistoryEditSaving(true)
     setHistoryEditError(null)
     try {
@@ -682,8 +694,7 @@ export function CustomerDebtsPage() {
           method: 'PATCH',
           body: JSON.stringify({
             occurred_at: dt.toISOString(),
-            amount_paid_usd: usd.toFixed(4),
-            amount_paid_iqd: iqd.toFixed(4),
+            ...amountFields,
           }),
         })
       } else {
@@ -691,8 +702,7 @@ export function CustomerDebtsPage() {
           method: 'PATCH',
           body: JSON.stringify({
             occurred_at: dt.toISOString(),
-            amount_paid_usd: usd.toFixed(4),
-            amount_paid_iqd: iqd.toFixed(4),
+            ...amountFields,
           }),
         })
       }
@@ -1137,7 +1147,7 @@ export function CustomerDebtsPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-dvh">
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">

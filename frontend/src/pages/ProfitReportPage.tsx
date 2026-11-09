@@ -531,7 +531,7 @@ export function ProfitReportPage() {
     : 1
 
   return (
-    <div className="min-h-dvh bg-[var(--app-bg-color,#f1f5f9)] dark:bg-slate-900 dark:text-slate-100">
+    <div className="min-h-dvh dark:text-slate-100">
       <main className="mx-auto max-w-6xl px-3 py-4 pb-14 sm:px-4 sm:py-6">
         {/* Hero */}
         <div className="relative overflow-hidden rounded-3xl border border-violet-200/60 bg-gradient-to-br from-violet-600 via-violet-700 to-emerald-700 p-5 shadow-lg shadow-violet-900/10 dark:border-violet-900/40 sm:p-7">

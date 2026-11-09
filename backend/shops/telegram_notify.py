@@ -98,9 +98,31 @@ def _api_call_detail(
         return None, str(exc)
 
 
+def webhook_secret_token() -> str:
+    """Secret Telegram echoes in X-Telegram-Bot-Api-Secret-Token; proves the update is real."""
+    import hashlib
+    import hmac
+
+    from django.conf import settings as dj_settings
+
+    return hmac.new(
+        dj_settings.SECRET_KEY.encode("utf-8"),
+        b"telegram-webhook",
+        hashlib.sha256,
+    ).hexdigest()[:64]
+
+
 def register_webhook(token: str) -> bool:
     webhook_url = f"{telegram_webhook_base_url()}/api/public/telegram/webhook/"
-    result = _api_call(token, "setWebhook", {"url": webhook_url, "drop_pending_updates": True})
+    result = _api_call(
+        token,
+        "setWebhook",
+        {
+            "url": webhook_url,
+            "drop_pending_updates": True,
+            "secret_token": webhook_secret_token(),
+        },
+    )
     return result is not None
 
 

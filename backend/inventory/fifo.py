@@ -376,3 +376,34 @@ def delete_unconsumed_purchase_line_batches(old_lines: Sequence[PurchaseLine]) -
                     "Record a purchase return or adjust stock separately.",
                 )
             batch.delete()
+
+
+@transaction.atomic
+def reconcile_product_batches(product_id: int) -> int:
+    """
+    Bring FIFO layers back in line with Product.current_stock_quantity, which is
+    the source of truth for on-hand units. Extra batch units are consumed oldest
+    first (e.g. a purchase received while stock was oversold); missing units get
+    a new layer at the product's buy price. Returns the adjustment applied to
+    batch totals (positive = units added).
+    """
+    product = Product.objects.select_for_update().filter(pk=product_id).first()
+    if product is None:
+        return 0
+    target = max(int(product.current_stock_quantity or 0), 0)
+    batches = _locked_fifo_batches(product.pk)
+    available = sum(int(b.remaining_quantity) for b in batches)
+    diff = target - available
+    if diff > 0:
+        create_product_batch(product=product, quantity=diff, cost_price=product.buy_price)
+    elif diff < 0:
+        excess = -diff
+        for batch in batches:
+            if excess <= 0:
+                break
+            take = min(int(batch.remaining_quantity), excess)
+            ProductBatch.objects.filter(pk=batch.pk).update(
+                remaining_quantity=F("remaining_quantity") - take,
+            )
+            excess -= take
+    return diff

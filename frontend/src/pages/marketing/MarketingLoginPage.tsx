@@ -1,3 +1,4 @@
+import { AppBackground } from '../../components/background/AppBackground'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
@@ -32,7 +33,8 @@ export function MarketingLoginPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-slate-100" dir="rtl">
+    <div className="min-h-dvh text-slate-100" dir="rtl">
+      <AppBackground dark bgColor="#020617" />
       <div className="border-b border-slate-800 bg-slate-900/80 px-4 py-4 pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="mx-auto flex max-w-lg items-center gap-3">
           <img src="/brand-logo.png" alt="" className="h-10 w-10 shrink-0 rounded-lg object-contain sm:h-11 sm:w-11" />

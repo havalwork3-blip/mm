@@ -19,6 +19,7 @@ from .fifo import (
     deduct_fifo_stock,
     deduct_from_purchase_line_batch,
     delete_unconsumed_purchase_line_batches,
+    reconcile_product_batches,
     record_sale_line_deductions,
     record_storefront_item_deductions,
     restore_sale_line_batches,
@@ -42,6 +43,7 @@ from .models import (
     PurchaseReturnLine,
     Sale,
     SaleLine,
+    SaleLineBatchDeduction,
     SaleReturn,
     SaleReturnLine,
     SaleReturnRefundMethod,
@@ -471,6 +473,16 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             order = StorefrontOrder.objects.select_for_update().get(pk=instance.pk)
+            # Re-read under the lock: a double click / second tab may already have
+            # cancelled it, and restoring stock twice would inflate the count.
+            old_status = order.status
+            if new_status == old_status:
+                return order
+            from .storefront_sales import create_sale_for_completed_order, undo_sale_for_order
+
+            if old_status == StorefrontOrderStatus.COMPLETED:
+                # Reopened: drop its sale first so stock moves back to the order once.
+                undo_sale_for_order(order)
             if (
                 old_status != StorefrontOrderStatus.CANCELLED
                 and new_status == StorefrontOrderStatus.CANCELLED
@@ -512,6 +524,9 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
                     )
             order.status = new_status
             order.save(update_fields=["status", "updated_at"])
+            if new_status == StorefrontOrderStatus.COMPLETED:
+                # Delivered and paid: count it in sales, profit and the cash box.
+                create_sale_for_completed_order(order)
             order_id = order.pk
             prev_status = old_status
 
@@ -813,7 +828,16 @@ class ProductSerializer(serializers.ModelSerializer):
         # If buy price was not provided at all, mark product as not fully registered.
         if not raw_buy_price:
             validated_data["is_unregistered_placeholder"] = True
-        return super().create(validated_data)
+        with transaction.atomic():
+            product = super().create(validated_data)
+            initial_stock = int(product.current_stock_quantity or 0)
+            if initial_stock > 0:
+                create_product_batch(
+                    product=product,
+                    quantity=initial_stock,
+                    cost_price=product.buy_price,
+                )
+        return product
 
     def _record_inventory_loss_expense(
         self,
@@ -851,11 +875,23 @@ class ProductSerializer(serializers.ModelSerializer):
         if instance.is_unregistered_placeholder:
             validated_data["is_unregistered_placeholder"] = False
         with transaction.atomic():
+            # save() writes every field: take the live stock under lock so a POS sale
+            # committed after this request loaded the product is not overwritten.
+            live_stock = (
+                Product.objects.select_for_update()
+                .values_list("current_stock_quantity", flat=True)
+                .get(pk=instance.pk)
+            )
+            instance.current_stock_quantity = live_stock
+            prev_stock = int(live_stock or 0)
             updated = super().update(instance, validated_data)
             next_stock = int(updated.current_stock_quantity or 0)
             delta = next_stock - prev_stock
             # Inventory manual stock increase should appear in purchase history.
-            if delta > 0:
+            if restored_from_discontinued:
+                # Restored products restart at zero: drop leftover FIFO layers, no fake purchase.
+                reconcile_product_batches(updated.pk)
+            elif delta > 0:
                 rate_raw = latest_usd_to_iqd_for_shop(updated.shop_id)
                 rate = Decimal(str(rate_raw)) if rate_raw is not None else Decimal("1")
                 if rate <= 0:
@@ -956,6 +992,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "shop", "amount_usd", "created_at"]
+        extra_kwargs = {"amount": {"min_value": Decimal("0.0001")}}
 
     def get_amount_usd(self, obj: Expense) -> str:
         return format(obj.amount_usd(), "f")
@@ -1105,12 +1142,12 @@ class PurchaseSerializer(serializers.ModelSerializer):
         return format(self._purchase_goods_total_usd(obj), "f")
 
     def get_remaining_balance_usd(self, obj: Purchase) -> str:
-        net = self._purchase_goods_total_usd(obj)
-        paid = Decimal(obj.amount_paid_usd)
-        remaining = (net - paid).quantize(Decimal("0.0001"))
-        if remaining < 0:
-            remaining = Decimal("0")
-        return format(remaining, "f")
+        from .dashboard_tools import purchase_unpaid_balance_usd
+
+        if obj.company_id is None:
+            return "0.0000"
+        # Same formula as supplier debts: supplier returns reduce what is owed.
+        return format(purchase_unpaid_balance_usd(obj), "f")
 
     def get_lines_product_names(self, obj: Purchase) -> str:
         parts: list[str] = []
@@ -1270,6 +1307,8 @@ class PurchaseSerializer(serializers.ModelSerializer):
                             Product.objects.filter(pk=product.pk).update(
                                 current_stock_quantity=F("current_stock_quantity") + add_to_stock,
                             )
+                            # Units sold while stock was negative consume this new layer.
+                            reconcile_product_batches(product.pk)
                 return purchase
             except IntegrityError:
                 if manual_invoice or attempt >= 2:
@@ -1476,6 +1515,9 @@ class PurchaseSerializer(serializers.ModelSerializer):
                     purchase_line=purchase_line,
                     received_at=updated.occurred_at,
                 )
+            # Legacy lines (before FIFO) have no batches to delete; re-align layers with stock.
+            for pid in all_pids | {ln.product_id for ln in old_lines}:
+                reconcile_product_batches(pid)
 
         return updated
 
@@ -1605,6 +1647,12 @@ class SaleSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "shop", "receipt_number", "created_at", "has_loss_sale"]
+        extra_kwargs = {
+            "amount_paid_usd": {"min_value": Decimal("0")},
+            "amount_paid_iqd": {"min_value": Decimal("0")},
+            "invoice_discount_usd": {"min_value": Decimal("0")},
+            "exchange_rate_usd_to_iqd": {"min_value": Decimal("0.0001")},
+        }
 
     def get_has_loss_sale(self, obj: Sale) -> bool:
         for ln in obj.lines.all():
@@ -1631,20 +1679,12 @@ class SaleSerializer(serializers.ModelSerializer):
     def get_previous_debt_usd(self, obj: Sale) -> str:
         from .dashboard_tools import sale_unpaid_balance_usd
 
-        c = obj.customer
-        if not c:
+        if not obj.customer_id:
             return format(Decimal("0"), "f")
-        total = Decimal("0")
-        qs = (
-            Sale.objects.filter(shop_id=obj.shop_id, customer_id=c.id)
-            .exclude(pk=obj.pk)
-            .prefetch_related("lines__return_lines")
-        )
-        for sale in qs:
-            bal = sale_unpaid_balance_usd(sale)
-            if bal > 0:
-                total += bal
-        return format(total.quantize(Decimal("0.0001")), "f")
+        # Customer total (cached per response) minus this sale: avoids reloading every
+        # sale of the customer for each row of the sales list.
+        total = Decimal(self.get_customer_outstanding_balance_usd(obj)) - sale_unpaid_balance_usd(obj)
+        return format(max(Decimal("0"), total).quantize(Decimal("0.0001")), "f")
 
     def get_unpaid_balance_usd(self, obj: Sale) -> str:
         from .dashboard_tools import sale_unpaid_balance_usd
@@ -1668,7 +1708,8 @@ class SaleSerializer(serializers.ModelSerializer):
         return format(cache[c.id], "f")
 
     def get_has_returns(self, obj: Sale) -> bool:
-        return obj.returns.exists()
+        # bool(.all()) reuses a prefetch when the list view has one.
+        return bool(obj.returns.all())
 
     def get_returned_total_usd(self, obj: Sale) -> str:
         total = Decimal("0")
@@ -1810,6 +1851,10 @@ class SaleSerializer(serializers.ModelSerializer):
         raise serializers.ValidationError({"detail": "Could not allocate receipt number. Please retry."})
 
     def update(self, instance: Sale, validated_data: dict) -> Sale:
+        if instance.storefront_order_id is not None:
+            raise serializers.ValidationError(
+                {"detail": "This sale comes from an online order; change the order instead."},
+            )
         if instance.returns.exists():
             raise serializers.ValidationError(
                 {
@@ -1862,6 +1907,9 @@ class SaleSerializer(serializers.ModelSerializer):
                 for attr, value in validated_data.items():
                     setattr(locked, attr, value)
                 locked.save()
+                from .dashboard_tools import rebalance_customer_debt_allocations
+
+                rebalance_customer_debt_allocations(shop_id, locked.customer_id)
             return locked
 
         shop_id = int(instance.shop_id)
@@ -1897,10 +1945,19 @@ class SaleSerializer(serializers.ModelSerializer):
                     )
             SaleLine.objects.filter(sale_id=locked.pk).delete()
 
+            old_customer_id = locked.customer_id
             for attr, value in validated_data.items():
                 setattr(locked, attr, value)
             locked.save()
             self._write_sale_lines(locked, shop_id, lines_data)
+            # Debt repayments already applied to this sale may now exceed what it owes.
+            from .dashboard_tools import rebalance_customer_debt_allocations
+
+            for cid in {old_customer_id, locked.customer_id}:
+                rebalance_customer_debt_allocations(shop_id, cid)
+            # Sales made before FIFO have no deduction rows to restore; re-align layers.
+            for pid in {ol.product_id for ol in old_lines if ol.product_id}:
+                reconcile_product_batches(pid)
 
         return locked
 
@@ -1908,8 +1965,39 @@ class SaleSerializer(serializers.ModelSerializer):
 class ShareholderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Shareholder
-        fields = ["id", "shop", "name", "share_percentage", "capital_contribution_usd"]
+        fields = [
+            "id",
+            "shop",
+            "name",
+            "share_percentage",
+            "capital_contribution_usd",
+            "wallet_start_month",
+        ]
         read_only_fields = ["id", "shop"]
+
+    def validate_wallet_start_month(self, value):
+        # Wallets are credited per calendar month.
+        return value.replace(day=1) if value else value
+
+    def validate(self, attrs):
+        pct = attrs.get("share_percentage", getattr(self.instance, "share_percentage", None))
+        request = self.context.get("request")
+        if pct is not None and request is not None:
+            shop_id = getattr(self.instance, "shop_id", None) or require_shop_id(request)
+            others = Shareholder.objects.filter(shop_id=shop_id)
+            if self.instance is not None:
+                others = others.exclude(pk=self.instance.pk)
+            total = sum((Decimal(o.share_percentage) for o in others), Decimal("0")) + Decimal(pct)
+            if total > 100:
+                raise serializers.ValidationError(
+                    {"share_percentage": f"All partners together would get {total}% of the profit (max 100%)."},
+                )
+        return attrs
+
+    def create(self, validated_data):
+        if not validated_data.get("wallet_start_month"):
+            validated_data["wallet_start_month"] = timezone.localdate().replace(day=1)
+        return super().create(validated_data)
 
 
 class CustomerDebtPaymentSerializer(serializers.ModelSerializer):
@@ -1988,7 +2076,10 @@ class ShareholderPaymentSerializer(serializers.ModelSerializer):
 
     def validate_shareholder(self, value):
         shop_id = self.context.get("shop_id")
-        if shop_id is not None and value.shop_id != shop_id:
+        if shop_id is None and self.context.get("request") is not None:
+            # Superusers pass the shop in the body; still never link another shop's partner.
+            shop_id = require_shop_id(self.context["request"])
+        if value.shop_id != shop_id:
             raise serializers.ValidationError("Shareholder does not belong to this shop.")
         return value
 
@@ -2002,6 +2093,25 @@ class ShareholderPaymentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"paid_on": "Payment date cannot be before the profit period start."},
             )
+        # A payout comes out of the partner's wallet and cannot exceed its balance.
+        shareholder = attrs.get("shareholder") or getattr(self.instance, "shareholder", None)
+        amount = attrs.get("amount_usd")
+        if shareholder is not None and amount is not None:
+            from .shareholder_wallet import credit_finished_months, wallet_totals
+
+            credit_finished_months(shareholder.shop_id)
+            available = wallet_totals(shareholder)["balance"]
+            if self.instance is not None and self.instance.shareholder_id == shareholder.pk:
+                available += Decimal(self.instance.amount_usd)
+            if Decimal(amount) > available:
+                raise serializers.ValidationError(
+                    {
+                        "amount_usd": (
+                            f"Wallet balance is only {available.quantize(Decimal('0.01'))} USD; "
+                            "a partner cannot be paid more than they have earned."
+                        ),
+                    },
+                )
         return attrs
 
 
@@ -2022,6 +2132,7 @@ class EmployeeDebtSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "shop", "employee_email", "created_at"]
+        extra_kwargs = {"amount": {"min_value": Decimal("0.0001")}}
 
     def validate_employee(self, value):
         request = self.context["request"]
@@ -2040,7 +2151,8 @@ class ShopDayOpeningCashSerializer(serializers.ModelSerializer):
 
 def latest_usd_to_iqd_for_shop(shop_id: int) -> Decimal | None:
     row = (
-        Currency.objects.filter(shop_id=shop_id)
+        # A rate typed with a future date must not override today's rate.
+        Currency.objects.filter(shop_id=shop_id, date__lte=timezone.localdate())
         .order_by("-date", "-id")
         .values_list("usd_to_iqd", flat=True)
         .first()
@@ -2051,6 +2163,19 @@ def latest_usd_to_iqd_for_shop(shop_id: int) -> Decimal | None:
 class SaleReturnLineInputSerializer(serializers.Serializer):
     sale_line_id = serializers.IntegerField(min_value=1)
     quantity = serializers.IntegerField(min_value=1)
+
+
+def _recheck_returned_quantities(qs, line_field: str, requested: dict, limits: dict) -> None:
+    """Fail if already-returned + requested exceeds the original quantity of any line."""
+    done = {
+        int(r[line_field]): int(r["total"] or 0)
+        for r in qs.values(line_field).annotate(total=Sum("quantity"))
+    }
+    for line_id, req_qty in requested.items():
+        if done.get(line_id, 0) + req_qty > limits[line_id]:
+            raise serializers.ValidationError(
+                {"lines": f"Line {line_id} was returned concurrently; reload and try again."},
+            )
 
 
 class SaleReturnCreateSerializer(serializers.Serializer):
@@ -2087,31 +2212,17 @@ class SaleReturnCreateSerializer(serializers.Serializer):
         if sale is None:
             raise serializers.ValidationError({"sale_id": "Sale not found for this shop."})
 
-        from .dashboard_tools import (
-            customer_outstanding_balance_usd,
-            sale_unpaid_balance_usd,
-        )
+        from .dashboard_tools import sale_discount_ratio, sale_unpaid_balance_usd
 
         sale_unpaid = sale_unpaid_balance_usd(sale)
         is_credit_sale = sale_unpaid > Decimal("0.0001")
-        customer_id = sale.customer_id
-        customer_debt = (
-            customer_outstanding_balance_usd(shop_id, int(customer_id))
-            if customer_id
-            else Decimal("0")
-        )
 
-        if refund_method == SaleReturnRefundMethod.DEBT_REDUCTION:
-            if not is_credit_sale:
-                raise serializers.ValidationError(
-                    {"refund_method": "This sale has no unpaid balance; use cash refund."},
-                )
-            if customer_debt <= Decimal("0.0001"):
-                raise serializers.ValidationError(
-                    {"refund_method": "Customer has no outstanding debt to reduce."},
-                )
-        elif is_credit_sale and refund_method != SaleReturnRefundMethod.CASH:
-            raise serializers.ValidationError({"refund_method": "Invalid refund method."})
+        if refund_method == SaleReturnRefundMethod.DEBT_REDUCTION and not is_credit_sale:
+            raise serializers.ValidationError(
+                {"refund_method": "This sale has no unpaid balance; use cash refund."},
+            )
+        # Returned lines carry their share of the invoice discount.
+        discount_ratio = sale_discount_ratio(sale)
 
         sale_lines_map: dict[int, SaleLine] = {
             ln.id: ln
@@ -2155,6 +2266,20 @@ class SaleReturnCreateSerializer(serializers.Serializer):
                 )
 
         with transaction.atomic():
+            # Re-check under a row lock so two concurrent returns can't exceed the sale.
+            Sale.objects.select_for_update().filter(pk=sale.pk).first()
+            _recheck_returned_quantities(
+                SaleReturnLine.objects.filter(sale_line_id__in=requested_by_line.keys()),
+                "sale_line_id",
+                requested_by_line,
+                {lid: int(ln.quantity) for lid, ln in sale_lines_map.items()},
+            )
+            # Unpaid balance read again under the lock: a return that finished meanwhile
+            # may already have cancelled part of this debt.
+            locked_sale = (
+                Sale.objects.filter(pk=sale.pk).prefetch_related("lines__return_lines").first()
+            )
+            sale_unpaid = sale_unpaid_balance_usd(locked_sale)
             sale_return = SaleReturn.objects.create(
                 shop_id=shop_id,
                 sale=sale,
@@ -2165,7 +2290,9 @@ class SaleReturnCreateSerializer(serializers.Serializer):
             total_refund = Decimal("0")
             for line_id, req_qty in requested_by_line.items():
                 src_line = sale_lines_map[line_id]
-                unit_price = Decimal(src_line.unit_price_usd)
+                unit_price = (Decimal(src_line.unit_price_usd) * discount_ratio).quantize(
+                    Decimal("0.0001"),
+                )
                 SaleReturnLine.objects.create(
                     sale_return=sale_return,
                     sale_line=src_line,
@@ -2175,6 +2302,19 @@ class SaleReturnCreateSerializer(serializers.Serializer):
                 )
                 if src_line.product_id:
                     restored = restore_sale_line_batches_partial(src_line, req_qty)
+                    if restored:
+                        # Cost of the units still sold = remaining FIFO deductions, so the
+                        # layer put back is not also counted in this line's COGS.
+                        left = SaleLineBatchDeduction.objects.filter(sale_line_id=src_line.pk)
+                        left_qty = sum(int(d.quantity) for d in left)
+                        if left_qty > 0:
+                            left_cost = sum(
+                                (Decimal(d.quantity) * Decimal(d.unit_cost_usd) for d in left),
+                                Decimal("0"),
+                            )
+                            SaleLine.objects.filter(pk=src_line.pk).update(
+                                unit_buy_price_usd=(left_cost / left_qty).quantize(Decimal("0.0001")),
+                            )
                     shortfall = int(req_qty) - int(restored)
                     if shortfall > 0:
                         # Legacy sales without FIFO deduction rows: return as a new layer.
@@ -2190,9 +2330,22 @@ class SaleReturnCreateSerializer(serializers.Serializer):
                     )
                 total_refund += (Decimal(req_qty) * unit_price).quantize(Decimal("0.0001"))
 
+            # The unpaid part of the sale is cancelled first; only what the customer
+            # actually paid for these goods can be handed back as cash.
+            debt_part = min(total_refund, sale_unpaid)
+            cash_part = (total_refund - debt_part).quantize(Decimal("0.0001"))
+            sale_return.cash_refund_usd = cash_part
+            sale_return.refund_method = (
+                SaleReturnRefundMethod.CASH if cash_part > 0 else SaleReturnRefundMethod.DEBT_REDUCTION
+            )
+            sale_return.save(update_fields=["cash_refund_usd", "refund_method"])
+            refund_method = sale_return.refund_method
+
         return {
             "id": sale_return.id,
             "sale_id": sale.id,
+            "cash_refund_usd": format(cash_part, "f"),
+            "debt_reduced_usd": format(debt_part.quantize(Decimal("0.0001")), "f"),
             "occurred_at": sale_return.occurred_at.isoformat(),
             "total_refund_usd": format(total_refund.quantize(Decimal("0.0001")), "f"),
             "refund_method": refund_method,
@@ -2271,6 +2424,13 @@ class PurchaseReturnCreateSerializer(serializers.Serializer):
                 )
 
         with transaction.atomic():
+            Purchase.objects.select_for_update().filter(pk=purchase.pk).first()
+            _recheck_returned_quantities(
+                PurchaseReturnLine.objects.filter(purchase_line_id__in=requested_by_line.keys()),
+                "purchase_line_id",
+                requested_by_line,
+                {lid: int(ln.quantity) for lid, ln in purchase_lines_map.items()},
+            )
             purchase_return = PurchaseReturn.objects.create(
                 shop_id=shop_id,
                 purchase=purchase,
@@ -2289,10 +2449,15 @@ class PurchaseReturnCreateSerializer(serializers.Serializer):
                     unit_cost_usd=unit_cost,
                 )
                 if src_line.product_id:
-                    deduct_from_purchase_line_batch(src_line, req_qty)
-                    Product.objects.filter(pk=src_line.product_id).update(
-                        current_stock_quantity=F("current_stock_quantity") - req_qty,
-                    )
+                    # Damaged units are returned first: they never entered stock.
+                    damaged = int(src_line.damaged_quantity or 0)
+                    prev_qty = int(already_returned.get(line_id, 0))
+                    sellable_qty = max(0, prev_qty + req_qty - damaged) - max(0, prev_qty - damaged)
+                    if sellable_qty > 0:
+                        deduct_from_purchase_line_batch(src_line, sellable_qty)
+                        Product.objects.filter(pk=src_line.product_id).update(
+                            current_stock_quantity=F("current_stock_quantity") - sellable_qty,
+                        )
                 total_return += (Decimal(req_qty) * unit_cost).quantize(Decimal("0.0001"))
 
         return {

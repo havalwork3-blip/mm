@@ -15,7 +15,7 @@ class PublicMarketingApiView(APIView):
     authentication_classes = []
 
     def finalize_response(self, request, response, *args, **kwargs):
-        response = super().finalize_response(request, *args, **kwargs)
+        response = super().finalize_response(request, response, *args, **kwargs)
         for key, value in PUBLIC_API_HEADERS.items():
             response[key] = value
         return response

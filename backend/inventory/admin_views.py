@@ -18,6 +18,8 @@ from .dashboard_tools import (
     total_customer_discounts_usd_in_range,
     total_expenses_usd_in_range,
     total_returned_products_usd_in_range,
+    total_payables_usd,
+    total_receivables_usd,
     total_receivables_usd_in_range,
     period_dashboard_petty_cash_usd_in_range,
     total_sales_usd_in_range,
@@ -62,6 +64,11 @@ class GlobalAdminStatsView(APIView):
         global_discounts = Decimal("0")
         global_sales = Decimal("0")
         global_expenses = Decimal("0")
+        global_receivables = Decimal("0")
+        global_payables = Decimal("0")
+        global_debt_collected = Decimal("0")
+        global_returned = Decimal("0")
+        global_drawer = Decimal("0")
         shop_rows: list[dict] = [] 
         for shop in Shop.objects.all().only("id", "name", "is_active"):
             sales_usd = total_sales_usd_in_range(shop.pk, d_from, d_to)
@@ -79,6 +86,13 @@ class GlobalAdminStatsView(APIView):
             global_stock += stock_usd
             global_sales += sales_usd
             global_expenses += expenses_usd
+            customer_debt_usd = total_receivables_usd(shop.pk)
+            supplier_debt_usd = total_payables_usd(shop.pk)
+            global_receivables += customer_debt_usd
+            global_payables += supplier_debt_usd
+            global_debt_collected += debt_collected_usd
+            global_returned += returned_usd
+            global_drawer += drawer_usd
 
             shop_rows.append(
                 {
@@ -95,6 +109,8 @@ class GlobalAdminStatsView(APIView):
                     "period_cash_drawer_usd": _money(drawer_usd),
                     "period_customer_debt_collected_usd": _money(debt_collected_usd),
                     "stock_value_usd": _money(stock_usd),
+                    "customer_debt_usd": _money(customer_debt_usd),
+                    "supplier_debt_usd": _money(supplier_debt_usd),
                 }
             )
 
@@ -117,6 +133,12 @@ class GlobalAdminStatsView(APIView):
                 "global_stock_value_usd": format(global_stock.quantize(Decimal("0.0001")), "f"),
                 "global_sales_usd": format(global_sales.quantize(Decimal("0.0001")), "f"),
                 "global_expenses_usd": format(global_expenses.quantize(Decimal("0.0001")), "f"),
+                # Combined totals across all shops (all values are USD).
+                "global_customer_debt_usd": _money(global_receivables),
+                "global_supplier_debt_usd": _money(global_payables),
+                "global_customer_debt_collected_usd": _money(global_debt_collected),
+                "global_returned_products_usd": _money(global_returned),
+                "global_cash_drawer_usd": _money(global_drawer),
                 "top_shops": top_shops,
             },
         )

@@ -103,7 +103,7 @@ export function CatalogPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-violet-50/90 via-white to-slate-50/95 pb-24 pt-4 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 sm:pt-6">
+    <div className="min-h-dvh pb-24 pt-4 sm:pt-6">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:max-w-4xl">
         {/* Hero */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-indigo-600 to-fuchsia-600 p-[1px] shadow-xl shadow-violet-500/20">

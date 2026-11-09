@@ -217,6 +217,9 @@ export function InventoryPage() {
     current_stock_quantity: '0',
     low_stock_threshold: '',
   })
+  // Stock shown when the edit modal opened; only send stock when the user changed it,
+  // otherwise POS sales made meanwhile would be undone by a stale value.
+  const [editStockAtOpen, setEditStockAtOpen] = useState('0')
 
   useEffect(() => {
     const t = window.setTimeout(
@@ -543,6 +546,7 @@ export function InventoryPage() {
     try {
       await loadCreateDependencies()
       setEditingProductId(product.id)
+      setEditStockAtOpen(String(product.current_stock_quantity ?? 0))
       setEditForm({
         name: product.name ?? '',
         category: String(product.category ?? ''),
@@ -578,7 +582,9 @@ export function InventoryPage() {
       form.append('buy_price', editForm.buy_price)
       form.append('sale_price_retail', editForm.buy_price)
       form.append('sale_price_wholesale', editForm.buy_price)
-      form.append('current_stock_quantity', String(Number(editForm.current_stock_quantity || '0')))
+      if (Number(editForm.current_stock_quantity || '0') !== Number(editStockAtOpen)) {
+        form.append('current_stock_quantity', String(Number(editForm.current_stock_quantity || '0')))
+      }
       const editThreshold = editForm.low_stock_threshold.trim()
       if (editThreshold) {
         form.append('low_stock_threshold', String(Math.max(0, Number(editThreshold))))
@@ -1024,7 +1030,7 @@ export function InventoryPage() {
 
   if (authPending) {
     return (
-      <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
+      <div className="min-h-dvh dark:text-slate-100">
         <PageAuthLoading />
       </div>
     )
@@ -1032,7 +1038,7 @@ export function InventoryPage() {
 
   if (showLogin) {
     return (
-      <div className="min-h-dvh bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
+      <div className="min-h-dvh dark:text-slate-100">
         <header className="border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
           <div className="mx-auto flex max-w-lg items-center justify-between gap-4">
             <Link
@@ -1118,7 +1124,7 @@ export function InventoryPage() {
   }
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-slate-50 dark:bg-slate-900 dark:text-slate-100">
+    <div className="min-h-dvh overflow-x-hidden dark:text-slate-100">
       {needsShop && (
         <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6">
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-start text-sm text-amber-900">

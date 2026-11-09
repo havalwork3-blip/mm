@@ -25,6 +25,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { AppBackground } from '../components/background/AppBackground'
 import { LangSwitcher } from '../components/LangSwitcher'
 import { OnlineOrderNotificationLayer } from '../components/OnlineOrderNotificationLayer'
 import { UserAvatar, userDisplayName } from '../components/UserAvatar'
@@ -521,7 +522,8 @@ function MainLayoutShell() {
   }
 
   return (
-    <div className="min-h-dvh bg-[var(--app-bg-color,#f1f5f9)]">
+    <div className="min-h-dvh">
+      <AppBackground />
       {showSidebar && (
         <>
           <header className="fixed inset-x-0 top-0 z-[110] flex h-14 min-h-[3.5rem] items-center gap-2 border-b border-slate-200 bg-white/95 px-2 shadow-sm backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/95 md:hidden">

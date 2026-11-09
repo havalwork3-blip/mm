@@ -1,8 +1,10 @@
 import {
   enqueueOfflineRequest,
+  moveOfflineQueueItemToFailed,
   peekOfflineQueue,
-  replaceFirstQueueItem,
-  shiftOfflineQueue,
+  removeOfflineQueueItem,
+  replaceOfflineQueueItem,
+  scrubStoredOfflineCredentials,
 } from './offlineQueue'
 import { sanitizeApiErrorText } from './sanitizeApiError'
 
@@ -95,8 +97,9 @@ export function resolveMediaUrl(url: string | null | undefined): string | null {
   return parsed.href
 }
 
-let basicUser: string | null = null
-let basicPass: string | null = null
+/** Signed-in email (for the offline queue owner) and the login token from /api/auth/login/. */
+let authEmail: string | null = null
+let authToken: string | null = null
 /** When set, appended as ?shop_id= for every request (superuser impersonation). */
 let superuserShopId: string | null = null
 let isFlushingOfflineQueue = false
@@ -104,7 +107,7 @@ let isFlushingOfflineQueue = false
 const SESSION_AUTH_KEY = 'pos_session_auth'
 /** When "1", superuser API calls omit ?shop_id= (global multi-tenant lists). */
 const GLOBAL_VIEW_KEY = 'pos_global_view'
-const OFFLINE_QUEUED_HINT =
+export const OFFLINE_QUEUED_HINT =
   'No internet. Your change was saved locally and will sync automatically when connection is back.'
 const NO_SHOP_SCOPE_DETAIL =
   'No shop scope: assign a shop to this user, pass shop_id, or include shop in the request body (superuser).'
@@ -160,18 +163,52 @@ export function isApiAuthFailure(error: unknown): boolean {
   )
 }
 
-export function setBasicAuth(user: string | null, pass: string | null) {
-  basicUser = user
-  basicPass = pass
+export function setAuthSession(email: string | null, token: string | null) {
+  authEmail = email
+  authToken = token
+  // Offline sales wait for their owner to be signed in; send them as soon as the session is known
+  // (login or restore after reload), not only on the next 'online' event.
+  if (email && token) {
+    setTimeout(() => {
+      void flushOfflineQueue()
+    }, 0)
+  }
 }
 
-/** Persist Basic auth in sessionStorage for same-tab navigation (internal tool). */
-export function persistSessionAuth(email: string, password: string) {
+/** Keep the login token (never the password) in sessionStorage for this tab. */
+export function persistSessionAuth(email: string, token: string) {
   try {
-    sessionStorage.setItem(SESSION_AUTH_KEY, btoa(`${email}:${password}`))
+    sessionStorage.setItem(SESSION_AUTH_KEY, JSON.stringify({ email, token }))
   } catch {
     /* ignore */
   }
+}
+
+/** Exchange email + password for a login token; the password is not kept anywhere. */
+export async function requestLoginToken(email: string, password: string): Promise<string> {
+  const res = await fetch(`${getApiBase()}/api/auth/login/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+    credentials: 'omit',
+  })
+  const data = (await res.json().catch(() => ({}))) as { token?: string; detail?: string }
+  if (!res.ok || !data.token) {
+    throw new ApiError(data.detail || `HTTP ${res.status}`, res.status === 429 ? 429 : 401)
+  }
+  return data.token
+}
+
+/** End this login session on the server (best effort). */
+export function revokeLoginToken() {
+  if (!authToken) return
+  void fetch(`${getApiBase()}/api/auth/logout/`, {
+    method: 'POST',
+    headers: { Authorization: `Token ${authToken}` },
+    credentials: 'omit',
+  }).catch(() => {
+    /* offline: the token still expires after two idle weeks */
+  })
 }
 
 export function clearSessionAuth() {
@@ -191,14 +228,13 @@ export function restoreSessionAuth(): boolean {
   const raw = sessionStorage.getItem(SESSION_AUTH_KEY)
   if (!raw) return false
   try {
-    const decoded = atob(raw)
-    const i = decoded.indexOf(':')
-    if (i < 1) return false
-    const email = decoded.slice(0, i)
-    const pass = decoded.slice(i + 1)
-    setBasicAuth(email, pass)
+    const parsed = JSON.parse(raw) as { email?: string; token?: string }
+    if (!parsed.token) throw new Error('old format')
+    setAuthSession(parsed.email ?? null, parsed.token)
     return true
   } catch {
+    // Older builds stored the password here; drop it and ask for a fresh sign-in.
+    sessionStorage.removeItem(SESSION_AUTH_KEY)
     return false
   }
 }
@@ -229,9 +265,8 @@ export function setGlobalView(on: boolean) {
 }
 
 function authHeaders(): HeadersInit {
-  if (!basicUser || !basicPass) return {}
-  const token = btoa(`${basicUser}:${basicPass}`)
-  return { Authorization: `Basic ${token}` }
+  if (!authToken) return {}
+  return { Authorization: `Token ${authToken}` }
 }
 
 /** Superuser tenant scope: memory override, or `pos_shop_id` when `shopScoped` (even in Global View). */
@@ -350,7 +385,30 @@ function formatJsonErrorValue(value: unknown): string {
   return String(value)
 }
 
+function makeIdempotencyKey(): string {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID()
+    }
+  } catch {
+    /* fall through */
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`
+}
+
 export async function apiJson<T>(path: string, init: ApiFetchOptions = {}): Promise<T> {
+  // Every write carries a unique key. The same key is kept if the request is queued offline and
+  // replayed, so the server applies it at most once (no duplicate sales / payments / returns).
+  {
+    const m = (init.method ?? 'GET').toString().toUpperCase()
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(m)) {
+      const h = new Headers(init.headers)
+      if (!h.has('Idempotency-Key')) {
+        h.set('Idempotency-Key', makeIdempotencyKey())
+        init = { ...init, headers: Array.from(h.entries()) }
+      }
+    }
+  }
   let res: Response | null = null
   const base = getApiBase()
   try {
@@ -366,13 +424,16 @@ export async function apiJson<T>(path: string, init: ApiFetchOptions = {}): Prom
       if (init.body != null && !headers.has('Content-Type') && !(init.body instanceof FormData)) {
         headers.set('Content-Type', 'application/json')
       }
+      // Freeze the shop scope now: by replay time another shop may be selected.
+      const scopedUrl = buildApiUrl(path, Boolean(init.omitShopScope), Boolean(init.shopScoped))
       enqueueOfflineRequest({
-        path,
+        path: scopedUrl.slice(getApiBase().length),
         method,
-        headers: Array.from(headers.entries()),
+        headers: Array.from(headers.entries()).filter(([k]) => k.toLowerCase() !== 'authorization'),
         bodyText: init.body == null ? null : String(init.body),
-        omitShopScope: Boolean(init.omitShopScope),
-        shopScoped: Boolean(init.shopScoped),
+        omitShopScope: true,
+        shopScoped: false,
+        ownerEmail: authEmail,
       })
       throw new ApiError(OFFLINE_QUEUED_HINT, 0)
     }
@@ -421,8 +482,8 @@ export async function apiJson<T>(path: string, init: ApiFetchOptions = {}): Prom
         detail = translateApiDetail(sanitizeApiErrorText(detail, res.status))
         if (res.status === 404 && detail.toLowerCase().includes('shop not found')) {
           try {
+            // Never drop the offline queue here: it may hold unsynced sales.
             localStorage.removeItem('pos_shop_id')
-            localStorage.removeItem('pos_offline_queue_v1')
           } catch {
             /* ignore */
           }
@@ -447,8 +508,11 @@ export async function flushOfflineQueue(): Promise<void> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return
   isFlushingOfflineQueue = true
   try {
+    if (!authToken) return
+    const me = (authEmail ?? '').toLowerCase()
     while (true) {
-      const item = peekOfflineQueue()
+      // Only the user who made these offline sales may send them; other users' items wait.
+      const item = peekOfflineQueue((it) => !it.ownerEmail || it.ownerEmail.toLowerCase() === me)
       if (!item) break
       try {
         const body: BodyInit | undefined = item.bodyText == null ? undefined : item.bodyText
@@ -460,20 +524,26 @@ export async function flushOfflineQueue(): Promise<void> {
           shopScoped: item.shopScoped,
         })
         if (res.ok) {
-          shiftOfflineQueue()
+          removeOfflineQueueItem(item.id)
           continue
         }
-        // Drop unrecoverable server-side errors to unblock later items.
+        // Unrecoverable server-side errors: set aside (not deleted) to unblock later items.
+        if (res.status === 401) break
+        // Same request still being processed on the server: try again later.
+        if (res.status === 409 && res.headers.get('Idempotency-Status') === 'in-progress') {
+          replaceOfflineQueueItem({ ...item, attempts: item.attempts + 1 })
+          break
+        }
         if (res.status >= 400 && res.status < 500) {
-          shiftOfflineQueue()
+          const detail = await res.text().catch(() => '')
+          console.warn('Offline request rejected on replay', item.path, res.status, detail)
+          moveOfflineQueueItemToFailed(item.id, res.status, detail.slice(0, 500))
           continue
         }
-        const next = { ...item, attempts: item.attempts + 1 }
-        replaceFirstQueueItem(next)
+        replaceOfflineQueueItem({ ...item, attempts: item.attempts + 1 })
         break
       } catch {
-        const next = { ...item, attempts: item.attempts + 1 }
-        replaceFirstQueueItem(next)
+        replaceOfflineQueueItem({ ...item, attempts: item.attempts + 1 })
         break
       }
     }
@@ -484,6 +554,7 @@ export async function flushOfflineQueue(): Promise<void> {
 
 export function initOfflineAutoSync() {
   if (typeof window === 'undefined') return
+  scrubStoredOfflineCredentials()
   window.addEventListener('online', () => {
     void flushOfflineQueue()
   })
@@ -534,4 +605,9 @@ export async function publicApiJson<T>(path: string): Promise<T> {
     throw new ApiError(detail || `HTTP ${res.status}`, res.status)
   }
   return res.json() as Promise<T>
+}
+
+/** True when a write failed only because the device is offline and it was queued for sync. */
+export function isOfflineQueuedError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 0 && error.message === OFFLINE_QUEUED_HINT
 }

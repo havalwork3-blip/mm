@@ -283,3 +283,25 @@ class IsShopOwnerOrCanPaySupplierDebt(permissions.BasePermission):
         if role == UserRole.OWNER:
             return True
         return _has_any_perm(u, ("add_purchase",))
+
+
+class IsShopManagerForWrites(permissions.BasePermission):
+    """
+    Read for any shop staff; changes (storefront settings, bot/WhatsApp tokens, banners,
+    delivery zones, test notifications) only for superuser / owner / manager.
+    """
+
+    message = "Only the shop owner or a manager can change these settings."
+
+    def has_permission(self, request, view) -> bool:
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        u = request.user
+        return bool(
+            u
+            and u.is_authenticated
+            and (
+                getattr(u, "is_superuser", False)
+                or getattr(u, "role", None) in (UserRole.OWNER, UserRole.MANAGER)
+            ),
+        )

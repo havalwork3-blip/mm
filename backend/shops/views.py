@@ -19,7 +19,7 @@ from inventory.permissions import (
 
 from shops.scoping import get_shop_id_for_request, require_shop_id
 
-from inventory.permissions import IsShopStaffWithOnlineStorefront
+from inventory.permissions import IsShopManagerForWrites, IsShopStaffWithOnlineStorefront
 
 from .models import (
     Currency,
@@ -370,6 +370,13 @@ class ShopViewSet(viewsets.ModelViewSet):
     lookup_field = "pk"
     permission_classes = [IsAuthenticated, IsShopOwnerOrDjangoModelPermission]
 
+    def check_permissions(self, request):
+        super().check_permissions(request)
+        # Creating or deleting a shop (delete cascades all its data and users) is for the
+        # main admin account only, not for one shop's owner.
+        if self.action in ("create", "destroy") and not getattr(request.user, "is_superuser", False):
+            self.permission_denied(request, message="Only the main admin can create or delete shops.")
+
     def get_object(self):
         from rest_framework.exceptions import NotFound
 
@@ -410,7 +417,12 @@ class CurrencyViewSet(viewsets.ModelViewSet):
         raw = request.data.get("usd_to_iqd")
         if raw is None:
             return Response({"detail": "usd_to_iqd is required."}, status=400)
-        rate = Decimal(str(raw))
+        try:
+            rate = Decimal(str(raw).strip().replace(",", ""))
+        except Exception:
+            return Response({"detail": "Invalid exchange rate."}, status=400)
+        if not rate.is_finite() or rate <= 0:
+            return Response({"detail": "Exchange rate must be greater than zero."}, status=400)
         today = timezone.localdate()
         obj, _ = Currency.objects.update_or_create(
             shop_id=shop_id,
@@ -503,8 +515,7 @@ class ReceiptSettingsView(APIView):
         obj = self._get_or_create(request)
         if not (
             getattr(request.user, "is_superuser", False)
-            or getattr(request.user, "role", None)
-            in (UserRole.OWNER, UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.RECEIPT_EDITOR)
+            or getattr(request.user, "role", None) in (UserRole.OWNER, UserRole.MANAGER, UserRole.RECEIPT_EDITOR)
             or request.user.has_perm("shops.change_receiptsettings")
         ):
             return Response({"detail": "You do not have permission for this action."}, status=403)
@@ -522,8 +533,7 @@ class ReceiptSettingsView(APIView):
         obj = self._get_or_create(request)
         if not (
             getattr(request.user, "is_superuser", False)
-            or getattr(request.user, "role", None)
-            in (UserRole.OWNER, UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.RECEIPT_EDITOR)
+            or getattr(request.user, "role", None) in (UserRole.OWNER, UserRole.MANAGER, UserRole.RECEIPT_EDITOR)
             or request.user.has_perm("shops.change_receiptsettings")
         ):
             return Response({"detail": "You do not have permission for this action."}, status=403)
@@ -562,8 +572,7 @@ class ShopSettingsView(APIView):
         obj = self._get_or_create(request)
         if not (
             getattr(request.user, "is_superuser", False)
-            or getattr(request.user, "role", None)
-            in (UserRole.OWNER, UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.RECEIPT_EDITOR)
+            or getattr(request.user, "role", None) in (UserRole.OWNER, UserRole.MANAGER)
             or request.user.has_perm("shops.change_shopsettings")
         ):
             return Response({"detail": "You do not have permission for this action."}, status=403)
@@ -581,8 +590,7 @@ class ShopSettingsView(APIView):
         obj = self._get_or_create(request)
         if not (
             getattr(request.user, "is_superuser", False)
-            or getattr(request.user, "role", None)
-            in (UserRole.OWNER, UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.RECEIPT_EDITOR)
+            or getattr(request.user, "role", None) in (UserRole.OWNER, UserRole.MANAGER)
             or request.user.has_perm("shops.change_shopsettings")
         ):
             return Response({"detail": "You do not have permission for this action."}, status=403)
@@ -600,7 +608,7 @@ class ShopSettingsView(APIView):
 class MerchantStorefrontSettingsView(APIView):
     """GET/PATCH online shop appearance for the active tenant."""
 
-    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront, IsShopManagerForWrites]
     http_method_names = ["get", "patch", "options", "head"]
 
     def _get_settings(self, request) -> StorefrontSettings:
@@ -642,7 +650,7 @@ def _storefront_shop_id(request) -> int:
 class MerchantStorefrontBannersView(APIView):
     """GET list / POST create hero banners for the active shop."""
 
-    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront, IsShopManagerForWrites]
     parser_classes = [JSONParser, FormParser, MultiPartParser]
     http_method_names = ["get", "post", "patch", "options", "head"]
 
@@ -683,7 +691,7 @@ class MerchantStorefrontBannersView(APIView):
 
 
 class MerchantStorefrontBannerDetailView(APIView):
-    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront, IsShopManagerForWrites]
     parser_classes = [JSONParser, FormParser, MultiPartParser]
     http_method_names = ["patch", "delete", "options", "head"]
 
@@ -720,7 +728,7 @@ class MerchantStorefrontBannerDetailView(APIView):
 class MerchantStorefrontDeliveryZonesView(APIView):
     """GET/PATCH delivery areas and fees for the online storefront."""
 
-    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront, IsShopManagerForWrites]
     http_method_names = ["get", "patch", "options", "head"]
 
     def _delivery_config_response(self, request, shop_id: int):
@@ -819,7 +827,14 @@ def public_telegram_webhook(request):
     """Telegram Bot API webhook — links mobile chats via /start LINKCODE."""
     import json
 
-    from shops.telegram_notify import process_telegram_update
+    import hmac
+
+    from shops.telegram_notify import process_telegram_update, webhook_secret_token
+
+    # Reject forged updates: Telegram sends the secret registered with setWebhook.
+    sent = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+    if not hmac.compare_digest(sent, webhook_secret_token()):
+        return Response({"ok": False}, status=403)
 
     try:
         payload = request.data if isinstance(request.data, dict) else json.loads(request.body or b"{}")
@@ -832,7 +847,7 @@ def public_telegram_webhook(request):
 class MerchantTelegramTestView(APIView):
     """POST — send a test message to all linked Telegram recipients."""
 
-    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront, IsShopManagerForWrites]
 
     def post(self, request):
         from shops.telegram_notify import send_test_notification
@@ -849,7 +864,7 @@ class MerchantTelegramTestView(APIView):
 class MerchantWhatsAppTestView(APIView):
     """POST — send a test WhatsApp message (optional body: { \"phone\": \"07...\" })."""
 
-    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront, IsShopManagerForWrites]
 
     def post(self, request):
         from shops.whatsapp_notify import send_test_customer_notification

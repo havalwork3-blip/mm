@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import { useLocale } from '../context/LocaleContext'
+import { ShareholderWalletPanel } from '../components/shareholders/ShareholderWalletPanel'
 import { useSession } from '../context/SessionContext'
 import { apiJson, isApiStatus } from '../lib/api'
 import {
@@ -148,6 +149,7 @@ const RESOURCE_CONFIG: Record<string, ResourceConfig> = {
       name: 'profit.shName',
       share_percentage: 'profit.shPct',
       capital_contribution_usd: 'settings.shareholderCapitalUsd',
+      wallet_start_month: 'wallet.startMonth',
     },
     fields: [
       { key: 'name', labelKey: 'profit.shName', label: 'Name', type: 'text', required: true },
@@ -159,11 +161,21 @@ const RESOURCE_CONFIG: Record<string, ResourceConfig> = {
         required: false,
         hintKey: 'settings.shareholderCapitalHint',
       },
+      {
+        key: 'wallet_start_month',
+        labelKey: 'wallet.startMonth',
+        type: 'date',
+        required: false,
+        hintKey: 'wallet.startMonthHint',
+      },
     ],
     toPayload: (d) => ({
       name: String(d.name ?? '').trim(),
       share_percentage: d.share_percentage ?? '',
       capital_contribution_usd: String(d.capital_contribution_usd ?? '').trim() || '0',
+      ...(String(d.wallet_start_month ?? '').trim()
+        ? { wallet_start_month: String(d.wallet_start_month).trim() }
+        : {}),
     }),
   },
   'opening-cash': {
@@ -1452,6 +1464,11 @@ export function ResourceCrudPage() {
 
   return (
     <div className="p-4 sm:p-6">
+      {isShareholdersResource ? (
+        <ShareholderWalletPanel
+          refreshKey={rows.map((r) => `${r.id}:${r.share_percentage}:${r.wallet_start_month}`).join('|')}
+        />
+      ) : null}
       <div className="mb-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">

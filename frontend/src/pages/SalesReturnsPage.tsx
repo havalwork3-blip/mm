@@ -10,6 +10,7 @@ import { formatSaleReceiptNumber } from '../lib/shopReceiptNumbers'
 import {
   customerHasOutstandingDebt,
   estimateReturnRefundUsd,
+  saleReturnResultMessage,
   saleIsCredit,
   type SaleReturnRefundMethod,
 } from '../lib/saleReturnRefund'
@@ -141,11 +142,7 @@ export function SalesReturnsPage() {
           lines: lines.map((x) => ({ sale_line_id: x.sale_line_id, quantity: x.quantity })),
         }),
       })
-      const successKey =
-        res.refund_method === 'debt_reduction'
-          ? 'salesReturns.successDebtReduction'
-          : 'pos.returnSuccess'
-      setSuccess(t(successKey).replace('{usd}', String(res.total_refund_usd)))
+      setSuccess(saleReturnResultMessage(res, t, formatMoneyCompact))
       setSelectedSale(null)
       setLockedReceiptId(null)
       setReturnNote('')

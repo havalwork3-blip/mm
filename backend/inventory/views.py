@@ -14,7 +14,8 @@ from shops.storefront_settings_utils import (
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import filters, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
@@ -678,7 +679,14 @@ class PurchaseViewSet(OwnerScopedViewSet):
         if paid_eq <= 0:
             return Response({"detail": "Enter a payment amount."}, status=400)
 
-        applied, overpaid = apply_supplier_debt_payment_fifo(shop_id, cid, paid_eq)
+        applied, overpaid = apply_supplier_debt_payment_fifo(
+            shop_id,
+            cid,
+            paid_eq,
+            amount_paid_usd=usd,
+            amount_paid_iqd=iqd,
+            exchange_rate=rate,
+        )
         new_bal = company_outstanding_usd(shop_id, cid)
         return Response(
             {
@@ -860,6 +868,8 @@ class SaleViewSet(ShopScopedViewSet):
                 ).prefetch_related("return_lines"),
             ),
             "returns__lines__sale_line",
+            "debt_payment_lines",
+            "debt_discount_writeoff_lines",
         )
         .all()
     )
@@ -1012,6 +1022,56 @@ class ShareholderViewSet(OwnerScopedViewSet):
         "PATCH": ("change_shareholder",),
         "DELETE": ("delete_shareholder",),
     }
+
+    @action(detail=False, methods=["get"], url_path="wallets")
+    def wallets(self, request):
+        """Every partner's wallet: earned, paid, balance and this month's estimate."""
+        from .shareholder_wallet import (
+            _shop_net_profit,
+            credit_finished_months,
+            month_start,
+            wallet_summary,
+        )
+
+        shop_id = require_shop_id(request)
+        credit_finished_months(shop_id)
+        today = timezone.localdate()
+        net_now = _shop_net_profit(shop_id, month_start(today), today)
+        rows = [
+            wallet_summary(sh, shop_net_this_month=net_now)
+            for sh in Shareholder.objects.filter(shop_id=shop_id).order_by("name")
+        ]
+        return Response({"shop_net_profit_this_month_usd": format(net_now, "f"), "wallets": rows})
+
+    @action(detail=True, methods=["get"], url_path="wallet")
+    def wallet(self, request, pk=None):
+        """One partner's wallet with the full history (monthly credits and payouts)."""
+        from .shareholder_wallet import credit_finished_months, wallet_history, wallet_summary
+
+        sh = self.get_object()
+        credit_finished_months(sh.shop_id)
+        return Response({**wallet_summary(sh), "history": wallet_history(sh)})
+
+    @action(detail=False, methods=["post"], url_path="recalculate-month")
+    def recalculate_month(self, request):
+        """Re-read a finished month's net profit after old sales/expenses were corrected."""
+        from django.utils.dateparse import parse_date
+
+        from .shareholder_wallet import credit_finished_months, recalculate_month
+
+        if not (request.user.is_superuser or getattr(request.user, "role", None) == "owner"):
+            return Response({"detail": "Only the shop owner can recalculate partner wallets."}, status=403)
+        raw = str(request.data.get("month") or "").strip()
+        month = parse_date(raw if len(raw) > 7 else f"{raw}-01")
+        if month is None:
+            return Response({"detail": "Send month as YYYY-MM."}, status=400)
+        shop_id = require_shop_id(request)
+        credit_finished_months(shop_id)
+        try:
+            updated = recalculate_month(shop_id, month)
+        except ValueError:
+            return Response({"detail": "This month is not finished yet."}, status=400)
+        return Response({"updated": updated})
 
 
 class CustomerDebtPaymentViewSet(OwnerScopedViewSet):
@@ -1269,8 +1329,19 @@ def public_storefront_products(request):
     return Response(ser.data)
 
 
+class StorefrontOrderThrottle(AnonRateThrottle):
+    """Limit anonymous online orders per IP (orders reserve stock while pending)."""
+
+    scope = "storefront_order"
+
+    def get_cache_key(self, request, view):
+        # Applies to every caller of this public endpoint, signed in or not.
+        return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([StorefrontOrderThrottle])
 def public_storefront_submit_order(request):
     """POST /api/public/storefront/submit_order/ — create an online order."""
     ser = StorefrontOrderSerializer(data=request.data, context={"request": request})
@@ -1618,6 +1689,9 @@ class MerchantOnlineProductGalleryView(APIView):
         upload = request.FILES.get("image")
         if upload is None:
             raise ValidationError({"image": "Image file is required."})
+        from inventory.image_upload import validate_image_upload
+
+        validate_image_upload(upload)
         count = StorefrontProductGalleryImage.objects.filter(product_id=product.pk).count()
         if count >= STOREFRONT_GALLERY_MAX_PER_PRODUCT:
             raise ValidationError(

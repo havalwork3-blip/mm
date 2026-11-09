@@ -17,7 +17,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 if load_dotenv:
     load_dotenv(BASE_DIR / ".env")
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() in ("1", "true", "yes")
+# Off unless explicitly enabled, so a server missing DJANGO_DEBUG never runs in debug mode.
+DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() in ("1", "true", "yes")
 
 _DEV_SECRET_KEY = "django-insecure-dev-only-change-in-production"
 SECRET_KEY = (
@@ -76,6 +77,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Retried / offline-replayed writes with the same Idempotency-Key are applied only once.
+    "config.idempotency.IdempotencyMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -134,7 +137,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+# Business timezone: date filters (__date), localdate() and reports split days at local midnight.
+TIME_ZONE = os.environ.get("DJANGO_BUSINESS_TZ", "Asia/Baghdad")
 USE_I18N = True
 USE_TZ = True
 
@@ -161,10 +165,31 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        # Dashboard: token from POST /api/auth/login/ (the password is never stored client-side).
+        "accounts.authentication.ApiTokenAuthentication",
         "accounts.authentication.EmailBasicAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "EXCEPTION_HANDLER": "config.exceptions.custom_exception_handler",
+    # Behind Nginx: the client IP is the last X-Forwarded-For entry (used by throttling).
+    "NUM_PROXIES": int(os.environ.get("DJANGO_NUM_PROXIES", "1")),
+    "DEFAULT_THROTTLE_RATES": {
+        "storefront_order": os.environ.get("STOREFRONT_ORDER_RATE", "30/hour"),
+    },
+}
+
+# Shared by all Gunicorn workers (login lockout + throttling must not be per-process).
+import tempfile as _tempfile
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": os.environ.get(
+            "DJANGO_CACHE_DIR",
+            os.path.join(_tempfile.gettempdir(), "mm-django-cache"),
+        ),
+        "TIMEOUT": 3600,
+    }
 }
 
 _default_local_origins = [
@@ -240,6 +265,11 @@ else:
         "https://*.mmiraq.com",
         "https://dashboard.mmiraq.com",
     ]
+
+from corsheaders.defaults import default_headers as _cors_default_headers
+
+CORS_ALLOW_HEADERS = (*_cors_default_headers, "idempotency-key")
+CORS_EXPOSE_HEADERS = ["Idempotency-Status", "Idempotency-Replayed"]
 
 # Browsers reject credentials + Access-Control-Allow-Origin: * together.
 CORS_ALLOW_CREDENTIALS = not CORS_ALLOW_ALL_ORIGINS

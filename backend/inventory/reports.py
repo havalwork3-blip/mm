@@ -14,11 +14,8 @@ from django.utils import timezone
 from shops.models import Shop
 
 from .models import (
-    CustomerDebtDiscountWriteoff,
-    CustomerDebtDiscountWriteoffSale,
     Expense,
     Purchase,
-    Sale,
     SaleLine,
     Shareholder,
     ShareholderPayment,
@@ -108,8 +105,10 @@ def _shareholder_paid_usd_by_period(
             ShareholderPayment.objects.filter(
                 shop_id=shop_id,
                 shareholder_id__in=sh_ids,
-                period_from=d_from,
-                period_to=d_to,
+                # Any payout for a period inside the report range counts (e.g. a
+                # January payout inside a Jan–Mar report), not only exact matches.
+                period_from__gte=d_from,
+                period_to__lte=d_to,
             )
             .values("shareholder_id")
             .annotate(total=Sum("amount_usd", output_field=dec))
@@ -197,33 +196,11 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
                 str(flags["line_loss_usd"]),
             )
 
-    sale_qs = Sale.objects.filter(
-        shop_id=shop_id,
-        occurred_at__gte=start,
-        occurred_at__lte=end,
-    )
-    cust_disc = sale_qs.aggregate(
-        s=Sum("invoice_discount_usd", output_field=dec),
-    )["s"] or Decimal("0")
-    writeoff_disc = (
-        CustomerDebtDiscountWriteoff.objects.filter(
-            shop_id=shop_id,
-            occurred_at__gte=start,
-            occurred_at__lte=end,
-        ).aggregate(s=Sum("amount_usd", output_field=dec))["s"]
-        or Decimal("0")
-    )
-    writeoff_overlap = (
-        CustomerDebtDiscountWriteoffSale.objects.filter(
-            writeoff__shop_id=shop_id,
-            writeoff__occurred_at__gte=start,
-            writeoff__occurred_at__lte=end,
-            sale__occurred_at__gte=start,
-            sale__occurred_at__lte=end,
-        ).aggregate(s=Sum("amount_usd", output_field=dec))["s"]
-        or Decimal("0")
-    )
-    cust_disc = Decimal(str(cust_disc)) + Decimal(str(writeoff_disc)) - Decimal(str(writeoff_overlap))
+    from .dashboard_tools import customer_discounts_usd_between
+
+    # Same formula as the dashboard: returned lines take their discount share, and debt
+    # write-offs count on their own date only (not again on the old sale's month).
+    cust_disc = customer_discounts_usd_between(shop_id, start, end)
 
     expense_qs = Expense.objects.filter(
         shop_id=shop_id,

@@ -324,6 +324,14 @@ class Sale(ShopScopedModel):
     amount_paid_usd = models.DecimalField(max_digits=18, decimal_places=4, default=Decimal("0"))
     receipt_number = models.PositiveIntegerField(db_index=True)
     note = models.TextField(blank=True)
+    # Set when a completed online-store order was turned into this sale.
+    storefront_order = models.OneToOneField(
+        "StorefrontOrder",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sale",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -410,6 +418,14 @@ class SaleReturn(ShopScopedModel):
         max_length=20,
         choices=SaleReturnRefundMethod.choices,
         default=SaleReturnRefundMethod.CASH,
+    )
+    # Cash actually handed back (USD). The rest of the return value reduced the
+    # sale's unpaid balance. Null on returns recorded before this field existed.
+    cash_refund_usd = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        null=True,
+        blank=True,
     )
 
     class Meta:
@@ -517,6 +533,40 @@ class CustomerDebtPaymentSale(models.Model):
         ]
 
 
+class SupplierPayment(ShopScopedModel):
+    """Supplier debt repayment recorded on the day it is paid (not the purchase date)."""
+
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.PROTECT,
+        related_name="debt_payments",
+    )
+    amount_paid_usd = models.DecimalField(max_digits=18, decimal_places=4, default=Decimal("0"))
+    amount_paid_iqd = models.DecimalField(max_digits=18, decimal_places=4, default=Decimal("0"))
+    exchange_rate_usd_to_iqd = models.DecimalField(max_digits=18, decimal_places=4)
+    # USD equivalent actually applied to purchases (cash that left the drawer).
+    amount_usd = models.DecimalField(max_digits=18, decimal_places=4)
+    occurred_at = models.DateTimeField(db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-occurred_at", "-id"]
+
+
+class SupplierPaymentPurchase(models.Model):
+    payment = models.ForeignKey(
+        SupplierPayment,
+        on_delete=models.CASCADE,
+        related_name="purchase_lines",
+    )
+    purchase = models.ForeignKey(
+        Purchase,
+        on_delete=models.CASCADE,
+        related_name="supplier_payment_lines",
+    )
+    amount_usd = models.DecimalField(max_digits=18, decimal_places=4)
+
+
 class ExpenseCurrency(models.TextChoices):
     USD = "USD", "USD"
     IQD = "IQD", "IQD"
@@ -569,6 +619,12 @@ class Shareholder(ShopScopedModel):
         validators=[MinValueValidator(Decimal("0"))],
         help_text="Partner capital recorded in the system (USD).",
     )
+    # First month whose net profit is credited to this partner's wallet.
+    wallet_start_month = models.DateField(
+        null=True,
+        blank=True,
+        help_text="First day of the first month that pays into the wallet.",
+    )
 
     class Meta:
         ordering = ["name"]
@@ -598,9 +654,13 @@ class ShareholderPayment(ShopScopedModel):
     )
     paid_on = models.DateField(db_index=True)
     period_from = models.DateField(
+        null=True,
+        blank=True,
         help_text="Profit report period start when this payment was recorded.",
     )
     period_to = models.DateField(
+        null=True,
+        blank=True,
         help_text="Profit report period end when this payment was recorded.",
     )
     note = models.TextField(blank=True)
@@ -611,6 +671,31 @@ class ShareholderPayment(ShopScopedModel):
 
     def __str__(self) -> str:
         return f"{self.shareholder.name}: {self.amount_usd} USD"
+
+
+class ShareholderWalletCredit(ShopScopedModel):
+    """A partner's share of one finished month's net profit (negative for a loss month)."""
+
+    shareholder = models.ForeignKey(
+        Shareholder,
+        on_delete=models.CASCADE,
+        related_name="wallet_credits",
+    )
+    month = models.DateField(help_text="First day of the month.")
+    shop_net_profit_usd = models.DecimalField(max_digits=18, decimal_places=4)
+    share_percentage = models.DecimalField(max_digits=5, decimal_places=2)
+    amount_usd = models.DecimalField(max_digits=18, decimal_places=4)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-month"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["shareholder", "month"],
+                name="uniq_wallet_credit_per_month",
+            ),
+        ]
 
 
 class EmployeeDebtType(models.TextChoices):
@@ -746,3 +831,26 @@ class StorefrontOrderItemBatchDeduction(models.Model):
 
     class Meta:
         ordering = ["id"]
+
+
+class IdempotencyRecord(models.Model):
+    """
+    One row per write request that carried an ``Idempotency-Key`` header.
+
+    Lets the server answer a retried / replayed request (offline queue, lost response)
+    with the first response instead of creating a second sale, payment or return.
+    """
+
+    owner_hash = models.CharField(max_length=64, help_text="SHA-256 of the caller's Authorization header.")
+    key = models.CharField(max_length=100)
+    method = models.CharField(max_length=10)
+    path = models.CharField(max_length=500)
+    status_code = models.PositiveSmallIntegerField(null=True, blank=True)
+    content_type = models.CharField(max_length=100, blank=True, default="")
+    response_body = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("owner_hash", "key"), name="uniq_idempotency_owner_key"),
+        ]

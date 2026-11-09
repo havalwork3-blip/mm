@@ -8,9 +8,13 @@ export type OfflineQueueItem = {
   shopScoped: boolean
   createdAt: number
   attempts: number
+  /** Login that queued it: replayed only for that user, never under someone else's session. */
+  ownerEmail?: string | null
 }
 
 const OFFLINE_QUEUE_KEY = 'pos_offline_queue_v1'
+/** Items the server rejected on replay (kept so an offline sale is never silently lost). */
+const OFFLINE_FAILED_KEY = 'pos_offline_failed_v1'
 
 function hasLocalStorage(): boolean {
   return typeof localStorage !== 'undefined'
@@ -56,21 +60,68 @@ export function enqueueOfflineRequest(item: Omit<OfflineQueueItem, 'id' | 'creat
   return next.id
 }
 
-export function peekOfflineQueue(): OfflineQueueItem | null {
+/** First queued item (optionally the first one matching `match`), in FIFO order. */
+export function peekOfflineQueue(
+  match?: (item: OfflineQueueItem) => boolean,
+): OfflineQueueItem | null {
   const items = readQueue()
-  return items.length ? items[0] : null
+  if (!match) return items.length ? items[0] : null
+  return items.find(match) ?? null
 }
 
-export function replaceFirstQueueItem(next: OfflineQueueItem) {
+export function replaceOfflineQueueItem(next: OfflineQueueItem) {
   const items = readQueue()
-  if (!items.length) return
-  items[0] = next
+  const i = items.findIndex((it) => it.id === next.id)
+  if (i < 0) return
+  items[i] = next
   writeQueue(items)
 }
 
-export function shiftOfflineQueue() {
+export function removeOfflineQueueItem(id: string) {
   const items = readQueue()
-  if (!items.length) return
-  items.shift()
-  writeQueue(items)
+  const rest = items.filter((it) => it.id !== id)
+  if (rest.length !== items.length) writeQueue(rest)
+}
+
+function withoutAuthHeader(headers: Array<[string, string]>): Array<[string, string]> {
+  return headers.filter(([k]) => k.toLowerCase() !== 'authorization')
+}
+
+/** Move an item to the failed list instead of discarding it (credentials are never kept). */
+export function moveOfflineQueueItemToFailed(id: string, status: number, detail: string) {
+  const items = readQueue()
+  const failed = items.find((it) => it.id === id)
+  if (!failed || !hasLocalStorage()) return
+  const prev = safeJsonParse<Array<OfflineQueueItem & { status: number; detail: string }>>(
+    localStorage.getItem(OFFLINE_FAILED_KEY),
+    [],
+  )
+  prev.push({ ...failed, headers: withoutAuthHeader(failed.headers), status, detail })
+  localStorage.setItem(OFFLINE_FAILED_KEY, JSON.stringify(prev))
+  writeQueue(items.filter((it) => it.id !== id))
+}
+
+/** Remove saved passwords (old Basic auth headers) from queued and failed items. */
+export function scrubStoredOfflineCredentials() {
+  if (!hasLocalStorage()) return
+  try {
+    const items = readQueue()
+    if (items.some((it) => it.headers.some(([k]) => k.toLowerCase() === 'authorization'))) {
+      writeQueue(items.map((it) => ({ ...it, headers: withoutAuthHeader(it.headers) })))
+    }
+    const failed = safeJsonParse<OfflineQueueItem[]>(localStorage.getItem(OFFLINE_FAILED_KEY), [])
+    if (failed.some((it) => (it.headers ?? []).some(([k]) => k.toLowerCase() === 'authorization'))) {
+      localStorage.setItem(
+        OFFLINE_FAILED_KEY,
+        JSON.stringify(failed.map((it) => ({ ...it, headers: withoutAuthHeader(it.headers ?? []) }))),
+      )
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getOfflineFailedCount(): number {
+  if (!hasLocalStorage()) return 0
+  return safeJsonParse<unknown[]>(localStorage.getItem(OFFLINE_FAILED_KEY), []).length
 }
