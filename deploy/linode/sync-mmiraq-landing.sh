@@ -30,7 +30,9 @@ for f in index.html css/main.css js/site.js logo-optimized.webp; do
     exit 1
   fi
 done
-for d in luxury tech shop services explore about terms contact; do
+# One-page site since 2026-05-31: old sections (luxury, tech, ...) are anchors on index.html,
+# and nginx-mmiraq.conf redirects their old URLs. Only the contact page is a separate page.
+for d in contact; do
   if [[ ! -f "${WEB_ROOT}/${d}/index.html" ]]; then
     echo "ERROR: missing ${WEB_ROOT}/${d}/index.html" >&2
     exit 1
@@ -52,4 +54,4 @@ fi
 echo "==> Done. Test:"
 echo "  curl -sI https://mmiraq.com/api/public/marketing-site/"
 echo "  curl -I https://mmiraq.com/css/main.css"
-echo "  curl -I https://mmiraq.com/luxury/"
+echo "  curl -I https://mmiraq.com/contact/"
