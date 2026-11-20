@@ -25,7 +25,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { AppBackground } from '../components/background/AppBackground'
+import { ConnectionLight } from '../components/ConnectionLight'
 import { LangSwitcher } from '../components/LangSwitcher'
 import { OnlineOrderNotificationLayer } from '../components/OnlineOrderNotificationLayer'
 import { UserAvatar, userDisplayName } from '../components/UserAvatar'
@@ -523,7 +523,8 @@ function MainLayoutShell() {
 
   return (
     <div className="min-h-dvh">
-      <AppBackground />
+      {/* Plain solid background (the animated dot grid was removed: distracting and costly on low-end devices). */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 bg-[var(--app-bg-color,#f1f5f9)] print:hidden" />
       {showSidebar && (
         <>
           <header className="fixed inset-x-0 top-0 z-[110] flex h-14 min-h-[3.5rem] items-center gap-2 border-b border-slate-200 bg-white/95 px-2 shadow-sm backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/95 md:hidden">
@@ -564,6 +565,7 @@ function MainLayoutShell() {
                 >
                   {resolvedMode === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 </button>
+                <ConnectionLight t={t} />
                 <LangSwitcher lang={lang} setLang={setLang} t={t} compact />
               </div>
             </div>
@@ -821,8 +823,11 @@ function MainLayoutShell() {
             </nav>
 
             <div className="border-t border-slate-700/80 p-2">
-              <div className={`mb-2 hidden md:block ${collapsed ? 'flex justify-center' : 'px-1'}`}>
-                <div className="flex items-center justify-center gap-2">
+              <div className={`mb-2 hidden md:block ${collapsed ? '' : 'px-1'}`}>
+                {/* Collapsed rail is only ~68px wide: stack the controls instead of overflowing. */}
+                <div
+                  className={`flex items-center justify-center gap-2 ${collapsed ? 'flex-col' : 'flex-wrap'}`}
+                >
                   <button
                     type="button"
                     onClick={() => setCollapsed((c) => !c)}
@@ -845,6 +850,7 @@ function MainLayoutShell() {
                   >
                     {resolvedMode === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                   </button>
+                  <ConnectionLight t={t} variant="dark" />
                   <LangSwitcher
                     lang={lang}
                     setLang={setLang}

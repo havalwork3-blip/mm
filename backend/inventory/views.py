@@ -75,8 +75,10 @@ from .permissions import (
     IsShopOwnerOrDjangoModelPermission,
     IsShopOwnerOrDjangoModelPermissionOrPosCustomerCreate,
     IsShopOwnerOrDjangoModelPermissionOrPosProductRead,
+    IsOwnerOrPermissionForWrites,
     IsShopOwnerOrPermission,
     IsShopStaffWithOnlineStorefront,
+    user_can_change_purchases,
 )
 from .serializers import (
     CategorySerializer,
@@ -609,6 +611,16 @@ class PurchaseViewSet(OwnerScopedViewSet):
             },
         )
 
+    def perform_update(self, serializer):
+        # PATCH is open to change_product only so stock clerks can fix auto stock-increase rows;
+        # real supplier invoices (costs, payments, company) need change_purchase.
+        instance = serializer.instance
+        if not user_can_change_purchases(self.request.user) and (
+            "[AUTO_STOCK_INCREASE]" not in (instance.note or "")
+        ):
+            raise PermissionDenied("You need permission to change purchases to edit this invoice.")
+        serializer.save()
+
     @action(detail=False, methods=["get"], url_path="company-outstanding")
     def company_outstanding(self, request):
         """Outstanding USD owed to a supplier before recording a new purchase."""
@@ -765,6 +777,8 @@ class PurchaseViewSet(OwnerScopedViewSet):
     )
     def patch_purchase_return_line(self, request, line_id=None):
         """Correct return timestamp, note, or stored unit cost for one return line (same shop)."""
+        if not user_can_change_purchases(request.user):
+            raise PermissionDenied("You need permission to change purchases to edit returns.")
         shop_id = require_shop_id(request)
         try:
             lid = int(line_id)
@@ -1115,7 +1129,8 @@ class ShareholderPaymentViewSet(OwnerScopedViewSet):
     permission_classes = [IsAuthenticated, IsShopOwnerOrPermission]
     permission_codenames_by_method = {
         "GET": ("view_shareholder", "view_cashier", "view_profitreport"),
-        "POST": ("change_shareholder", "view_profitreport"),
+        # Paying partners moves money: a view-only report permission is not enough.
+        "POST": ("change_shareholder", "add_shareholderpayment"),
     }
 
     def get_serializer_context(self):
@@ -1360,7 +1375,8 @@ class MerchantStorefrontOrderViewSet(ShopScopedViewSet):
         .all()
     )
     serializer_class = MerchantStorefrontOrderSerializer
-    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront, IsOwnerOrPermissionForWrites]
+    write_permission_codenames = ("change_storefrontorder",)
     http_method_names = ["get", "head", "options", "patch"]
 
     def get_queryset(self):
@@ -1372,10 +1388,22 @@ class MerchantStorefrontOrderViewSet(ShopScopedViewSet):
                 return qs.none()
         return qs.order_by("-created_at", "-id")
 
+    def _expire_stale(self):
+        from .storefront_expiry import expire_stale_pending_orders
+
+        shop_id = get_shop_id_for_request(self.request)
+        if shop_id is not None:
+            expire_stale_pending_orders(shop_id)
+
+    def list(self, request, *args, **kwargs):
+        self._expire_stale()
+        return super().list(request, *args, **kwargs)
+
     @action(detail=False, methods=["get"], url_path="pending-count")
     def pending_count(self, request):
         """Count new online orders (PENDING) for sidebar badge."""
-        count = self.get_queryset().filter(status=StorefrontOrderStatus.PENDING).count()
+        self._expire_stale()
+        count =self.get_queryset().filter(status=StorefrontOrderStatus.PENDING).count()
         return Response({"pending_count": count})
 
     @action(detail=False, methods=["get"], url_path="stats")
@@ -1429,7 +1457,8 @@ def _normalize_storefront_hex(raw: str) -> str:
 class MerchantStorefrontCategoryCardsView(APIView):
     """GET/PATCH home-page category card order and gradient backgrounds."""
 
-    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront, IsOwnerOrPermissionForWrites]
+    write_permission_codenames = ("change_category", "change_product")
     http_method_names = ["get", "patch", "options", "head"]
 
     def _shop(self, request):
@@ -1538,7 +1567,8 @@ class MerchantStorefrontCategoryCardsView(APIView):
 class MerchantOnlineProductPricingView(APIView):
     """GET/PATCH online storefront prices and quantity-tier discounts per product."""
 
-    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront, IsOwnerOrPermissionForWrites]
+    write_permission_codenames = ("change_product",)
     http_method_names = ["get", "patch", "options", "head"]
 
     def get(self, request):
@@ -1663,7 +1693,8 @@ class MerchantOnlineProductPricingView(APIView):
 class MerchantOnlineProductGalleryView(APIView):
     """POST multipart image — add gallery photo for an online storefront product."""
 
-    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront, IsOwnerOrPermissionForWrites]
+    write_permission_codenames = ("change_product",)
 
     def post(self, request, product_id: int):
         from inventory.online_product_schema import online_product_content_schema_ready
@@ -1714,7 +1745,8 @@ class MerchantOnlineProductGalleryView(APIView):
 class MerchantOnlineProductGalleryDetailView(APIView):
     """DELETE — remove a gallery image."""
 
-    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront]
+    permission_classes = [IsAuthenticated, IsShopStaffWithOnlineStorefront, IsOwnerOrPermissionForWrites]
+    write_permission_codenames = ("change_product",)
 
     def delete(self, request, image_id: int):
         shop_id = require_shop_id(request)

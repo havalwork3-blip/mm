@@ -4,7 +4,7 @@ Idempotency for write requests.
 The dashboard sends a unique ``Idempotency-Key`` header with every POST/PUT/PATCH/DELETE and
 keeps the same key when a request is queued offline and replayed. The first request with a
 given key is processed normally and its response stored; any later request with the same key
-(from the same login) gets that stored response back instead of being applied a second time.
+(from the same user, in any tab or login session) gets that stored response back instead of being applied a second time.
 
 Requests without the header behave exactly as before.
 """
@@ -27,9 +27,37 @@ _STALE_IN_PROGRESS = timedelta(minutes=10)
 _RETENTION = timedelta(days=60)
 
 
+def _request_user_id(request) -> int | None:
+    """
+    The signed-in user, resolved without running the full DRF auth stack.
+
+    Keys must be scoped to the *user*, not to the login token: each browser tab and each new
+    sign-in gets its own token, and an offline sale replayed from another tab or after signing
+    in again must still be recognised as the same request (otherwise it is saved twice).
+    """
+    auth = (request.META.get("HTTP_AUTHORIZATION", "") or "").split()
+    if len(auth) == 2 and auth[0] == "Token":
+        from accounts.authentication import _hash_token
+        from accounts.models import ApiToken
+
+        return (
+            ApiToken.objects.filter(key_hash=_hash_token(auth[1]))
+            .values_list("user_id", flat=True)
+            .first()
+        )
+    user = getattr(request, "user", None)
+    if user is not None and getattr(user, "is_authenticated", False):
+        return user.pk
+    return None
+
+
 def _owner_hash(request) -> str:
-    auth = request.META.get("HTTP_AUTHORIZATION", "") or ""
-    raw = auth or "anon:" + (request.META.get("REMOTE_ADDR") or "")
+    user_id = _request_user_id(request)
+    if user_id is not None:
+        raw = f"user:{user_id}"
+    else:
+        auth = request.META.get("HTTP_AUTHORIZATION", "") or ""
+        raw = auth or "anon:" + (request.META.get("REMOTE_ADDR") or "")
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 

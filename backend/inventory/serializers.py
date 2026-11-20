@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
@@ -98,6 +98,47 @@ def _inventory_loss_note(
         f"[AUTO_INVENTORY_LOSS] کەمکردنەوەی دەستی کۆگا: {qty} دانە × {buy_s} USD "
         f"(کۆی گشتی {loss_s} USD)"
     )
+
+
+_MONEY_STEP = Decimal("0.0001")
+
+
+def _sale_line_return_value_usd(sale_line, quantity: int, discount_ratio: Decimal) -> Decimal:
+    """
+    Value handed back for returning `quantity` more units of a sale line (its share of
+    the invoice discount removed). Computed on the cumulative returned quantity so the
+    per-unit rounding never adds up to more than the line was actually sold for.
+    """
+    prev_qty = 0
+    prev_value = Decimal("0")
+    for row in SaleReturnLine.objects.filter(sale_line_id=sale_line.pk).values_list(
+        "quantity",
+        "unit_price_usd",
+    ):
+        prev_qty += int(row[0])
+        prev_value += Decimal(row[0]) * Decimal(row[1])
+    total_after = (
+        Decimal(prev_qty + int(quantity)) * Decimal(sale_line.unit_price_usd) * discount_ratio
+    ).quantize(_MONEY_STEP)
+    return max(Decimal("0"), total_after - prev_value).quantize(_MONEY_STEP)
+
+
+def _split_amount_over_units(quantity: int, amount: Decimal) -> list[tuple[int, Decimal]]:
+    """
+    Split `amount` (4 dp) over `quantity` units as at most two (qty, unit price) rows
+    whose qty x unit sum is exactly `amount` (unit prices are stored with 4 dp).
+    """
+    qty = int(quantity)
+    amount = Decimal(amount).quantize(_MONEY_STEP)
+    low = (amount / qty).quantize(_MONEY_STEP, rounding=ROUND_DOWN)
+    high_units = int(((amount - low * qty) / _MONEY_STEP).to_integral_value())
+    high_units = min(max(high_units, 0), qty)
+    rows: list[tuple[int, Decimal]] = []
+    if qty - high_units > 0:
+        rows.append((qty - high_units, low))
+    if high_units > 0:
+        rows.append((high_units, low + _MONEY_STEP))
+    return rows
 
 
 class PublicProductSerializer(serializers.ModelSerializer):
@@ -317,6 +358,31 @@ class StorefrontOrderSerializer(serializers.ModelSerializer):
         delivery_zone = validated_data.pop("_delivery_zone", None)
         shop = validated_data["shop"]
         shop_id = int(shop.pk)
+        from django.conf import settings as dj_settings
+
+        from .storefront_expiry import expire_stale_pending_orders
+
+        # Give back stock held by abandoned orders before checking availability.
+        expire_stale_pending_orders(shop_id)
+
+        max_open = int(getattr(dj_settings, "STOREFRONT_MAX_OPEN_ORDERS_PER_PHONE", 3) or 0)
+        phone = (validated_data.get("customer_phone") or "").strip()
+        if max_open > 0 and phone:
+            open_count = StorefrontOrder.objects.filter(
+                shop_id=shop_id,
+                customer_phone=phone,
+                status=StorefrontOrderStatus.PENDING,
+            ).count()
+            if open_count >= max_open:
+                raise serializers.ValidationError(
+                    {
+                        "customer_phone": (
+                            "You already have orders waiting to be confirmed. "
+                            "Please wait for the shop to contact you."
+                        ),
+                    },
+                )
+        max_qty = int(getattr(dj_settings, "STOREFRONT_MAX_QTY_PER_LINE", 50) or 0)
 
         with transaction.atomic():
             subtotal = Decimal("0")
@@ -326,6 +392,10 @@ class StorefrontOrderSerializer(serializers.ModelSerializer):
                 qty = int(row["quantity"])
                 if qty <= 0:
                     continue
+                if max_qty > 0 and qty > max_qty:
+                    raise serializers.ValidationError(
+                        {"items": f"At most {max_qty} of {product.name} per order."},
+                    )
                 if product.shop_id != shop_id:
                     raise serializers.ValidationError(
                         {"items": "Each product must belong to the selected shop."},
@@ -350,6 +420,11 @@ class StorefrontOrderSerializer(serializers.ModelSerializer):
                 from inventory.online_pricing import effective_online_unit_price
 
                 unit_price = effective_online_unit_price(product, qty)
+                if unit_price <= 0:
+                    # No online or retail price set: never sell it for $0.
+                    raise serializers.ValidationError(
+                        {"items": f"{product.name} is not available for online ordering."},
+                    )
                 line_total = (unit_price * Decimal(qty)).quantize(Decimal("0.0001"))
                 subtotal += line_total
                 line_blocks.append(
@@ -385,7 +460,8 @@ class StorefrontOrderSerializer(serializers.ModelSerializer):
                 total_amount=grand_total,
                 status=StorefrontOrderStatus.PENDING,
             )
-            for block in line_blocks:
+            # Lock products in id order: two orders listing [A, B] and [B, A] would deadlock.
+            for block in sorted(line_blocks, key=lambda b: b["product"].pk):
                 product = (
                     Product.objects.select_for_update()
                     .filter(pk=block["product"].pk, shop_id=shop_id)
@@ -496,7 +572,7 @@ class MerchantStorefrontOrderSerializer(serializers.ModelSerializer):
                 old_status == StorefrontOrderStatus.CANCELLED
                 and new_status != StorefrontOrderStatus.CANCELLED
             ):
-                for item in order.items.select_related("product"):
+                for item in order.items.select_related("product").order_by("product_id"):
                     prod = (
                         Product.objects.select_for_update()
                         .filter(pk=item.product_id)
@@ -922,6 +998,8 @@ class ProductSerializer(serializers.ModelSerializer):
                     purchase_line=purchase_line,
                     received_at=purchase.occurred_at,
                 )
+                # From negative stock, part of the new layer covers units already sold.
+                reconcile_product_batches(updated.pk)
             # Manual stock decrease / stop-carrying write-off → inventory loss (expense).
             elif delta < 0 and not restored_from_discontinued:
                 loss_qty = abs(delta)
@@ -1827,6 +1905,27 @@ class SaleSerializer(serializers.ModelSerializer):
         )
         return int(latest) + 1
 
+    @staticmethod
+    def _reject_walk_in_debt(sale: Sale, allowed_unpaid: Decimal = Decimal("0")) -> None:
+        """
+        A sale left (partly) unpaid must belong to a customer: otherwise the debt shows in
+        total receivables but on nobody's account and can never be collected.
+        `allowed_unpaid` lets edits of older walk-in sales keep (not grow) their existing debt.
+        """
+        if sale.customer_id is not None:
+            return
+        from .dashboard_tools import sale_unpaid_balance_usd
+
+        if sale_unpaid_balance_usd(sale) > allowed_unpaid:
+            raise serializers.ValidationError(
+                {
+                    "customer": (
+                        "A sale with an unpaid balance (debt) needs a customer. "
+                        "Select or add the customer, or take full payment."
+                    ),
+                },
+            )
+
     def create(self, validated_data: dict) -> Sale:
         lines_data: list = validated_data.pop("lines")
         request = self.context["request"]
@@ -1845,6 +1944,15 @@ class SaleSerializer(serializers.ModelSerializer):
                     validated_data["receipt_number"] = self._next_receipt_number(shop_id)
                     sale = Sale.objects.create(**validated_data)
                     self._write_sale_lines(sale, shop_id, lines_data)
+                    from .dashboard_tools import trim_sale_checkout_overpayment
+
+                    trim_sale_checkout_overpayment(sale.pk)
+                    sale.refresh_from_db(fields=["amount_paid_usd", "amount_paid_iqd"])
+                    self._reject_walk_in_debt(sale)
+                    from .dashboard_tools import apply_customer_unallocated_credit
+
+                    # Payment credit freed by an earlier sale edit settles this debt.
+                    apply_customer_unallocated_credit(shop_id, sale.customer_id)
                 return sale
             except IntegrityError:
                 continue
@@ -1904,11 +2012,20 @@ class SaleSerializer(serializers.ModelSerializer):
                         raise serializers.ValidationError(
                             {pay_key: "Payment amount cannot be negative."},
                         )
+                from .dashboard_tools import sale_unpaid_balance_usd
+
+                unpaid_before = sale_unpaid_balance_usd(locked)
                 for attr, value in validated_data.items():
                     setattr(locked, attr, value)
                 locked.save()
-                from .dashboard_tools import rebalance_customer_debt_allocations
+                from .dashboard_tools import (
+                    rebalance_customer_debt_allocations,
+                    trim_sale_checkout_overpayment,
+                )
 
+                trim_sale_checkout_overpayment(locked.pk)
+                locked.refresh_from_db(fields=["amount_paid_usd", "amount_paid_iqd"])
+                self._reject_walk_in_debt(locked, allowed_unpaid=unpaid_before)
                 rebalance_customer_debt_allocations(shop_id, locked.customer_id)
             return locked
 
@@ -1918,8 +2035,9 @@ class SaleSerializer(serializers.ModelSerializer):
         if customer is not empty and customer is not None and customer.shop_id != shop_id:
             raise serializers.ValidationError({"customer": "Customer must belong to your shop."})
 
-        discount = validated_data.get("invoice_discount_usd") or Decimal("0")
-        self._validate_discount_against_lines(lines_data, discount)
+        # A partial update keeps the stored discount, so validate against that one.
+        discount = validated_data.get("invoice_discount_usd", instance.invoice_discount_usd) or Decimal("0")
+        self._validate_discount_against_lines(lines_data, Decimal(discount))
 
         with transaction.atomic():
             locked = (
@@ -1933,6 +2051,10 @@ class SaleSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"detail": "Cannot edit a sale that has product returns recorded."},
                 )
+            from .dashboard_tools import sale_unpaid_balance_usd
+
+            # Measured before the old lines are removed: an old walk-in sale may keep its debt.
+            unpaid_before = sale_unpaid_balance_usd(locked)
 
             old_lines = list(
                 SaleLine.objects.filter(sale_id=locked.pk).select_related("product"),
@@ -1951,7 +2073,14 @@ class SaleSerializer(serializers.ModelSerializer):
             locked.save()
             self._write_sale_lines(locked, shop_id, lines_data)
             # Debt repayments already applied to this sale may now exceed what it owes.
-            from .dashboard_tools import rebalance_customer_debt_allocations
+            from .dashboard_tools import (
+                rebalance_customer_debt_allocations,
+                trim_sale_checkout_overpayment,
+            )
+
+            trim_sale_checkout_overpayment(locked.pk)
+            locked.refresh_from_db(fields=["amount_paid_usd", "amount_paid_iqd"])
+            self._reject_walk_in_debt(locked, allowed_unpaid=unpaid_before)
 
             for cid in {old_customer_id, locked.customer_id}:
                 rebalance_customer_debt_allocations(shop_id, cid)
@@ -2290,16 +2419,15 @@ class SaleReturnCreateSerializer(serializers.Serializer):
             total_refund = Decimal("0")
             for line_id, req_qty in requested_by_line.items():
                 src_line = sale_lines_map[line_id]
-                unit_price = (Decimal(src_line.unit_price_usd) * discount_ratio).quantize(
-                    Decimal("0.0001"),
-                )
-                SaleReturnLine.objects.create(
-                    sale_return=sale_return,
-                    sale_line=src_line,
-                    product=src_line.product,
-                    quantity=req_qty,
-                    unit_price_usd=unit_price,
-                )
+                line_refund = _sale_line_return_value_usd(src_line, req_qty, discount_ratio)
+                for row_qty, row_unit in _split_amount_over_units(req_qty, line_refund):
+                    SaleReturnLine.objects.create(
+                        sale_return=sale_return,
+                        sale_line=src_line,
+                        product=src_line.product,
+                        quantity=row_qty,
+                        unit_price_usd=row_unit,
+                    )
                 if src_line.product_id:
                     restored = restore_sale_line_batches_partial(src_line, req_qty)
                     if restored:
@@ -2328,7 +2456,9 @@ class SaleReturnCreateSerializer(serializers.Serializer):
                     Product.objects.filter(pk=src_line.product_id).update(
                         current_stock_quantity=F("current_stock_quantity") + req_qty,
                     )
-                total_refund += (Decimal(req_qty) * unit_price).quantize(Decimal("0.0001"))
+                    # Units put back while stock is negative cover earlier oversold sales.
+                    reconcile_product_batches(src_line.product_id)
+                total_refund += line_refund
 
             # The unpaid part of the sale is cancelled first; only what the customer
             # actually paid for these goods can be handed back as cash.
@@ -2454,10 +2584,26 @@ class PurchaseReturnCreateSerializer(serializers.Serializer):
                     prev_qty = int(already_returned.get(line_id, 0))
                     sellable_qty = max(0, prev_qty + req_qty - damaged) - max(0, prev_qty - damaged)
                     if sellable_qty > 0:
-                        deduct_from_purchase_line_batch(src_line, sellable_qty)
+                        _, cost_gap = deduct_from_purchase_line_batch(src_line, sellable_qty)
                         Product.objects.filter(pk=src_line.product_id).update(
                             current_stock_quantity=F("current_stock_quantity") - sellable_qty,
                         )
+                        if cost_gap > 0:
+                            # This line's own layer was already sold, so dearer stock went
+                            # back while the supplier credits only this line's cost.
+                            Expense.objects.create(
+                                shop_id=shop_id,
+                                name=_inventory_loss_expense_name(src_line.product.name),
+                                amount=cost_gap,
+                                currency=ExpenseCurrency.USD,
+                                note=(
+                                    f"[AUTO_INVENTORY_LOSS] گەڕاندنەوە بۆ کۆمپانیا: {sellable_qty} دانە — "
+                                    f"جیاوازی تێچوو {_usd_compact(cost_gap)} USD "
+                                    "(supplier return cost difference)"
+                                ),
+                                occurred_on=timezone.localdate(),
+                                exchange_rate_usd_to_iqd=None,
+                            )
                 total_return += (Decimal(req_qty) * unit_cost).quantize(Decimal("0.0001"))
 
         return {

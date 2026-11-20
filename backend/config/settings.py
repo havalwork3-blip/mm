@@ -178,6 +178,14 @@ REST_FRAMEWORK = {
     },
 }
 
+# Public online orders take stock immediately; these limits stop fake orders from locking it up.
+# PENDING orders nobody handled are cancelled (stock restored) after this many hours (0 = never).
+STOREFRONT_PENDING_ORDER_HOURS = int(os.environ.get("STOREFRONT_PENDING_ORDER_HOURS", "48"))
+# Largest quantity of one product in a single online order.
+STOREFRONT_MAX_QTY_PER_LINE = int(os.environ.get("STOREFRONT_MAX_QTY_PER_LINE", "50"))
+# Open (PENDING) online orders allowed per phone number at the same time.
+STOREFRONT_MAX_OPEN_ORDERS_PER_PHONE = int(os.environ.get("STOREFRONT_MAX_OPEN_ORDERS_PER_PHONE", "3"))
+
 # Shared by all Gunicorn workers (login lockout + throttling must not be per-process).
 import tempfile as _tempfile
 

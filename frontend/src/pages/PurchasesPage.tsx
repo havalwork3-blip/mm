@@ -1,3 +1,4 @@
+import { localDateIso } from '../lib/datePresets'
 import { Download, Pencil, Printer } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { jsPDF } from 'jspdf'
@@ -123,13 +124,13 @@ function formatMoneySmart(value: number): string {
 }
 
 /** API USD strings (e.g. 0.0000) → up to 2 decimals, trailing fractional zeros stripped. */
-function formatUsdCellString(raw: string | undefined | null): string {
+function formatUsdCellString(raw: string | undefined | null, maxDecimals = 2): string {
   if (raw == null) return '—'
   const trimmed = String(raw).trim()
   if (trimmed === '') return '—'
   const n = parseFloat(normalizeNum(trimmed))
   if (Number.isNaN(n)) return '—'
-  const s = n.toFixed(2).replace(/\.?0+$/, '')
+  const s = n.toFixed(maxDecimals).replace(/\.?0+$/, '')
   return s === '' ? '0' : s
 }
 
@@ -176,17 +177,19 @@ function stripUsdParens(label: string): string {
 function purchaseLineColumnValues(row: PurchaseHistoryRow): {
   productNames: string
   quantities: string
+  unitPrices: string
 } {
   const lines = row.lines ?? []
   if (lines.length > 0) {
     return {
       productNames: lines.map((ln) => ln.product_name ?? '?').join('\n'),
       quantities: lines.map((ln) => String(ln.quantity ?? 0)).join('\n'),
+      unitPrices: lines.map((ln) => formatUsdCellString(ln.unit_cost_usd, 4)).join('\n'),
     }
   }
   const raw = String(row.lines_product_names ?? row.lines_summary ?? '').trim()
   if (!raw) {
-    return { productNames: '—', quantities: '—' }
+    return { productNames: '—', quantities: '—', unitPrices: '—' }
   }
   const parts = raw.split('·').map((p) => p.trim()).filter(Boolean)
   const names: string[] = []
@@ -204,6 +207,7 @@ function purchaseLineColumnValues(row: PurchaseHistoryRow): {
   return {
     productNames: names.join('\n'),
     quantities: qtys.join('\n'),
+    unitPrices: names.map(() => '—').join('\n'),
   }
 }
 
@@ -231,6 +235,9 @@ export function PurchasesPage() {
   const [companyId, setCompanyId] = useState('')
   const [outstandingUsd, setOutstandingUsd] = useState<string | null>(null)
   const [occurredAt, setOccurredAt] = useState(() => toDatetimeLocalValue(new Date()))
+  /** False until the user edits the date: then "now" is used at save time, so a page left open
+   * since yesterday never records today's purchase under an old date. */
+  const [occurredAtTouched, setOccurredAtTouched] = useState(false)
   const [currency, setCurrency] = useState<'USD' | 'IQD'>('USD')
   const [exchangeRate, setExchangeRate] = useState('')
   const [paymentType, setPaymentType] = useState<'cash' | 'debt'>('debt')
@@ -575,6 +582,7 @@ export function PurchasesPage() {
         <td>${escapeHtml(p.company_name ?? '—')}</td>
         <td>${escapeHtml(cols.productNames)}</td>
         <td>${escapeHtml(cols.quantities)}</td>
+        <td style="white-space:pre-line">${escapeHtml(cols.unitPrices)}</td>
         <td>${escapeHtml(purchaseReceiptDisplay(p))}</td>
         <td>${escapeHtml(formatUsdCellString(p.goods_total_usd))}</td>
         <td>${escapeHtml(formatUsdCellString(p.amount_paid_usd))}</td>
@@ -605,6 +613,7 @@ export function PurchasesPage() {
             <th><span>${escapeHtml(t('purchasePage.colCompany'))}</span></th>
             <th><span>${escapeHtml(t('purchasePage.colProducts'))}</span></th>
             <th><span>${escapeHtml(t('purchasePage.colTotalUnits'))}</span></th>
+            <th><span>${escapeHtml(t('purchasePage.unitPrice') + ' USD')}</span></th>
             <th><span>${escapeHtml(t('purchasePage.colInvoice'))}</span></th>
             <th><span>${escapeHtml(stripUsdParens(t('purchasePage.colGoodsTotal')) + ' USD')}</span></th>
             <th><span>${escapeHtml(stripUsdParens(t('purchasePage.colPaid')) + ' USD')}</span></th>
@@ -657,7 +666,7 @@ export function PurchasesPage() {
   const downloadHistoryPdf = useCallback(async () => {
     try {
       const pdf = await buildHistoryPdfDoc()
-      pdf.save(`purchase-history-${new Date().toISOString().slice(0, 10)}.pdf`)
+      pdf.save(`purchase-history-${localDateIso()}.pdf`)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     }
@@ -689,10 +698,25 @@ export function PurchasesPage() {
     setAmountPaidUsd(netAfterDiscount.toFixed(4))
   }, [paymentType, netAfterDiscount])
 
+  useEffect(() => {
+    if (occurredAtTouched) return
+    const refresh = () => setOccurredAt(toDatetimeLocalValue(new Date()))
+    const id = window.setInterval(refresh, 30_000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [occurredAtTouched])
+
   function resetForm() {
     setCompanyId('')
     setOutstandingUsd(null)
     setOccurredAt(toDatetimeLocalValue(new Date()))
+    setOccurredAtTouched(false)
     setCurrency('USD')
     setPaymentType('debt')
     setDiscountUsd('')
@@ -745,8 +769,13 @@ export function PurchasesPage() {
       setError(t('purchasePage.needLines'))
       return
     }
-    let occurred = occurredAt.trim()
-    if (occurred.length === 16) occurred = `${occurred}:00`
+    // Send an absolute timestamp (with timezone) so the server can never misread local wall-clock time.
+    const occurredDate = occurredAtTouched ? new Date(occurredAt.trim()) : new Date()
+    if (Number.isNaN(occurredDate.getTime())) {
+      setError(t('common.error'))
+      return
+    }
+    const occurred = occurredDate.toISOString()
 
     setSubmitting(true)
     try {
@@ -1001,6 +1030,7 @@ export function PurchasesPage() {
                     <th className="px-3 py-2 text-start">{t('purchasePage.colCompany')}</th>
                     <th className="px-3 py-2 text-center">{t('purchasePage.colProducts')}</th>
                     <th className="px-3 py-2 text-center">{t('purchasePage.colTotalUnits')}</th>
+                    <th className="px-3 py-2 text-center whitespace-nowrap">{t('purchasePage.unitPrice')} USD</th>
                     <th className="px-3 py-2 text-start">{t('purchasePage.colInvoice')}</th>
                     <th className="px-3 py-2 text-center">{stripUsdParens(t('purchasePage.colGoodsTotal'))} USD</th>
                     <th className="px-3 py-2 text-center">{stripUsdParens(t('purchasePage.colPaid'))} USD</th>
@@ -1014,13 +1044,13 @@ export function PurchasesPage() {
                 <tbody>
                   {historyLoading ? (
                     <tr>
-                      <td colSpan={canChangePurchase ? 10 : 9} className="px-3 py-4 text-slate-500">
+                      <td colSpan={canChangePurchase ? 11 : 10} className="px-3 py-4 text-slate-500">
                         {t('common.loading')}
                       </td>
                     </tr>
                   ) : historyRows.length === 0 ? (
                     <tr>
-                      <td colSpan={canChangePurchase ? 10 : 9} className="px-3 py-4 text-slate-500">
+                      <td colSpan={canChangePurchase ? 11 : 10} className="px-3 py-4 text-slate-500">
                         {t('crud.noRows')}
                       </td>
                     </tr>
@@ -1043,6 +1073,9 @@ export function PurchasesPage() {
                           </td>
                           <td className="px-3 py-2 text-center font-mono text-xs tabular-nums whitespace-pre-line">
                             {cols.quantities}
+                          </td>
+                          <td className="px-3 py-2 text-center font-mono text-xs tabular-nums whitespace-pre-line">
+                            {cols.unitPrices}
                           </td>
                           <td className="px-3 py-2 font-mono text-xs tabular-nums">{purchaseReceiptDisplay(p)}</td>
                           <td className="px-3 py-2 text-center font-mono tabular-nums">
@@ -1332,7 +1365,10 @@ export function PurchasesPage() {
                 <input
                   type="datetime-local"
                   value={occurredAt}
-                  onChange={(e) => setOccurredAt(e.target.value)}
+                  onChange={(e) => {
+                    setOccurredAt(e.target.value)
+                    setOccurredAtTouched(true)
+                  }}
                   className="min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
                 />
               </label>

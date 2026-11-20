@@ -15,6 +15,7 @@ import {
   type SaleReturnRefundMethod,
 } from '../lib/saleReturnRefund'
 import type { Paginated, SaleListRow, SaleReturnResponse } from '../types/api'
+import { normalizeNumericInput } from '../lib/exchangeRate'
 
 export function SalesReturnsPage() {
   const { t } = useLocale()
@@ -242,7 +243,7 @@ export function SalesReturnsPage() {
                 type="search"
                 inputMode="numeric"
                 value={receiptNumber}
-                onChange={(e) => setReceiptNumber(e.target.value.replace(/\D+/g, ''))}
+                onChange={(e) => setReceiptNumber(normalizeNumericInput(e.target.value).replace(/\D+/g, ''))}
                 placeholder={t('sales.filterReceiptNumber')}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
               />
@@ -432,7 +433,7 @@ export function SalesReturnsPage() {
                         onChange={(e) =>
                           setReturnQuantities((prev) => ({
                             ...prev,
-                            [ln.id]: e.target.value.replace(/\D+/g, ''),
+                            [ln.id]: normalizeNumericInput(e.target.value).replace(/\D+/g, ''),
                           }))
                         }
                         inputMode="numeric"

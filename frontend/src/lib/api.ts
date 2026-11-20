@@ -310,10 +310,13 @@ export type ApiFetchOptions = RequestInit & {
   omitShopScope?: boolean
   /** Superuser: send `shop_id` even when Global View is on (tenant-specific APIs). */
   shopScoped?: boolean
+  /** Never queue this write for offline replay; fail immediately instead (e.g. creating a customer). */
+  noOfflineQueue?: boolean
 }
 
 export async function apiFetch(path: string, init: ApiFetchOptions = {}) {
-  const { omitShopScope, shopScoped, ...rest } = init
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { omitShopScope, shopScoped, noOfflineQueue, ...rest } = init
   const url = buildApiUrl(path, Boolean(omitShopScope), Boolean(shopScoped))
   const headers = new Headers(rest.headers)
   const a = authHeaders() as Record<string, string>
@@ -337,7 +340,8 @@ async function apiFetchWithBase(
   path: string,
   init: ApiFetchOptions = {},
 ) {
-  const { omitShopScope, shopScoped, ...rest } = init
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { omitShopScope, shopScoped, noOfflineQueue, ...rest } = init
   let p = path.startsWith('/') ? path : `/${path}`
   const sid = scopedShopIdForRequest(Boolean(shopScoped))
   const isMeEndpoint = p.startsWith('/api/users/me')
@@ -419,7 +423,7 @@ export async function apiJson<T>(path: string, init: ApiFetchOptions = {}): Prom
     const isNetworkFailure = e instanceof TypeError
     const canQueueBody =
       init.body == null || typeof init.body === 'string' || init.body instanceof URLSearchParams
-    if (isMutating && isNetworkFailure && canQueueBody) {
+    if (isMutating && isNetworkFailure && canQueueBody && !init.noOfflineQueue) {
       const headers = new Headers(init.headers)
       if (init.body != null && !headers.has('Content-Type') && !(init.body instanceof FormData)) {
         headers.set('Content-Type', 'application/json')
@@ -506,6 +510,20 @@ export async function apiJson<T>(path: string, init: ApiFetchOptions = {}): Prom
 export async function flushOfflineQueue(): Promise<void> {
   if (isFlushingOfflineQueue) return
   if (typeof navigator !== 'undefined' && !navigator.onLine) return
+  // The queue lives in localStorage and is shared by every tab: let only one tab send it at a
+  // time, otherwise two tabs replay the same sale at once. (The server also dedupes per user.)
+  const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined
+  if (locks?.request) {
+    await locks.request('mm-offline-queue-flush', { ifAvailable: true }, async (lock) => {
+      if (lock) await flushOfflineQueueLocked()
+    })
+    return
+  }
+  await flushOfflineQueueLocked()
+}
+
+async function flushOfflineQueueLocked(): Promise<void> {
+  if (isFlushingOfflineQueue) return
   isFlushingOfflineQueue = true
   try {
     if (!authToken) return

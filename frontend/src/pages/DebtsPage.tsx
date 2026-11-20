@@ -1,3 +1,4 @@
+import { localDateIso } from '../lib/datePresets'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { Download, History, Lock, Pencil, Printer, Unlock } from 'lucide-react'
@@ -87,7 +88,7 @@ export function DebtsPage() {
   const [debtType, setDebtType] = useState<'taken' | 'returned'>('taken')
   const [employeeId, setEmployeeId] = useState<number | ''>('')
   const [note, setNote] = useState('')
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(() => localDateIso())
   const [error, setError] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [debtEditOpen, setDebtEditOpen] = useState(false)
@@ -185,7 +186,7 @@ export function DebtsPage() {
 
   const downloadDebtsHistoryPdf = useCallback(async () => {
     const pdf = await buildDebtsHistoryPdfDoc()
-    pdf.save(`employee-debt-history-${new Date().toISOString().slice(0, 10)}.pdf`)
+    pdf.save(`employee-debt-history-${localDateIso()}.pdf`)
   }, [buildDebtsHistoryPdfDoc])
 
   const printDebtsHistory = useCallback(async () => {

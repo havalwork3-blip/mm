@@ -93,11 +93,12 @@ def recalculate_month(shop_id: int, month: date) -> int:
         shop_id=shop_id,
         month=first,
     ):
-        pct = Decimal(credit.shareholder.share_percentage)
+        # Keep the percentage the partner had in that month: a later change of
+        # share_percentage applies to future months only.
+        pct = Decimal(credit.share_percentage)
         credit.shop_net_profit_usd = net
-        credit.share_percentage = pct
         credit.amount_usd = (net * pct / 100).quantize(MONEY)
-        credit.save(update_fields=["shop_net_profit_usd", "share_percentage", "amount_usd", "updated_at"])
+        credit.save(update_fields=["shop_net_profit_usd", "amount_usd", "updated_at"])
         updated += 1
     return updated
 

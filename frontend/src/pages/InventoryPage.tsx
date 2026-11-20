@@ -1,3 +1,4 @@
+import { localDateIso } from '../lib/datePresets'
 import { Ban, Globe2, LayoutGrid, Layers } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -895,7 +896,7 @@ export function InventoryPage() {
           offsetY += sliceHeight
           pageNo += 1
         }
-        doc.save(`inventory-products-${new Date().toISOString().slice(0, 10)}.pdf`)
+        doc.save(`inventory-products-${localDateIso()}.pdf`)
         return
       }
 
@@ -930,7 +931,7 @@ export function InventoryPage() {
           doc.text(`Page ${data.pageNumber}`, pageWidth - 56, pageSize.getHeight() - 12)
         },
       })
-      doc.save(`inventory-products-${new Date().toISOString().slice(0, 10)}.pdf`)
+      doc.save(`inventory-products-${localDateIso()}.pdf`)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {

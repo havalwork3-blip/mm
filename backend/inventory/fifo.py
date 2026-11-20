@@ -48,6 +48,20 @@ def _money(value: Decimal | str | int | float | None) -> Decimal:
     return Decimal(str(value or 0)).quantize(Decimal("0.0001"))
 
 
+def is_oversold_placeholder(batch: ProductBatch | None) -> bool:
+    """
+    Placeholder layer created when units were sold with no stock left (quantity 0,
+    no purchase). Deduction rows pointing at it are 'oversold' units whose real cost
+    is assigned when stock arrives (see reconcile_product_batches). Units returned
+    from it never were on the shelf, so they must not be put back into it.
+    """
+    return batch is not None and int(batch.quantity) == 0 and batch.purchase_line_id is None
+
+
+def _oversold_placeholder_filter(prefix: str = "batch__") -> dict:
+    return {f"{prefix}quantity": 0, f"{prefix}purchase_line__isnull": True}
+
+
 def available_batch_quantity(product_id: int) -> int:
     total = (
         ProductBatch.objects.filter(product_id=product_id, remaining_quantity__gt=0).aggregate(
@@ -266,9 +280,12 @@ def restore_sale_line_batches(sale_line: SaleLine) -> int:
         .order_by("id"),
     )
     for row in rows:
-        ProductBatch.objects.select_for_update().filter(pk=row.batch_id).update(
-            remaining_quantity=F("remaining_quantity") + row.quantity,
-        )
+        # Oversold units were never on the shelf: giving them back only cancels the
+        # negative stock, no FIFO layer gains units.
+        if not is_oversold_placeholder(row.batch):
+            ProductBatch.objects.select_for_update().filter(pk=row.batch_id).update(
+                remaining_quantity=F("remaining_quantity") + row.quantity,
+            )
         restored += int(row.quantity)
     SaleLineBatchDeduction.objects.filter(sale_line_id=sale_line.pk).delete()
     return restored
@@ -294,9 +311,10 @@ def restore_sale_line_batches_partial(sale_line: SaleLine, quantity: int) -> int
         if need <= 0:
             break
         take = min(int(row.quantity), need)
-        ProductBatch.objects.select_for_update().filter(pk=row.batch_id).update(
-            remaining_quantity=F("remaining_quantity") + take,
-        )
+        if not is_oversold_placeholder(row.batch):
+            ProductBatch.objects.select_for_update().filter(pk=row.batch_id).update(
+                remaining_quantity=F("remaining_quantity") + take,
+            )
         if take == int(row.quantity):
             row.delete()
         else:
@@ -313,26 +331,35 @@ def restore_storefront_item_batches(order_item: StorefrontOrderItem) -> int:
     rows = list(
         StorefrontOrderItemBatchDeduction.objects.select_for_update()
         .filter(order_item_id=order_item.pk)
+        .select_related("batch")
         .order_by("id"),
     )
     for row in rows:
-        ProductBatch.objects.select_for_update().filter(pk=row.batch_id).update(
-            remaining_quantity=F("remaining_quantity") + row.quantity,
-        )
+        if not is_oversold_placeholder(row.batch):
+            ProductBatch.objects.select_for_update().filter(pk=row.batch_id).update(
+                remaining_quantity=F("remaining_quantity") + row.quantity,
+            )
         restored += int(row.quantity)
     StorefrontOrderItemBatchDeduction.objects.filter(order_item_id=order_item.pk).delete()
     return restored
 
 
 @transaction.atomic
-def deduct_from_purchase_line_batch(purchase_line: PurchaseLine, quantity: int) -> int:
+def deduct_from_purchase_line_batch(
+    purchase_line: PurchaseLine,
+    quantity: int,
+) -> tuple[int, Decimal]:
     """
     Supplier return: remove units from the batch(es) created by this purchase line.
     Falls back to general FIFO if the original batch is exhausted.
+
+    Returns (units taken, cost gap). The supplier credits this line's unit cost; when
+    the fallback consumes a dearer layer, the gap (layer cost - credited cost, > 0)
+    leaves inventory without being refunded and must be booked as a loss.
     """
     need = int(quantity)
     if need <= 0:
-        return 0
+        return 0, Decimal("0")
     product = purchase_line.product
     Product.objects.select_for_update().filter(pk=product.pk).first()
 
@@ -352,10 +379,16 @@ def deduct_from_purchase_line_batch(purchase_line: PurchaseLine, quantity: int) 
         need -= take
         taken += take
 
+    gap = Decimal("0")
     if need > 0:
-        deduct_fifo_stock(product, need, allow_negative=True)
+        result = deduct_fifo_stock(product, need, allow_negative=True)
+        credited = _money(purchase_line.unit_cost_usd)
+        for d in result.deductions:
+            if is_oversold_placeholder(d.batch):
+                continue  # no layer left: nothing of value leaves inventory
+            gap += (_money(d.unit_cost_usd) - credited) * Decimal(d.quantity)
         taken += need
-    return taken
+    return taken, max(Decimal("0"), gap).quantize(Decimal("0.0001"))
 
 
 @transaction.atomic
@@ -378,6 +411,74 @@ def delete_unconsumed_purchase_line_batches(old_lines: Sequence[PurchaseLine]) -
             batch.delete()
 
 
+def reprice_sale_line_from_deductions(sale_line_id: int) -> None:
+    """Sale line COGS snapshot = weighted cost of its (unreturned) FIFO deductions."""
+    rows = list(SaleLineBatchDeduction.objects.filter(sale_line_id=sale_line_id))
+    qty = sum(int(r.quantity) for r in rows)
+    if qty <= 0:
+        return
+    cost = sum((Decimal(r.quantity) * Decimal(r.unit_cost_usd) for r in rows), Decimal("0"))
+    SaleLine.objects.filter(pk=sale_line_id).update(
+        unit_buy_price_usd=(cost / qty).quantize(Decimal("0.0001")),
+    )
+
+
+def _settle_oversold_sale_deductions(
+    product: Product,
+    batches: Sequence[ProductBatch],
+    limit: int,
+) -> int:
+    """
+    Move up to `limit` oversold sale units (deductions on placeholder layers, oldest
+    sale first) onto real layers (oldest first), consuming those layers and repricing
+    the sale lines with the real cost. Returns the number of units settled.
+    """
+    if limit <= 0:
+        return 0
+    rows = list(
+        SaleLineBatchDeduction.objects.select_for_update()
+        .filter(batch__product_id=product.pk, **_oversold_placeholder_filter())
+        .order_by("sale_line__sale__occurred_at", "sale_line_id", "id"),
+    )
+    if not rows:
+        return 0
+    layers = [[b, int(b.remaining_quantity)] for b in batches if not is_oversold_placeholder(b)]
+    settled = 0
+    touched: set[int] = set()
+    li = 0
+    for row in rows:
+        row_left = int(row.quantity)
+        while row_left > 0 and settled < limit and li < len(layers):
+            batch, avail = layers[li]
+            if avail <= 0:
+                li += 1
+                continue
+            take = min(row_left, avail, limit - settled)
+            SaleLineBatchDeduction.objects.create(
+                sale_line_id=row.sale_line_id,
+                batch=batch,
+                quantity=take,
+                unit_cost_usd=_money(batch.cost_price),
+            )
+            ProductBatch.objects.filter(pk=batch.pk).update(
+                remaining_quantity=F("remaining_quantity") - take,
+            )
+            layers[li][1] = avail - take
+            row_left -= take
+            settled += take
+            touched.add(int(row.sale_line_id))
+        if row_left <= 0:
+            row.delete()
+        elif row_left != int(row.quantity):
+            row.quantity = row_left
+            row.save(update_fields=["quantity"])
+        if settled >= limit or li >= len(layers):
+            break
+    for line_id in touched:
+        reprice_sale_line_from_deductions(line_id)
+    return settled
+
+
 @transaction.atomic
 def reconcile_product_batches(product_id: int) -> int:
     """
@@ -397,7 +498,11 @@ def reconcile_product_batches(product_id: int) -> int:
     if diff > 0:
         create_product_batch(product=product, quantity=diff, cost_price=product.buy_price)
     elif diff < 0:
-        excess = -diff
+        # Units sold while stock was negative take their real cost from the layers
+        # that now cover them; any excess left (untracked, e.g. legacy data or a manual
+        # write-off below zero) is consumed silently as before.
+        excess = -diff - _settle_oversold_sale_deductions(product, batches, -diff)
+        batches = _locked_fifo_batches(product.pk)
         for batch in batches:
             if excess <= 0:
                 break

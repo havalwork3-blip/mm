@@ -1,0 +1,20 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "django",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["/Users/havalkamal/Documents/website/mm/scripts/run-django-backend.mjs"],
+      "port": 8001
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "/Users/havalkamal/Documents/website/mm/frontend/node_modules/vite/bin/vite.js",
+        "/Users/havalkamal/Documents/website/mm/frontend"
+      ],
+      "port": 5180
+    }
+  ]
+}

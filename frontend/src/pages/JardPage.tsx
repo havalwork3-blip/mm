@@ -1,3 +1,4 @@
+import { localDateIso } from '../lib/datePresets'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { Check, ChevronDown, ImageOff } from 'lucide-react'
@@ -340,7 +341,7 @@ export function JardPage() {
           offsetY += sliceHeight
           pageNo += 1
         }
-        pdf.save(`jard-${new Date().toISOString().slice(0, 10)}.pdf`)
+        pdf.save(`jard-${localDateIso()}.pdf`)
       } finally {
         document.body.removeChild(container)
       }

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, time, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
 
 from django.db import transaction
@@ -307,6 +307,27 @@ def _allocate_customer_debt_payment_fifo(
     return applied.quantize(Decimal("0.0001")), allocations
 
 
+def customer_unallocated_payment_credit(shop_id: int, customer_id: int) -> list[tuple[int, Decimal]]:
+    """(payment_id, amount) of debt payments not (fully) allocated to sales, oldest first."""
+    out: list[tuple[int, Decimal]] = []
+    payments = (
+        CustomerDebtPayment.objects.filter(shop_id=shop_id, customer_id=customer_id)
+        .annotate(allocated=Sum("sale_lines__amount_usd"))
+        .order_by("occurred_at", "id")
+    )
+    for p in payments:
+        left = customer_debt_payment_usd_eq(p) - Decimal(str(p.allocated or 0))
+        if left > Decimal("0.00005"):
+            out.append((p.pk, left.quantize(Decimal("0.0001"))))
+    return out
+
+
+def apply_customer_unallocated_credit(shop_id: int, customer_id: int | None) -> None:
+    """Use payment credit freed by earlier sale edits to settle this customer's debts."""
+    if customer_id and customer_unallocated_payment_credit(shop_id, customer_id):
+        rebalance_customer_debt_allocations(shop_id, customer_id)
+
+
 def rebalance_customer_debt_allocations(shop_id: int, customer_id: int | None) -> None:
     """
     After a sale is edited, debt repayments allocated to it may exceed what it now owes.
@@ -316,6 +337,16 @@ def rebalance_customer_debt_allocations(shop_id: int, customer_id: int | None) -
     if not customer_id:
         return
     with transaction.atomic():
+        # A payment only settles debts of the customer who made it: allocations left on a
+        # sale that was moved to another customer go back to the payer's credit.
+        CustomerDebtPaymentSale.objects.filter(
+            sale__shop_id=shop_id,
+            sale__customer_id=customer_id,
+        ).exclude(payment__customer_id=customer_id).delete()
+        CustomerDebtPaymentSale.objects.filter(
+            payment__shop_id=shop_id,
+            payment__customer_id=customer_id,
+        ).exclude(sale__customer_id=customer_id).delete()
         sales = list(
             Sale.objects.select_for_update()
             .filter(shop_id=shop_id, customer_id=customer_id)
@@ -334,13 +365,16 @@ def rebalance_customer_debt_allocations(shop_id: int, customer_id: int | None) -
                 if excess <= Decimal("0.00005"):
                     break
                 cut = min(Decimal(row.amount_usd), excess)
-                freed.append((row.payment_id, cut))
                 excess -= cut
                 if cut >= Decimal(row.amount_usd):
                     row.delete()
                 else:
                     row.amount_usd = Decimal(row.amount_usd) - cut
                     row.save(update_fields=["amount_usd"])
+        # Every part of the customer's payments not allocated to a sale (freed above, or
+        # earlier when nothing else was owed) is credit for their unpaid sales, oldest
+        # payment first. It stays on the payment until a debt can take it.
+        freed = customer_unallocated_payment_credit(shop_id, customer_id)
         if not freed:
             return
         for sale in sales:
@@ -362,6 +396,57 @@ def rebalance_customer_debt_allocations(shop_id: int, customer_id: int | None) -
                     freed.pop(0)
                 else:
                     freed[0] = (payment_id, amount - chunk)
+
+
+def _trim_debt_payment_excess(
+    amount_paid_usd: Decimal,
+    amount_paid_iqd: Decimal,
+    exchange_rate: Decimal,
+    excess: Decimal,
+) -> tuple[Decimal, Decimal]:
+    """
+    Only the part of a payment that settled debt stays in the drawer; the excess is
+    handed back as change. Take it off the USD part first, then IQD.
+    """
+    if excess > 0:
+        usd_cut = min(excess, amount_paid_usd)
+        amount_paid_usd -= usd_cut
+        excess -= usd_cut
+        if excess > 0 and exchange_rate > 0:
+            amount_paid_iqd = max(
+                Decimal("0"),
+                (amount_paid_iqd - excess * exchange_rate).quantize(Decimal("0.0001")),
+            )
+    return amount_paid_usd, amount_paid_iqd
+
+
+def trim_sale_checkout_overpayment(sale_id: int) -> None:
+    """
+    Cash typed at checkout above the invoice total is change handed back, not
+    drawer cash. Store only what the invoice needed so cash-in reports stay true.
+    """
+    sale = Sale.objects.filter(pk=sale_id).prefetch_related(
+        "lines__return_lines", "debt_discount_writeoff_lines",
+    ).first()
+    if sale is None:
+        return
+    final_usd = _sale_final_usd(sale)
+    excess = (_sale_paid_usd_equiv(sale) - final_usd).quantize(Decimal("0.0001"))
+    if excess < CUSTOMER_DEBT_LIST_MIN_USD:
+        return
+    paid_usd = Decimal(sale.amount_paid_usd)
+    paid_iqd = Decimal(sale.amount_paid_iqd)
+    rate = Decimal(sale.exchange_rate_usd_to_iqd)
+    # USD is kept first (up to the total); IQD covers only what USD left open.
+    new_usd = min(paid_usd, final_usd)
+    new_iqd = paid_iqd
+    if rate > 0 and paid_iqd > 0:
+        need_iqd = ((final_usd - new_usd) * rate).quantize(Decimal("0.0001"))
+        if paid_iqd == paid_iqd.to_integral_value():
+            # POS works in whole dinars; round up so the invoice still reads fully paid.
+            need_iqd = need_iqd.to_integral_value(rounding=ROUND_CEILING)
+        new_iqd = min(paid_iqd, max(Decimal("0"), need_iqd))
+    Sale.objects.filter(pk=sale.pk).update(amount_paid_usd=new_usd, amount_paid_iqd=new_iqd)
 
 
 def apply_customer_debt_payment_fifo(
@@ -403,18 +488,12 @@ def apply_customer_debt_payment_fifo(
         if applied <= 0:
             return Decimal("0"), payment_usd_eq, None
 
-        # Only the part that settled debt stays in the drawer; the excess is handed back
-        # as change. Take it off the USD part first, then IQD.
-        excess = (payment_usd_eq - applied).quantize(Decimal("0.0001"))
-        if excess > 0:
-            usd_cut = min(excess, amount_paid_usd)
-            amount_paid_usd -= usd_cut
-            excess -= usd_cut
-            if excess > 0 and exchange_rate > 0:
-                amount_paid_iqd = max(
-                    Decimal("0"),
-                    (amount_paid_iqd - excess * exchange_rate).quantize(Decimal("0.0001")),
-                )
+        amount_paid_usd, amount_paid_iqd = _trim_debt_payment_excess(
+            amount_paid_usd,
+            amount_paid_iqd,
+            exchange_rate,
+            (payment_usd_eq - applied).quantize(Decimal("0.0001")),
+        )
 
         payment = CustomerDebtPayment.objects.create(
             shop_id=shop_id,
@@ -461,14 +540,20 @@ def update_customer_debt_payment(
             payment.amount_paid_usd = amount_paid_usd.quantize(Decimal("0.0001"))
         if amount_paid_iqd is not None:
             payment.amount_paid_iqd = amount_paid_iqd.quantize(Decimal("0.0001"))
-        payment.save()
-
         paid_eq = customer_debt_payment_usd_eq(payment)
-        _, allocations = _allocate_customer_debt_payment_fifo(
+        applied, allocations = _allocate_customer_debt_payment_fifo(
             shop_id,
             int(payment.customer_id),
             paid_eq,
         )
+        # Same rule as a new payment: what exceeds the debt is change, not drawer cash.
+        payment.amount_paid_usd, payment.amount_paid_iqd = _trim_debt_payment_excess(
+            Decimal(payment.amount_paid_usd),
+            Decimal(payment.amount_paid_iqd),
+            Decimal(payment.exchange_rate_usd_to_iqd),
+            (paid_eq - applied).quantize(Decimal("0.0001")),
+        )
+        payment.save()
         for sale_id, chunk in allocations:
             CustomerDebtPaymentSale.objects.create(
                 payment=payment,
@@ -507,8 +592,10 @@ def apply_customer_debt_remainder_as_discount(
         if unpaid <= Decimal("0.00005"):
             continue
         line_sub = _sale_lines_subtotal_usd(sale)
-        new_disc = Decimal(sale.invoice_discount_usd) + unpaid
-        if new_disc > line_sub:
+        # Compare what the discount will actually be after returns (returned lines took
+        # their share of the stored discount with them), not the raw stored discount.
+        new_disc = sale_effective_discount_usd(sale) + unpaid
+        if new_disc > line_sub + Decimal("0.00005"):
             raise ValueError("discount_exceeds_subtotal")
         sale_chunks.append((sale.pk, unpaid))
 
@@ -598,14 +685,40 @@ def purchase_balance_usd(pur: Purchase) -> Decimal:
     Signed balance for one purchase: positive = still owed, negative = supplier credit
     (e.g. goods returned after the invoice was already paid in full).
     """
-    line_sum = Decimal("0")
+    gross, net_lines = purchase_line_totals_usd(pur)
+    net_due = net_lines - purchase_effective_discount_usd(pur, gross=gross, net=net_lines)
+    paid = Decimal(pur.amount_paid_usd)
+    return (net_due - paid).quantize(Decimal("0.0001"))
+
+
+def purchase_line_totals_usd(pur: Purchase) -> tuple[Decimal, Decimal]:
+    """(line total as invoiced, line total after supplier returns) for one purchase."""
+    gross = Decimal("0")
+    net = Decimal("0")
     for ln in pur.lines.all():
         returned = sum(int(r.quantity) for r in ln.return_lines.all())
         net_qty = max(0, int(ln.quantity) - returned)
-        line_sum += Decimal(net_qty) * Decimal(ln.unit_cost_usd)
-    net_due = line_sum - Decimal(pur.discount_received_usd)
-    paid = Decimal(pur.amount_paid_usd)
-    return (net_due - paid).quantize(Decimal("0.0001"))
+        gross += Decimal(ln.quantity) * Decimal(ln.unit_cost_usd)
+        net += Decimal(net_qty) * Decimal(ln.unit_cost_usd)
+    return gross, net
+
+
+def purchase_effective_discount_usd(
+    pur: Purchase,
+    *,
+    gross: Decimal | None = None,
+    net: Decimal | None = None,
+) -> Decimal:
+    """
+    Supplier discount still applying after purchase returns: returned goods take their
+    share of the invoice discount with them (a fully returned invoice keeps none).
+    """
+    disc = Decimal(pur.discount_received_usd)
+    if gross is None or net is None:
+        gross, net = purchase_line_totals_usd(pur)
+    if disc <= 0 or gross <= 0 or net >= gross:
+        return disc
+    return (disc * net / gross).quantize(Decimal("0.0001"))
 
 
 def purchase_unpaid_balance_usd(pur: Purchase) -> Decimal:
@@ -1013,32 +1126,34 @@ def top_selling_products_in_range(
     None, every distinct sold product in the range is returned.
     """
     start, end = _bounds(d_from, d_to)
-    dec = DecimalField(max_digits=24, decimal_places=4)
-    qs = (
+    lines = (
         SaleLine.objects.filter(
             sale__shop_id=shop_id,
             sale__occurred_at__gte=start,
             sale__occurred_at__lte=end,
         )
         .annotate(display_name=Coalesce("product__name", "manual_name"))
-        .values("display_name")
-        .annotate(
-            total_qty=Sum("quantity"),
-            total_sales_usd=Sum(F("quantity") * F("unit_price_usd"), output_field=dec),
-        )
-        .order_by("-total_qty", "-total_sales_usd")
+        .prefetch_related("return_lines")
     )
-    if limit is not None:
-        qs = qs[: max(1, int(limit))]
-    out: list[dict] = []
-    for row in qs:
-        name = (row.get("display_name") or "").strip()
+    # Returned units are not sold: net them out per line (same basis as the profit report).
+    grouped: dict[str, list] = {}
+    for ln in lines:
+        name = (ln.display_name or "").strip()
         if not name:
             continue
-        total_qty = int(row.get("total_qty") or 0)
-        total_sales_usd = Decimal(str(row.get("total_sales_usd") or "0")).quantize(
-            Decimal("0.0001"),
-        )
+        returned_qty = sum(int(r.quantity) for r in ln.return_lines.all())
+        net_qty = max(0, int(ln.quantity) - returned_qty)
+        if net_qty <= 0:
+            continue
+        row = grouped.setdefault(name, [0, Decimal("0")])
+        row[0] += net_qty
+        row[1] += Decimal(net_qty) * Decimal(ln.unit_price_usd)
+    ranked = sorted(grouped.items(), key=lambda kv: (-kv[1][0], -kv[1][1]))
+    if limit is not None:
+        ranked = ranked[: max(1, int(limit))]
+    out: list[dict] = []
+    for name, (total_qty, total_sales) in ranked:
+        total_sales_usd = total_sales.quantize(Decimal("0.0001"))
         out.append(
             {
                 "product_name": name,

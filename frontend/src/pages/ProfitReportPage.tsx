@@ -31,7 +31,7 @@ import { useLocale } from '../context/LocaleContext'
 import { useTheme } from '../context/ThemeContext'
 import { useSyncedSession } from '../hooks/useSyncedSession'
 import { apiJson } from '../lib/api'
-import { resolveDatePresetRange, type DatePreset } from '../lib/datePresets'
+import { localDateIso, resolveDatePresetRange, type DatePreset } from '../lib/datePresets'
 import { formatDecimalTrim, formatMoneyCompact } from '../lib/formatMoney'
 import { hasPerm } from '../lib/permissions'
 import {
@@ -236,9 +236,9 @@ export function ProfitReportPage() {
   const [shopOverride, setShopOverride] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [dFrom, setDFrom] = useState(() =>
-    new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10),
+    localDateIso(new Date(Date.now() - 7 * 86400000)),
   )
-  const [dTo, setDTo] = useState(() => new Date().toISOString().slice(0, 10))
+  const [dTo, setDTo] = useState(() => localDateIso())
   const [report, setReport] = useState<ProfitReportResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')

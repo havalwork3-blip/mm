@@ -37,9 +37,15 @@ def jard_rows_for_shop(
         r["product_id"]: r
         for r in sold_qs.values("product_id").annotate(q=Sum("quantity"), v=Sum(line_value))
     }
+    # Returned units are valued at the original (gross) sale line price, the same basis
+    # as sold_qs; the return line's own price is net of the invoice discount.
+    returned_value = ExpressionWrapper(
+        F("quantity") * F("sale_line__unit_price_usd"),
+        output_field=dec,
+    )
     returned = {
         r["product_id"]: r
-        for r in returned_qs.values("product_id").annotate(q=Sum("quantity"), v=Sum(line_value))
+        for r in returned_qs.values("product_id").annotate(q=Sum("quantity"), v=Sum(returned_value))
     }
     stock_value = {
         r["product_id"]: r["v"]

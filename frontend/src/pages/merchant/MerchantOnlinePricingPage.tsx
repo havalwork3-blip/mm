@@ -22,7 +22,7 @@ import { useShopExchangeRate } from '../../hooks/useShopExchangeRate'
 import { useSyncedSession } from '../../hooks/useSyncedSession'
 import { apiJson, resolveMediaUrl } from '../../lib/api'
 import { categoryDisplayName } from '../../lib/categoryNames'
-import { formatMoney2, parseDec, usdToIqdString } from '../../lib/moneyInput'
+import { formatMoney2, formatMoney4, parseDec, usdToIqdString } from '../../lib/moneyInput'
 import {
   fetchStorefrontDeliveryZones,
   saveStorefrontDeliveryZones,
@@ -50,7 +50,7 @@ function draftFromRow(row: OnlineProductPricingRow, rate: number | null): RowDra
     row.online_sale_price != null && String(row.online_sale_price).trim() !== ''
       ? String(row.online_sale_price)
       : ''
-  const usd = usdRaw ? formatMoney2(usdRaw) : ''
+  const usd = usdRaw ? formatMoney4(usdRaw) : ''
   const usdNum = parseDec(usd)
   const iqd =
     usd && rate != null && rate > 0 && usdNum > 0 ? usdToIqdString(usdNum, rate) : ''
@@ -71,7 +71,7 @@ function displayUsdPrice(raw: string | null | undefined): string {
 type ZoneUiRow = DeliveryZoneDraft & { key: string }
 
 function zoneDraftFromRow(row: StorefrontDeliveryZoneRow, rate: number | null): DeliveryZoneDraft {
-  const usd = formatMoney2(row.delivery_fee_usd)
+  const usd = formatMoney4(row.delivery_fee_usd)
   const usdNum = parseDec(usd)
   const iqd =
     usd && rate != null && rate > 0 && usdNum > 0 ? usdToIqdString(usdNum, rate) : ''
@@ -167,7 +167,7 @@ export function MerchantOnlinePricingPage() {
         ),
       )
       const raw = data.delivery_free_min_usd
-      const usd = raw ? formatMoney2(raw) : ''
+      const usd = raw ? formatMoney4(raw) : ''
       const usdNum = parseDec(usd)
       const iqd =
         usd && rate != null && rate > 0 && usdNum > 0 ? usdToIqdString(usdNum, rate) : ''
@@ -311,12 +311,12 @@ export function MerchantOnlinePricingPage() {
         .map((z, idx) => ({
           ...(z.id != null ? { id: z.id } : {}),
           name: z.name.trim(),
-          delivery_fee_usd: formatMoney2(z.delivery_fee_usd.trim() || '0') || '0',
+          delivery_fee_usd: formatMoney4(z.delivery_fee_usd.trim() || '0') || '0',
           sort_order: idx,
           is_active: z.is_active,
         }))
       const freeMin =
-        freeDeliveryUsd.trim() === '' ? null : formatMoney2(freeDeliveryUsd.trim()) || null
+        freeDeliveryUsd.trim() === '' ? null : formatMoney4(freeDeliveryUsd.trim()) || null
       const updated = await saveStorefrontDeliveryZones(payload, freeMin)
       setZones(
         updated.zones.map((r, i) =>
@@ -324,7 +324,7 @@ export function MerchantOnlinePricingPage() {
         ),
       )
       const raw = updated.delivery_free_min_usd
-      const usd = raw ? formatMoney2(raw) : ''
+      const usd = raw ? formatMoney4(raw) : ''
       const usdNum = parseDec(usd)
       const iqd =
         usd && rate != null && rate > 0 && usdNum > 0 ? usdToIqdString(usdNum, rate) : ''
@@ -347,7 +347,7 @@ export function MerchantOnlinePricingPage() {
         return {
           id: r.id,
           online_sale_price:
-            d.online_sale_price.trim() === '' ? null : formatMoney2(d.online_sale_price.trim()),
+            d.online_sale_price.trim() === '' ? null : formatMoney4(d.online_sale_price.trim()),
           online_discount_percent: formatMoney2(d.online_discount_percent.trim() || '0') || '0',
           online_discount_min_quantity: Math.max(
             1,

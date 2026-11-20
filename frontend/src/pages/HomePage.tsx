@@ -1,3 +1,4 @@
+import { localDateIso } from '../lib/datePresets'
 ﻿import {
   Activity,
   BarChart3,
@@ -114,8 +115,8 @@ export function HomePage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const [dFrom, setDFrom] = useState(() => new Date().toISOString().slice(0, 10))
-  const [dTo, setDTo] = useState(() => new Date().toISOString().slice(0, 10))
+  const [dFrom, setDFrom] = useState(() => localDateIso())
+  const [dTo, setDTo] = useState(() => localDateIso())
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [pettyCashTrend, setPettyCashTrend] = useState<PettyCashTrendResponse | null>(null)
   const [pettyCashQuery, setPettyCashQuery] = useState('days=7')
@@ -127,8 +128,8 @@ export function HomePage() {
   const [statsForbidden, setStatsForbidden] = useState(false)
   const [onlineStats, setOnlineStats] = useState<OnlineStorefrontOrderStats | null>(null)
   const [loadingOnlineStats, setLoadingOnlineStats] = useState(false)
-  const [topSellingFrom, setTopSellingFrom] = useState(() => new Date().toISOString().slice(0, 10))
-  const [topSellingTo, setTopSellingTo] = useState(() => new Date().toISOString().slice(0, 10))
+  const [topSellingFrom, setTopSellingFrom] = useState(() => localDateIso())
+  const [topSellingTo, setTopSellingTo] = useState(() => localDateIso())
   const [topSellingProducts, setTopSellingProducts] = useState<TopSellingProductRow[]>([])
   const [stockProducts, setStockProducts] = useState<ProductRow[]>([])
   const [loadingStockProducts, setLoadingStockProducts] = useState(false)

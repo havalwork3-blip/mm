@@ -1,7 +1,6 @@
 import { Lock, Unlock } from 'lucide-react'
 
 import {
-  formatMoney2,
   iqdToUsdString,
   normalizeMoneyInput,
   parseDec,
@@ -62,12 +61,14 @@ export function UsdIqdDualInput({
       onUsdChange('', '')
       return
     }
+    // Keep what the user typed (e.g. "12." or "0.0") so decimals can be entered;
+    // reformatting each keystroke turned "12.5" into 125.
     const usd = parseDec(cleaned)
     if (usd <= 0) {
-      onUsdChange('', '')
+      onUsdChange(cleaned, '')
       return
     }
-    onUsdChange(formatMoney2(usd), usdToIqdString(usd, rate))
+    onUsdChange(cleaned, usdToIqdString(usd, rate))
   }
 
   function handleIqd(raw: string) {

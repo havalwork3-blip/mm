@@ -66,6 +66,10 @@ def _effective_line_buy_price_usd(
     snap = _money_q(ln.unit_buy_price_usd)
     if snap > 0:
         return snap
+    # A $0 snapshot backed by FIFO deduction rows is a real cost (free goods from the
+    # supplier); only legacy lines without FIFO data fall back to catalog/purchase cost.
+    if ln.batch_deductions.all():
+        return snap
     pid = ln.product_id
     if not pid:
         return Decimal("0")
@@ -151,7 +155,10 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
     sum_buy = Decimal("0")
     purchase_costs = _latest_purchase_unit_cost_by_product(shop_id)
     per_product: dict[tuple[int | None, str], dict[str, Decimal | int | str | None]] = {}
-    for ln in line_qs.select_related("product", "product__category").prefetch_related("return_lines"):
+    for ln in line_qs.select_related("product", "product__category").prefetch_related(
+        "return_lines",
+        "batch_deductions",
+    ):
         returned_qty = sum(int(row.quantity) for row in ln.return_lines.all())
         net_qty = max(0, int(ln.quantity) - returned_qty)
         if net_qty <= 0:
@@ -215,19 +222,21 @@ def profit_report_for_shop(shop_id: int, d_from, d_to) -> dict:
         shop_id=shop_id,
         occurred_at__gte=start,
         occurred_at__lte=end,
-    ).prefetch_related("lines")
+    ).prefetch_related("lines__return_lines")
+    from .dashboard_tools import purchase_effective_discount_usd, purchase_line_totals_usd
+
+    # Goods sent back to the supplier are not purchases, and they take their share of
+    # the supplier discount with them (same basis as supplier balances).
     total_purchases_goods_usd = Decimal("0")
+    company_disc = Decimal("0")
     for pur in purchase_qs:
-        line_sum = Decimal("0")
-        for ln in pur.lines.all():
-            line_sum += Decimal(ln.quantity) * Decimal(ln.unit_cost_usd)
-        net_goods = line_sum - Decimal(pur.discount_received_usd)
+        gross_lines, net_lines = purchase_line_totals_usd(pur)
+        disc = purchase_effective_discount_usd(pur, gross=gross_lines, net=net_lines)
+        company_disc += disc
+        net_goods = net_lines - disc
         if net_goods < 0:
             net_goods = Decimal("0")
         total_purchases_goods_usd += net_goods
-    company_disc = purchase_qs.aggregate(
-        s=Sum("discount_received_usd", output_field=dec),
-    )["s"] or Decimal("0")
 
     sum_sale_q = _money_q(sum_sale)
     sum_buy_q = _money_q(sum_buy)

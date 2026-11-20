@@ -20,7 +20,7 @@ import { SaleReturnRefundDialog } from '../components/sales/SaleReturnRefundDial
 import { useLocale } from '../context/LocaleContext'
 import { useSubmitLock } from '../hooks/useSubmitLock'
 import { useSyncedSession } from '../hooks/useSyncedSession'
-import { apiJson, getGlobalView, isOfflineQueuedError, resolveMediaUrl } from '../lib/api'
+import { apiJson, ApiError, getGlobalView, isOfflineQueuedError, resolveMediaUrl } from '../lib/api'
 import {
   apiRateFromIqdPer100Input,
   formatIqdInteger,
@@ -30,6 +30,7 @@ import {
   parseNumericInput,
   usdToIqdAmount,
 } from '../lib/exchangeRate'
+import { normalizeNumericInput } from '../lib/exchangeRate'
 import { normalizeMoneyInput, parseDec } from '../lib/moneyInput'
 import {
   buildBlankReceiptHtml,
@@ -86,9 +87,21 @@ type PosDraft = {
 
 const MANUAL_SEARCH_OPTION_ID = -2147483648
 
+/** Compare customer names the way a cashier sees them: case, spacing and Arabic/Kurdish ي/ی ك/ک variants ignored. */
+function normalizeCustomerName(name: string): string {
+  return name
+    .replace(/ي/g, 'ی')
+    .replace(/ك/g, 'ک')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+
 /** POS line unit price: empty → 0; rejects negative and non-numeric input. */
 function parsePosUnitPriceUsd(raw: string): { ok: boolean; value: number } {
-  const trimmed = raw.trim().replace(/,/g, '')
+  // Same normalisation as the on-screen totals (٠-٩ / ۰-۹ digits, ٫ decimal point, commas),
+  // otherwise "12٫5" shows 12.5 but is saved as 12.
+  const trimmed = normalizeNumericInput(raw)
   if (!trimmed) return { ok: true, value: 0 }
   const n = Number.parseFloat(trimmed)
   if (!Number.isFinite(n)) return { ok: false, value: 0 }
@@ -153,6 +166,7 @@ export function PosPage() {
   const [newCustPhone1, setNewCustPhone1] = useState('')
   const [newCustPhone2, setNewCustPhone2] = useState('')
   const [newCustNote, setNewCustNote] = useState('')
+  const [newCustError, setNewCustError] = useState<string | null>(null)
 
   /** داشکاندن دەتوانرێت بە USD یان IQD بنووسرێت؛ بۆ API وەک USD نێردرێت */
   const [discountIqd, setDiscountIqd] = useState('')
@@ -485,6 +499,12 @@ export function PosPage() {
         setAmountPaidUsd(
           formatDecimalTrim(Number(sale.amount_paid_usd ?? 0)) || '0',
         )
+        // Paid partly in USD and partly in IQD: with the fields linked, checkout would treat them
+        // as one mirrored payment and drop the USD part (inventing a debt). Keep them separate.
+        if (Number(sale.amount_paid_usd ?? 0) > 0 && Number(sale.amount_paid_iqd ?? 0) > 0) {
+          setPaymentUsdLinked(false)
+          setPaymentIqdLinked(false)
+        }
         setSaleNote(sale.note ?? '')
         if (sale.customer != null) {
           setSelectedCustomerId(sale.customer)
@@ -1075,6 +1095,7 @@ export function PosPage() {
   async function createCustomer() {
     await runCreateCustomer(async () => {
       setError(null)
+      setNewCustError(null)
       const custPayload: Record<string, unknown> = {
         name: newCustName.trim(),
         workplace: newCustWorkplace,
@@ -1087,10 +1108,25 @@ export function PosPage() {
         const sid = localStorage.getItem('pos_shop_id')?.trim()
         if (sid) custPayload.shop = Number(sid)
       }
-      const created = await apiJson<CustomerRow>('/api/customers/', {
-        method: 'POST',
-        body: JSON.stringify(custPayload),
-      })
+      let created: CustomerRow
+      try {
+        created = await apiJson<CustomerRow>('/api/customers/', {
+          method: 'POST',
+          body: JSON.stringify(custPayload),
+          // Queuing would create the customer later (and again on every retry) while this
+          // sale could not be linked to it: fail now with a clear message instead.
+          noOfflineQueue: true,
+        })
+      } catch (e) {
+        setNewCustError(
+          e instanceof ApiError && e.status === 0
+            ? t('pos.customerCreateOffline')
+            : e instanceof Error
+              ? e.message
+              : t('common.error'),
+        )
+        return
+      }
       setSelectedCustomerId(created.id)
       setSelectedCustomer(created)
       setCustomerQuery(created.name)
@@ -1105,7 +1141,38 @@ export function PosPage() {
     setNewCustPhone1('')
     setNewCustPhone2('')
     setNewCustNote('')
+    setNewCustError(null)
     setCustomerModalOpen(true)
+  }
+
+  /**
+   * The cashier typed a name but did not pick a customer from the list. Never drop the name:
+   * link the single exact match, otherwise stop the sale and ask.
+   */
+  async function resolveTypedCustomer(
+    typed: string,
+  ): Promise<
+    | { kind: 'one'; customer: CustomerRow }
+    | { kind: 'none' }
+    | { kind: 'many'; list: CustomerRow[] }
+    | { kind: 'error' }
+  > {
+    const want = normalizeCustomerName(typed)
+    const exact = (list: CustomerRow[]) => list.filter((c) => normalizeCustomerName(c.name) === want)
+    try {
+      const data = await apiJson<Paginated<CustomerRow> | CustomerRow[]>(
+        `/api/customers/?search=${encodeURIComponent(typed)}&page_size=100`,
+      )
+      const matches = exact(Array.isArray(data) ? data : data.results)
+      if (matches.length === 1) return { kind: 'one', customer: matches[0] }
+      if (matches.length > 1) return { kind: 'many', list: matches }
+      return { kind: 'none' }
+    } catch {
+      // Offline: trust the last search results only when they give exactly one match.
+      const matches = exact(customerHits)
+      if (matches.length === 1) return { kind: 'one', customer: matches[0] }
+      return { kind: 'error' }
+    }
   }
 
   async function checkout(options?: { skipManualConfirm?: boolean }) {
@@ -1126,9 +1193,37 @@ export function PosPage() {
       setError(t('pos.enterQtyAndPrice'))
       return
     }
-    if (showAddCustomer && selectedCustomerId === null) {
-      setError(t('pos.registerUnknownCustomer'))
-      openNewCustomerModal(customerQuery)
+    let customerId = selectedCustomerId
+    const typedCustomer = customerQuery.trim()
+    if (customerId === null && typedCustomer) {
+      checkoutLockRef.current = true
+      let resolved: Awaited<ReturnType<typeof resolveTypedCustomer>>
+      try {
+        resolved = await resolveTypedCustomer(typedCustomer)
+      } finally {
+        checkoutLockRef.current = false
+      }
+      if (resolved.kind === 'one') {
+        customerId = resolved.customer.id
+        selectCustomerFromSearch(resolved.customer)
+      } else if (resolved.kind === 'none') {
+        setError(t('pos.registerUnknownCustomer'))
+        openNewCustomerModal(typedCustomer)
+        return
+      } else {
+        if (resolved.kind === 'many') {
+          setCustomerHits(resolved.list)
+          setCustomerSearchOpen(true)
+        }
+        setError(t(resolved.kind === 'many' ? 'pos.customerNotSelected' : 'pos.customerCheckFailed'))
+        customerInputRef.current?.focus()
+        return
+      }
+    }
+    // A debt must sit on a customer's account (the server enforces this too).
+    if (customerId === null && editingSaleId === null && balanceUsd > 0.005) {
+      setError(t('pos.debtNeedsCustomer'))
+      customerInputRef.current?.focus()
       return
     }
     const manualLines = cart.filter((l) => l.product.manual_entry)
@@ -1150,7 +1245,7 @@ export function PosPage() {
     try {
       const isEdit = editingSaleId !== null
       const body: Record<string, unknown> = {
-        customer: selectedCustomerId,
+        customer: customerId,
         occurred_at: isEdit ? editingOccurredAt || new Date().toISOString() : new Date().toISOString(),
         exchange_rate_usd_to_iqd: String(rate),
         invoice_discount_usd: discountAmt > 0 ? discountAmt.toFixed(4) : '0',
@@ -1178,7 +1273,7 @@ export function PosPage() {
           shopScoped: true,
         },
       )
-      setReceiptSummary({
+      const savedSummary = {
         subtotalUsd,
         returnedTotalUsd: 0,
         discountUsd: discountAmt,
@@ -1186,7 +1281,8 @@ export function PosPage() {
         finalIqd,
         paidUsdEq,
         balanceUsd,
-      })
+      }
+      setReceiptSummary(savedSummary)
       setLastReceipt(sale)
       setSaleSuccessMode(isEdit ? 'edit' : 'new')
       if (isEdit) {
@@ -1210,8 +1306,9 @@ export function PosPage() {
         removeDraftById(activeDraftId)
       }
       if (receiptSettings?.direct_print) {
+        // Pass this sale explicitly: the closure's lastReceipt still holds the previous sale.
         window.setTimeout(() => {
-          void printReceipt()
+          void printReceipt({ sale, sum: savedSummary })
         }, 180)
       }
     } catch (e) {
@@ -1315,14 +1412,7 @@ export function PosPage() {
       return
     }
 
-    setReturnModalOpen(false)
     setReturnRefundDialogOpen(false)
-    setReturnSale(null)
-    setReturnQuantities({})
-    setReturnReceiptNumber('')
-    setReturnNote('')
-    setPendingReturnPayload(null)
-
     setSubmittingReturn(true)
     setError(null)
     try {
@@ -1335,6 +1425,13 @@ export function PosPage() {
           lines: payloadLines,
         }),
       })
+      // Clear the return form only once the server accepted it, so a failure keeps the quantities.
+      setReturnModalOpen(false)
+      setReturnSale(null)
+      setReturnQuantities({})
+      setReturnReceiptNumber('')
+      setReturnNote('')
+      setPendingReturnPayload(null)
       setError(saleReturnResultMessage(res, t, formatMoneyCompact))
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
@@ -1352,7 +1449,8 @@ export function PosPage() {
       .map((ln) => ({
         sale_line_id: ln.id,
         quantity: Math.max(0, Math.floor(parseDec(returnQuantities[ln.id] ?? '0'))),
-        sold: ln.quantity,
+        // What can still be returned: sold minus what earlier returns already took back.
+        sold: ln.quantity - (Number(ln.returned_quantity ?? 0) || 0),
       }))
       .filter((x) => x.quantity > 0)
 
@@ -1477,9 +1575,11 @@ export function PosPage() {
     window.setTimeout(() => customerInputRef.current?.focus(), 0)
   }
 
-  async function renderReceiptHtml() {
-    const sale = lastReceipt
-    const sum = receiptSummary
+  type ReceiptSummary = NonNullable<typeof receiptSummary>
+  /** `override` = the sale just saved: state from setLastReceipt is not rendered yet at that point. */
+  async function renderReceiptHtml(override?: { sale: SaleListRow; sum: ReceiptSummary }) {
+    const sale = override?.sale ?? lastReceipt
+    const sum = override?.sum ?? receiptSummary
     if (!sale || !sum) return ''
     return buildReceiptHtml({
       sale,
@@ -1489,8 +1589,8 @@ export function PosPage() {
     })
   }
 
-  async function printReceipt() {
-    const html = await renderReceiptHtml()
+  async function printReceipt(override?: { sale: SaleListRow; sum: ReceiptSummary }) {
+    const html = await renderReceiptHtml(override)
     if (html) printReceiptHtml(html)
     resetForNextSale()
   }
@@ -1507,7 +1607,7 @@ export function PosPage() {
   const showAddCustomer =
     customerQuery.trim().length > 0 &&
     !customerHits.some(
-      (c) => c.name.toLowerCase() === customerQuery.trim().toLowerCase(),
+      (c) => normalizeCustomerName(c.name) === normalizeCustomerName(customerQuery),
     )
 
   const showAddManualProduct =
@@ -2044,7 +2144,7 @@ export function PosPage() {
                           inputMode="numeric"
                           value={l.quantity > 0 ? String(l.quantity) : ''}
                           onChange={(e) => {
-                            const digitsOnly = e.target.value.replace(/\D+/g, '')
+                            const digitsOnly = normalizeNumericInput(e.target.value).replace(/\D+/g, '')
                             updateLineQty(
                               l.lineId,
                               digitsOnly ? Number.parseInt(digitsOnly, 10) : 0,
@@ -2597,7 +2697,7 @@ export function PosPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
               <input
                 value={returnReceiptNumber}
-                onChange={(e) => setReturnReceiptNumber(e.target.value.replace(/\D+/g, ''))}
+                onChange={(e) => setReturnReceiptNumber(normalizeNumericInput(e.target.value).replace(/\D+/g, ''))}
                 inputMode="numeric"
                 placeholder={t('pos.returnReceiptNumber')}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
@@ -2640,7 +2740,7 @@ export function PosPage() {
                               onChange={(e) =>
                                 setReturnQuantities((prev) => ({
                                   ...prev,
-                                  [ln.id]: e.target.value.replace(/\D+/g, ''),
+                                  [ln.id]: normalizeNumericInput(e.target.value).replace(/\D+/g, ''),
                                 }))
                               }
                               inputMode="numeric"
@@ -2794,6 +2894,11 @@ export function PosPage() {
                 rows={2}
               />
             </div>
+            {newCustError ? (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-start text-sm text-red-800">
+                {newCustError}
+              </p>
+            ) : null}
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"

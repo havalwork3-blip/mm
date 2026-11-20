@@ -1,3 +1,4 @@
+import { localDateIso } from '../lib/datePresets'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { ArrowLeft, Download, Pencil, Printer, Wallet } from 'lucide-react'
@@ -234,7 +235,7 @@ export function CompanyDebtsPage() {
           {
             kind: 'purchase_payment',
             id: -Date.now(),
-            occurred_on: new Date().toISOString().slice(0, 10),
+            occurred_on: localDateIso(),
             occurred_at: new Date().toISOString(),
             amount_usd: data.applied_usd_eq,
             direction: 'out',
@@ -256,7 +257,7 @@ export function CompanyDebtsPage() {
     setHistoryLoading(true)
     setError(null)
     try {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = localDateIso()
       const from = '2000-01-01'
       const q = new URLSearchParams({ from, to: today })
       const led = await apiJson<{ entries: SupplierPaymentHistoryRow[] }>(
@@ -364,7 +365,7 @@ export function CompanyDebtsPage() {
     </tr>`,
       )
       .join('')
-    const dateText = new Date().toISOString().slice(0, 10)
+    const dateText = localDateIso()
     container.innerHTML = `
       <style>
         .sheet { border: 1px solid #dbe2ea; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 24px rgba(2,6,23,.08); }
@@ -434,7 +435,7 @@ export function CompanyDebtsPage() {
   const downloadPaymentHistoryPdf = useCallback(async () => {
     try {
       const pdf = await buildPaymentHistoryPdfDoc()
-      pdf.save(`supplier-payment-history-${new Date().toISOString().slice(0, 10)}.pdf`)
+      pdf.save(`supplier-payment-history-${localDateIso()}.pdf`)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     }

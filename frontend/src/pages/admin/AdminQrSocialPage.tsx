@@ -1,3 +1,4 @@
+import { localDateIso } from '../../lib/datePresets'
 import { Copy, Download, Loader2, MessageCircle, Plus, QrCode, Send, Share2, Trash2 } from 'lucide-react'
 import QRCode from 'qrcode'
 import type { FormEvent } from 'react'
@@ -98,7 +99,7 @@ export function AdminQrSocialPage() {
 
   const [managerTokenInput, setManagerTokenInput] = useState('')
   const [managerReportDate, setManagerReportDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
+    localDateIso(),
   )
   const [managerTelegramTesting, setManagerTelegramTesting] = useState(false)
   const [managerTelegramSending, setManagerTelegramSending] = useState(false)

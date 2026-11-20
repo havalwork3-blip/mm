@@ -1,3 +1,4 @@
+import { localDateIso } from '../lib/datePresets'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { ArrowLeft, Banknote, Download, Pencil, Printer, Tag, Wallet } from 'lucide-react'
@@ -70,7 +71,7 @@ function stripAnyParens(label: string): string {
 }
 
 function normalizeHistoryDateRange(dateFrom: string, dateTo: string): { from: string; to: string } {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localDateIso()
   let from = dateFrom.trim() || '2000-01-01'
   let to = dateTo.trim() || today
   if (from > to) {
@@ -440,7 +441,7 @@ export function CustomerDebtsPage() {
           {
             kind: 'customer_debt_payment',
             id: paymentId,
-            occurred_on: occurredAt.slice(0, 10),
+            occurred_on: localDateIso(new Date(occurredAt)),
             occurred_at: occurredAt,
             amount_usd: data.applied_usd_eq,
             direction: 'in',
@@ -735,7 +736,7 @@ export function CustomerDebtsPage() {
     </tr>`,
       )
       .join('')
-    const dateText = `${historyDateFrom.trim() || '2000-01-01'} -> ${historyDateTo.trim() || new Date().toISOString().slice(0, 10)}`
+    const dateText = `${historyDateFrom.trim() || '2000-01-01'} -> ${historyDateTo.trim() || localDateIso()}`
     container.innerHTML = `
       <style>
         .sheet { border: 1px solid #dbe2ea; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 24px rgba(2,6,23,.08); }
@@ -821,7 +822,7 @@ export function CustomerDebtsPage() {
         historyScope === 'debt_repayments'
           ? 'customer-debt-repayment-history'
           : 'customer-payment-history'
-      pdf.save(`${prefix}-${new Date().toISOString().slice(0, 10)}.pdf`)
+      pdf.save(`${prefix}-${localDateIso()}.pdf`)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     }
@@ -951,7 +952,7 @@ export function CustomerDebtsPage() {
   const downloadCustomerDebtsPdf = useCallback(async () => {
     try {
       const pdf = await buildCustomerDebtsPdfDoc()
-      pdf.save(`customer-debts-${new Date().toISOString().slice(0, 10)}.pdf`)
+      pdf.save(`customer-debts-${localDateIso()}.pdf`)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     }

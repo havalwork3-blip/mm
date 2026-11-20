@@ -326,6 +326,14 @@ class FullSystemPart2Tests(ShopTestCase):
         self.api("get", "/api/merchant/storefront-orders/stats/")
         self.soft(self.code("patch", "/api/merchant/storefront-settings/", {}), 403, "employee cannot change store settings")
         self.soft(self.code("post", "/api/merchant/storefront-banners/", {"title": "x"}), 403, "employee cannot add banners")
+        # Changing order status needs the online-orders permission (not just being staff).
+        self.soft(self.code("patch", f"/api/merchant/storefront-orders/{order['id']}/", {"status": "CANCELLED"}), 403,
+                  "employee without permission cannot change order status")
+        from django.contrib.auth.models import Permission
+
+        self.employee.user_permissions.add(Permission.objects.get(codename="change_storefrontorder"))
+        self.employee = type(self.employee).objects.get(pk=self.employee.pk)  # reset permission cache
+        self.as_user(self.employee)
         self.api("patch", f"/api/merchant/storefront-orders/{order['id']}/", {"status": "CANCELLED"})
         self.assert_stock(p, 10)
         self.as_user(self.owner2)

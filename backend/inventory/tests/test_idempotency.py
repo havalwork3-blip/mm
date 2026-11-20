@@ -63,3 +63,48 @@ class IdempotencyTests(ShopTestCase):
         self.api("post", path, {"amount_paid_usd": "5"}, HTTP_IDEMPOTENCY_KEY="pay-1")
         self.api("post", path, {"amount_paid_usd": "5"}, HTTP_IDEMPOTENCY_KEY="pay-1")
         self.assertEqual(CustomerDebtPayment.objects.filter(customer=self.customer).count(), 1)
+
+
+class IdempotencyAcrossLoginsTests(ShopTestCase):
+    """Two tabs (or a new sign-in) use different tokens for the same user: still one sale."""
+
+    def setUp(self):
+        super().setUp()
+        self.product = self.make_product(stock=10)
+
+    def test_same_key_from_two_tokens_of_same_user_creates_one_sale(self):
+        from rest_framework.test import APIClient
+
+        from accounts.authentication import issue_token
+
+        body = IdempotencyTests._sale_body(self)
+        tab1, tab2 = APIClient(), APIClient()
+        tab1.credentials(HTTP_AUTHORIZATION=f"Token {issue_token(self.owner)}")
+        tab2.credentials(HTTP_AUTHORIZATION=f"Token {issue_token(self.owner)}")
+        r1 = tab1.post("/api/sales/", body, format="json", HTTP_IDEMPOTENCY_KEY="offline-1")
+        r2 = tab2.post("/api/sales/", body, format="json", HTTP_IDEMPOTENCY_KEY="offline-1")
+        self.assertEqual(r1.status_code, 201)
+        self.assertEqual(r2.status_code, 201)
+        self.assertEqual(r2["Idempotency-Replayed"], "true")
+        self.assertEqual(Sale.objects.filter(shop=self.shop).count(), 1)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.current_stock_quantity, 9)
+
+    def test_same_key_from_different_users_is_not_shared(self):
+        from django.contrib.auth import get_user_model
+        from rest_framework.test import APIClient
+
+        from accounts.authentication import issue_token
+
+        from accounts.models import UserRole
+
+        other = get_user_model().objects.create_user(
+            "owner-two@a.test", "pw-owner-two-123", shop=self.shop, role=UserRole.OWNER,
+        )
+        body = IdempotencyTests._sale_body(self)
+        a, b = APIClient(), APIClient()
+        a.credentials(HTTP_AUTHORIZATION=f"Token {issue_token(self.owner)}")
+        b.credentials(HTTP_AUTHORIZATION=f"Token {issue_token(other)}")
+        a.post("/api/sales/", body, format="json", HTTP_IDEMPOTENCY_KEY="same")
+        b.post("/api/sales/", body, format="json", HTTP_IDEMPOTENCY_KEY="same")
+        self.assertEqual(Sale.objects.filter(shop=self.shop).count(), 2)

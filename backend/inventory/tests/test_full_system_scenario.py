@@ -82,7 +82,7 @@ class FullSystemScenarioTests(ShopTestCase):
                 perm_ids("view_product", "add_product", "change_product",
                          "view_purchase", "add_purchase", "view_category", "add_category"),
             ),
-            "cashier": ("cashier@a.test", UserRole.EMPLOYEE, perm_ids("add_sale", "view_sale")),
+            "cashier": ("cashier@a.test", UserRole.EMPLOYEE, perm_ids("add_sale", "view_sale", "change_storefrontorder")),
             "editor": ("editor@a.test", UserRole.RECEIPT_EDITOR, []),
             "nobody": ("nobody@a.test", UserRole.EMPLOYEE, []),
         }

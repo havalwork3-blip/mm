@@ -285,6 +285,33 @@ class IsShopOwnerOrCanPaySupplierDebt(permissions.BasePermission):
         return _has_any_perm(u, ("add_purchase",))
 
 
+class IsOwnerOrPermissionForWrites(permissions.BasePermission):
+    """
+    Reads: any staff that passed the other permission classes.
+    Writes: superuser / owner, or a user holding one of ``view.write_permission_codenames``
+    (e.g. an employee given "change product" may edit online prices; one without may not).
+    """
+
+    message = "You do not have permission to change this."
+
+    def has_permission(self, request, view) -> bool:
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        u = request.user
+        if not (u and u.is_authenticated):
+            return False
+        if getattr(u, "is_superuser", False) or getattr(u, "role", None) == UserRole.OWNER:
+            return True
+        return _has_any_perm(u, getattr(view, "write_permission_codenames", ()))
+
+
+def user_can_change_purchases(user) -> bool:
+    """Superuser / owner / explicit change_purchase (not just change_product)."""
+    if getattr(user, "is_superuser", False) or getattr(user, "role", None) == UserRole.OWNER:
+        return True
+    return _has_any_perm(user, ("change_purchase",))
+
+
 class IsShopManagerForWrites(permissions.BasePermission):
     """
     Read for any shop staff; changes (storefront settings, bot/WhatsApp tokens, banners,

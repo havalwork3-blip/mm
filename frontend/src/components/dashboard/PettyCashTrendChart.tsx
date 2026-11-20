@@ -1,3 +1,4 @@
+import { localDateIso } from '../../lib/datePresets'
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import {
   Area,
@@ -49,7 +50,7 @@ export function buildPettyCashTrendQuery(
 function isoDaysAgo(n: number): string {
   const d = new Date()
   d.setDate(d.getDate() - n)
-  return d.toISOString().slice(0, 10)
+  return localDateIso(d)
 }
 
 function presetFromQuery(query: string): PettyCashRangePreset {
@@ -171,7 +172,7 @@ export function PettyCashTrendChart({
   const [animateKey, setAnimateKey] = useState(0)
   const [preset, setPreset] = useState<PettyCashRangePreset>(() => presetFromQuery(query))
   const [customFrom, setCustomFrom] = useState(() => isoDaysAgo(29))
-  const [customTo, setCustomTo] = useState(() => new Date().toISOString().slice(0, 10))
+  const [customTo, setCustomTo] = useState(() => localDateIso())
   const [customOpen, setCustomOpen] = useState(() => presetFromQuery(query) === 'custom')
 
   useEffect(() => {

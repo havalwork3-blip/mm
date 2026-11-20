@@ -1,3 +1,4 @@
+import { localDateIso } from '../../lib/datePresets'
 import { BadgeDollarSign, Boxes, Store, TicketPercent, Users } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useLocale } from '../../context/LocaleContext'
@@ -7,9 +8,9 @@ import type { AdminGlobalStats } from '../../types/api'
 export function AdminOverviewPage() {
   const { t } = useLocale()
   const [dFrom, setDFrom] = useState(() =>
-    new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
+    localDateIso(new Date(Date.now() - 30 * 86400000)),
   )
-  const [dTo, setDTo] = useState(() => new Date().toISOString().slice(0, 10))
+  const [dTo, setDTo] = useState(() => localDateIso())
   const [stats, setStats] = useState<AdminGlobalStats | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

@@ -1,3 +1,4 @@
+import { localDateIso } from '../lib/datePresets'
 import {
   ArrowDownLeft,
   ArrowLeft,
@@ -69,7 +70,7 @@ function parseUsdAmount(s: string): number {
 }
 
 function formatDateInput(d: Date): string {
-  return d.toISOString().slice(0, 10)
+  return localDateIso(d)
 }
 
 function resolvePresetRange(preset: 'today' | 'week' | 'month' | 'year') {
