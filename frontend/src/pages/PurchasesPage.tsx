@@ -174,41 +174,61 @@ function stripUsdParens(label: string): string {
   return label.replace(/\s*\(USD\)\s*/gi, ' ').replace(/\s+/g, ' ').trim()
 }
 
-function purchaseLineColumnValues(row: PurchaseHistoryRow): {
-  productNames: string
-  quantities: string
-  unitPrices: string
-} {
+type PurchaseLineRow = { name: string; qty: string; price: string }
+
+/** One display row per purchase line, so name / quantity / unit price always stay on the same line. */
+function purchaseLineRows(row: PurchaseHistoryRow): PurchaseLineRow[] {
+  // A newline (or other odd whitespace) inside a product name must not create an extra row.
+  const clean = (v: string) => v.replace(/\s+/g, ' ').trim()
   const lines = row.lines ?? []
   if (lines.length > 0) {
-    return {
-      productNames: lines.map((ln) => ln.product_name ?? '?').join('\n'),
-      quantities: lines.map((ln) => String(ln.quantity ?? 0)).join('\n'),
-      unitPrices: lines.map((ln) => formatUsdCellString(ln.unit_cost_usd, 4)).join('\n'),
-    }
+    return lines.map((ln) => ({
+      name: clean(ln.product_name ?? '') || '?',
+      qty: String(ln.quantity ?? 0),
+      price: formatUsdCellString(ln.unit_cost_usd, 4),
+    }))
   }
   const raw = String(row.lines_product_names ?? row.lines_summary ?? '').trim()
-  if (!raw) {
-    return { productNames: '—', quantities: '—', unitPrices: '—' }
-  }
-  const parts = raw.split('·').map((p) => p.trim()).filter(Boolean)
-  const names: string[] = []
-  const qtys: string[] = []
-  for (const part of parts) {
-    const m = part.match(/^(.+?)\s*[x×]\s*(\d+)\s*$/i)
-    if (m) {
-      names.push(m[1].trim())
-      qtys.push(m[2])
-    } else {
-      names.push((part.split('@')[0] ?? part).trim())
-      qtys.push('—')
-    }
-  }
-  return {
-    productNames: names.join('\n'),
-    quantities: qtys.join('\n'),
-    unitPrices: names.map(() => '—').join('\n'),
-  }
+  if (!raw) return []
+  return raw
+    .split('·')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const m = part.match(/^(.+?)\s*[x×]\s*(\d+)\s*$/i)
+      return m
+        ? { name: clean(m[1]), qty: m[2], price: '—' }
+        : { name: clean(part.split('@')[0] ?? part), qty: '—', price: '—' }
+    })
+}
+
+/**
+ * One fixed-height row per purchase line. Name, quantity and price columns use the same row
+ * height (and never wrap), so line N lines up across the three columns on long invoices.
+ */
+function PurchaseLineCell({
+  rows,
+  pick,
+  title = false,
+}: {
+  rows: PurchaseLineRow[]
+  pick: (r: PurchaseLineRow) => string
+  title?: boolean
+}) {
+  if (rows.length === 0) return <>—</>
+  return (
+    <div className="flex flex-col">
+      {rows.map((r, i) => (
+        <div
+          key={i}
+          className="mx-auto h-6 max-w-56 truncate whitespace-nowrap leading-6"
+          title={title ? pick(r) : undefined}
+        >
+          {pick(r)}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function emptyLine(): LineForm {
@@ -576,13 +596,17 @@ export function PurchasesPage() {
     container.setAttribute('dir', isRtl ? 'rtl' : 'ltr')
     const rowsHtml = historyRows
       .map((p) => {
-        const cols = purchaseLineColumnValues(p)
+        const rows = purchaseLineRows(p)
+        const cell = (pick: (r: PurchaseLineRow) => string) =>
+          rows.length === 0
+            ? '—'
+            : rows.map((r) => `<div class="ln">${escapeHtml(pick(r))}</div>`).join('')
         return `<tr>
         <td>${escapeHtml(formatDateTimeCell(p.occurred_at))}</td>
         <td>${escapeHtml(p.company_name ?? '—')}</td>
-        <td>${escapeHtml(cols.productNames)}</td>
-        <td>${escapeHtml(cols.quantities)}</td>
-        <td style="white-space:pre-line">${escapeHtml(cols.unitPrices)}</td>
+        <td>${cell((r) => r.name)}</td>
+        <td>${cell((r) => r.qty)}</td>
+        <td>${cell((r) => r.price)}</td>
         <td>${escapeHtml(purchaseReceiptDisplay(p))}</td>
         <td>${escapeHtml(formatUsdCellString(p.goods_total_usd))}</td>
         <td>${escapeHtml(formatUsdCellString(p.amount_paid_usd))}</td>
@@ -601,6 +625,7 @@ export function PurchasesPage() {
         thead th { background: #0ea5a4; color: #fff; font-weight: 700; padding: 0; height: 34px; vertical-align: middle; }
         thead th > span { display: flex; align-items: center; justify-content: center; height: 34px; line-height: 1.1; text-align: center; }
         tbody tr:nth-child(even) { background: #f8fafc; }
+        .ln { height: 18px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       </style>
       <div class="sheet">
         <div class="head">
@@ -1057,7 +1082,7 @@ export function PurchasesPage() {
                   ) : (
                     historyRows.map((p) => {
                       const editable = canChangePurchase && !p.has_returns
-                      const cols = purchaseLineColumnValues(p)
+                      const lineRows = purchaseLineRows(p)
                       return (
                         <tr key={p.id} className="border-t border-slate-100 align-top dark:border-slate-700">
                           <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">
@@ -1068,14 +1093,14 @@ export function PurchasesPage() {
                               ? t('purchasePage.companyInventoryIncrease')
                               : (p.company_name ?? '—')}
                           </td>
-                          <td className="px-3 py-2 text-center text-xs font-medium leading-relaxed whitespace-pre-line text-slate-900 dark:text-slate-100">
-                            {cols.productNames}
+                          <td className="px-3 py-2 text-center text-xs font-medium text-slate-900 dark:text-slate-100">
+                            <PurchaseLineCell rows={lineRows} pick={(r) => r.name} title />
                           </td>
-                          <td className="px-3 py-2 text-center font-mono text-xs tabular-nums whitespace-pre-line">
-                            {cols.quantities}
+                          <td className="px-3 py-2 text-center font-mono text-xs tabular-nums">
+                            <PurchaseLineCell rows={lineRows} pick={(r) => r.qty} />
                           </td>
-                          <td className="px-3 py-2 text-center font-mono text-xs tabular-nums whitespace-pre-line">
-                            {cols.unitPrices}
+                          <td className="px-3 py-2 text-center font-mono text-xs tabular-nums">
+                            <PurchaseLineCell rows={lineRows} pick={(r) => r.price} />
                           </td>
                           <td className="px-3 py-2 font-mono text-xs tabular-nums">{purchaseReceiptDisplay(p)}</td>
                           <td className="px-3 py-2 text-center font-mono tabular-nums">
