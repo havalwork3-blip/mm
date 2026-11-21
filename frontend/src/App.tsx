@@ -1,49 +1,63 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { PageBoundary } from './components/PageBoundary'
+import { lazyPage, prefetchAllPages } from './lib/lazyPage'
 import { isStorefrontMode } from './lib/storefrontConfig'
 import { MainLayout } from './layout/MainLayout'
-import { AdminLayout } from './pages/admin/AdminLayout'
-import { AdminShopsPage } from './pages/admin/AdminShopsPage'
-import { AdminUsersPage } from './pages/admin/AdminUsersPage'
-import { CashierPage } from './pages/CashierPage'
-import { CompanyDebtsPage } from './pages/CompanyDebtsPage'
-import { CustomerDebtsPage } from './pages/CustomerDebtsPage'
-import { DebtsPage } from './pages/DebtsPage'
-import { HomePage } from './pages/HomePage'
-import { InventoryPage } from './pages/InventoryPage'
-import { JardPage } from './pages/JardPage'
-import { PosPage } from './pages/PosPage'
-import { ProfitReportPage } from './pages/ProfitReportPage'
-import { PurchasesPage } from './pages/PurchasesPage'
-import { PurchaseReturnsPage } from './pages/PurchaseReturnsPage'
-import { CategoriesManagePage } from './pages/CategoriesManagePage'
-import { ResourceCrudPage } from './pages/ResourceCrudPage'
-import { SalesListPage } from './pages/SalesListPage'
-import { SalesReturnsPage } from './pages/SalesReturnsPage'
-import { CatalogPage } from './pages/CatalogPage'
-import { SettingsPage } from './pages/SettingsPage'
-import { ProfilePage } from './pages/ProfilePage'
-import { QrCodeSocialLandingPage } from './pages/QrCodeSocialLandingPage'
-import { AdminQrSocialPage } from './pages/admin/AdminQrSocialPage'
-import { MerchantOnlineOrdersPage } from './pages/merchant/MerchantOnlineOrdersPage'
-import { MerchantOnlinePricingPage } from './pages/merchant/MerchantOnlinePricingPage'
-import { MerchantOnlineShopPage } from './pages/merchant/MerchantOnlineShopPage'
-import { MarketingCMSLayout } from './pages/marketing/MarketingCMSLayout'
-import { MarketingContactInboxPage } from './pages/marketing/MarketingContactInboxPage'
-import { MarketingContentPage } from './pages/marketing/MarketingContentPage'
-import { MarketingLoginPage } from './pages/marketing/MarketingLoginPage'
-import { MarketingOverviewPage } from './pages/marketing/MarketingOverviewPage'
-import { MarketingProductsPage } from './pages/marketing/MarketingProductsPage'
-import { MarketingSettingsPage } from './pages/marketing/MarketingSettingsPage'
 import { MarketingSessionProvider } from './context/MarketingSessionContext'
-import { StorefrontRoutes } from './pages/storefront/StorefrontRoutes'
+
+// Pages are split into their own files and loaded on demand: the first load stays small
+// (previously the whole system was one ~3 MB script).
+const AdminLayout = lazyPage(() => import('./pages/admin/AdminLayout'), 'AdminLayout')
+const AdminShopsPage = lazyPage(() => import('./pages/admin/AdminShopsPage'), 'AdminShopsPage')
+const AdminUsersPage = lazyPage(() => import('./pages/admin/AdminUsersPage'), 'AdminUsersPage')
+const CashierPage = lazyPage(() => import('./pages/CashierPage'), 'CashierPage')
+const CompanyDebtsPage = lazyPage(() => import('./pages/CompanyDebtsPage'), 'CompanyDebtsPage')
+const CustomerDebtsPage = lazyPage(() => import('./pages/CustomerDebtsPage'), 'CustomerDebtsPage')
+const DebtsPage = lazyPage(() => import('./pages/DebtsPage'), 'DebtsPage')
+const HomePage = lazyPage(() => import('./pages/HomePage'), 'HomePage')
+const InventoryPage = lazyPage(() => import('./pages/InventoryPage'), 'InventoryPage')
+const JardPage = lazyPage(() => import('./pages/JardPage'), 'JardPage')
+const PosPage = lazyPage(() => import('./pages/PosPage'), 'PosPage')
+const ProfitReportPage = lazyPage(() => import('./pages/ProfitReportPage'), 'ProfitReportPage')
+const PurchasesPage = lazyPage(() => import('./pages/PurchasesPage'), 'PurchasesPage')
+const PurchaseReturnsPage = lazyPage(() => import('./pages/PurchaseReturnsPage'), 'PurchaseReturnsPage')
+const CategoriesManagePage = lazyPage(() => import('./pages/CategoriesManagePage'), 'CategoriesManagePage')
+const ResourceCrudPage = lazyPage(() => import('./pages/ResourceCrudPage'), 'ResourceCrudPage')
+const SalesListPage = lazyPage(() => import('./pages/SalesListPage'), 'SalesListPage')
+const SalesReturnsPage = lazyPage(() => import('./pages/SalesReturnsPage'), 'SalesReturnsPage')
+const CatalogPage = lazyPage(() => import('./pages/CatalogPage'), 'CatalogPage')
+const SettingsPage = lazyPage(() => import('./pages/SettingsPage'), 'SettingsPage')
+const ProfilePage = lazyPage(() => import('./pages/ProfilePage'), 'ProfilePage')
+const QrCodeSocialLandingPage = lazyPage(() => import('./pages/QrCodeSocialLandingPage'), 'QrCodeSocialLandingPage')
+const AdminQrSocialPage = lazyPage(() => import('./pages/admin/AdminQrSocialPage'), 'AdminQrSocialPage')
+const MerchantOnlineOrdersPage = lazyPage(() => import('./pages/merchant/MerchantOnlineOrdersPage'), 'MerchantOnlineOrdersPage')
+const MerchantOnlinePricingPage = lazyPage(() => import('./pages/merchant/MerchantOnlinePricingPage'), 'MerchantOnlinePricingPage')
+const MerchantOnlineShopPage = lazyPage(() => import('./pages/merchant/MerchantOnlineShopPage'), 'MerchantOnlineShopPage')
+const MarketingCMSLayout = lazyPage(() => import('./pages/marketing/MarketingCMSLayout'), 'MarketingCMSLayout')
+const MarketingContactInboxPage = lazyPage(() => import('./pages/marketing/MarketingContactInboxPage'), 'MarketingContactInboxPage')
+const MarketingContentPage = lazyPage(() => import('./pages/marketing/MarketingContentPage'), 'MarketingContentPage')
+const MarketingLoginPage = lazyPage(() => import('./pages/marketing/MarketingLoginPage'), 'MarketingLoginPage')
+const MarketingOverviewPage = lazyPage(() => import('./pages/marketing/MarketingOverviewPage'), 'MarketingOverviewPage')
+const MarketingProductsPage = lazyPage(() => import('./pages/marketing/MarketingProductsPage'), 'MarketingProductsPage')
+const MarketingSettingsPage = lazyPage(() => import('./pages/marketing/MarketingSettingsPage'), 'MarketingSettingsPage')
+const StorefrontRoutes = lazyPage(() => import('./pages/storefront/StorefrontRoutes'), 'StorefrontRoutes')
 
 const storefrontHost = isStorefrontMode()
 
 function App() {
+  useEffect(() => {
+    // Dashboard only: fetch the other pages in the background so later navigation
+    // (also while offline) is instant. Storefront visitors never download dashboard code.
+    if (!storefrontHost) prefetchAllPages()
+  }, [])
+
   if (storefrontHost) {
     return (
       <BrowserRouter>
-        <StorefrontRoutes />
+        <PageBoundary>
+          <StorefrontRoutes />
+        </PageBoundary>
       </BrowserRouter>
     )
   }
@@ -51,6 +65,7 @@ function App() {
   return (
     <BrowserRouter>
       <MarketingSessionProvider>
+        <PageBoundary>
         <Routes>
           <Route path="/site-cms/login" element={<MarketingLoginPage />} />
           <Route path="/site-cms" element={<MarketingCMSLayout />}>
@@ -98,6 +113,7 @@ function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </PageBoundary>
       </MarketingSessionProvider>
     </BrowserRouter>
   )

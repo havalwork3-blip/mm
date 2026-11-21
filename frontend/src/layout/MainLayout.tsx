@@ -27,6 +27,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ConnectionLight } from '../components/ConnectionLight'
 import { LangSwitcher } from '../components/LangSwitcher'
+import { PageBoundary } from '../components/PageBoundary'
 import { OnlineOrderNotificationLayer } from '../components/OnlineOrderNotificationLayer'
 import { UserAvatar, userDisplayName } from '../components/UserAvatar'
 import { useLocale } from '../context/LocaleContext'
@@ -906,7 +907,10 @@ function MainLayoutShell() {
       >
         <main className="relative min-h-dvh min-w-0 overflow-x-hidden overflow-y-auto">
           <ShopSwitchLoadingOverlay />
-          <Outlet />
+          {/* Keep the sidebar visible while a page's code loads; reset errors per page. */}
+          <PageBoundary key={loc.pathname}>
+            <Outlet />
+          </PageBoundary>
         </main>
       </div>
 
